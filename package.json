@@ -1,0 +1,29 @@
+{
+  "name": "tms-platform",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "db:generate": "cd packages/database && prisma generate",
+    "db:migrate": "cd packages/database && prisma migrate dev",
+    "db:push": "cd packages/database && prisma db push",
+    "db:seed": "cd packages/database && tsx prisma/seed.ts",
+    "db:studio": "cd packages/database && prisma studio"
+  },
+  "devDependencies": {
+    "turbo": "^1.11.0",
+    "prettier": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
+

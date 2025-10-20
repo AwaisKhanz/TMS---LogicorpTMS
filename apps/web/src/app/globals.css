@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Backgrounds - Light Gray #F8FAFC */
+    --background: 210 40% 98%;
+    --foreground: 215 20% 35%; /* Text Gray #475569 */
+
+    /* Cards - White #FFFFFF */
+    --card: 0 0% 100%;
+    --card-foreground: 215 20% 35%;
+
+    /* Popovers */
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 20% 35%;
+
+    /* Primary - Blue #2563EB */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Light backgrounds */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 215 33% 17%; /* Dark Navy #1E293B */
+
+    /* Muted - For subtle backgrounds and disabled states */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 20% 35%;
+
+    /* Accent - For hover states and highlights */
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 215 33% 17%;
+
+    /* Destructive - Error Red #EF4444 */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Success - Green #22C55E */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning - Amber #FACC15 */
+    --warning: 45 93% 54%;
+    --warning-foreground: 215 33% 17%;
+
+    /* Info - Teal #0EA5E9 */
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Borders - Gray #E2E8F0 */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 60%;
+
+    --radius: 0.5rem;
+
+    /* Chart colors - Distinct and vibrant */
+    --chart-1: 217 91% 60%; /* Primary Blue */
+    --chart-2: 142 71% 45%; /* Success Green */
+    --chart-3: 45 93% 54%; /* Warning Amber */
+    --chart-4: 199 89% 48%; /* Info Teal */
+    --chart-5: 0 84% 60%; /* Destructive Red */
+  }
+
+  .dark {
+    /* Dark Background #0F172A */
+    --background: 222 47% 11%;
+    --foreground: 214 32% 96%; /* Light Text #F1F5F9 */
+
+    /* Dark Card Background #1E293B */
+    --card: 215 33% 17%;
+    --card-foreground: 214 32% 96%;
+
+    /* Popovers */
+    --popover: 215 33% 17%;
+    --popover-foreground: 214 32% 96%;
+
+    /* Primary - Blue #2563EB (same in dark mode) */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Slightly lighter than card */
+    --secondary: 215 25% 27%;
+    --secondary-foreground: 214 32% 96%;
+
+    /* Muted - For subtle dark backgrounds */
+    --muted: 215 25% 27%;
+    --muted-foreground: 215 20% 65%;
+
+    /* Accent - For hover states */
+    --accent: 215 25% 27%;
+    --accent-foreground: 214 32% 96%;
+
+    /* Destructive - Error Red #EF4444 */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Success - Green #22C55E */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning - Amber #FACC15 */
+    --warning: 45 93% 54%;
+    --warning-foreground: 215 33% 17%;
+
+    /* Info - Teal #0EA5E9 */
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Borders - Slightly lighter than card */
+    --border: 215 25% 27%;
+    --input: 215 25% 27%;
+    --ring: 217 91% 60%;
+
+    /* Chart colors - Same vibrant colors for dark mode */
+    --chart-1: 217 91% 60%; /* Primary Blue */
+    --chart-2: 142 71% 45%; /* Success Green */
+    --chart-3: 45 93% 54%; /* Warning Amber */
+    --chart-4: 199 89% 48%; /* Info Teal */
+    --chart-5: 0 84% 60%; /* Destructive Red */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

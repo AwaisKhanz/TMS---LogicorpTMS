@@ -1,0 +1,561 @@
+---
+alwaysApply: true
+---
+
+# TMS Cursor Rules Document
+
+## Project Context
+
+You are working on a Transportation Management System (TMS) - a multi-tenant SaaS platform for freight brokers and logistics companies. The system manages loads, carriers, customers, invoicing, and integrates with multiple third-party services.
+
+## Technology Stack
+
+- **Frontend**: Next.js 14 (App Router), TypeScript, shadcn/ui, Tailwind CSS
+- **Backend**: Node.js, Express, Prisma ORM, PostgreSQL
+- **Infrastructure**: Railway hosting, AWS S3, Redis, SendGrid
+- **Auth**: JWT with refresh tokens
+
+## Critical Project Rules
+
+### 1. Multi-Tenancy is Mandatory
+
+- EVERY database query must include `organizationId` filter
+- NEVER expose data from one organization to another
+- Use Prisma middleware for automatic tenant filtering
+- All API endpoints must validate tenant context from JWT
+
+### 2. Use shadcn/ui Components Only
+
+- NEVER create custom UI components if shadcn/ui has one
+- Import shadcn/ui components correctly: `import { Button } from "@/components/ui/button"`
+- Do NOT pass custom styles to shadcn components - use className with Tailwind only
+- Use shadcn/ui's built-in variants instead of custom styling
+
+### 3. TypeScript is Required
+
+- Use TypeScript for ALL files (.ts, .tsx)
+- Define interfaces for all data structures
+- Use proper types - avoid `any`
+- Enable strict mode in tsconfig.json
+
+## Code Structure Rules
+
+### Frontend Structure
+
+```
+app/
+├── (auth)/          # Public routes
+├── (dashboard)/     # Protected routes
+│   ├── layout.tsx   # Must include auth check
+│   └── [routes]/    # All dashboard routes
+components/
+├── ui/              # shadcn/ui components only
+├── features/        # Feature-specific components
+└── layouts/         # Layout components
+
+hooks/               # Custom React hooks
+lib/                 # Utilities and helpers
+services/            # API client services
+```
+
+### Backend Structure
+
+```
+src/
+├── controllers/     # Route handlers only
+├── services/       # Business logic
+├── repositories/   # Database queries
+├── middleware/     # Express middleware
+├── utils/          # Shared utilities
+├── types/          # TypeScript types
+└── config/         # Configuration
+```
+
+### API Patterns
+
+#### Controllers (Thin Layer)
+
+```typescript
+// ✅ CORRECT - Controller only handles HTTP
+export const createLoad = async (req: Request, res: Response) => {
+  try {
+    const { organizationId, userId } = req.auth;
+    const load = await loadService.create(req.body, organizationId, userId);
+    res.status(201).json({ success: true, data: load });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ❌ WRONG - Business logic in controller
+export const createLoad = async (req: Request, res: Response) => {
+  // Don't put business logic here!
+  const loadNumber = generateLoadNumber();
+  const load = await prisma.load.create({...});
+};
+```
+
+#### Services (Business Logic)
+
+```typescript
+// ✅ CORRECT - Service contains business logic
+export class LoadService {
+  async create(data: CreateLoadDto, orgId: string, userId: string) {
+    // Validate business rules
+    await this.validateLoadData(data);
+
+    // Generate load number
+    const loadNumber = await this.generateLoadNumber(orgId);
+
+    // Create with repository
+    const load = await this.loadRepo.create({
+      ...data,
+      loadNumber,
+      organizationId: orgId,
+      createdBy: userId,
+    });
+
+    // Side effects
+    await this.notificationService.sendLoadCreated(load);
+
+    return load;
+  }
+}
+```
+
+#### Repositories (Data Access)
+
+```typescript
+// ✅ CORRECT - Repository only handles data access
+export class LoadRepository {
+  async create(data: Prisma.LoadCreateInput) {
+    return prisma.load.create({ data });
+  }
+
+  async findByOrganization(orgId: string, filters?: LoadFilters) {
+    return prisma.load.findMany({
+      where: {
+        organizationId: orgId,
+        ...filters,
+      },
+    });
+  }
+}
+```
+
+## Component Patterns
+
+### Page Components
+
+```tsx
+// ✅ CORRECT - Server component with proper data fetching
+export default async function LoadsPage() {
+  const loads = await getLoads();
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Loads"
+        action={
+          <Button asChild>
+            <Link href="/loads/new">Create Load</Link>
+          </Button>
+        }
+      />
+      <LoadsDataTable loads={loads} />
+    </div>
+  );
+}
+```
+
+### Form Components
+
+```tsx
+// ✅ CORRECT - Using React Hook Form with Zod
+"use client";
+
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+const loadSchema = z.object({
+  customerRate: z.number().positive(),
+  commodity: z.string().min(1, "Commodity is required"),
+  // ... other fields
+});
+
+export function LoadForm() {
+  const form = useForm<z.infer<typeof loadSchema>>({
+    resolver: zodResolver(loadSchema),
+  });
+
+  const onSubmit = async (data: z.infer<typeof loadSchema>) => {
+    // Handle submission
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="commodity"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Commodity</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit">Create Load</Button>
+      </form>
+    </Form>
+  );
+}
+```
+
+## Database Rules
+
+### Always Use Transactions
+
+```typescript
+// ✅ CORRECT - Use transactions for multi-table operations
+async createLoadWithDocuments(loadData: any, documents: any[]) {
+  return prisma.$transaction(async (tx) => {
+    const load = await tx.load.create({ data: loadData });
+
+    for (const doc of documents) {
+      await tx.document.create({
+        data: { ...doc, loadId: load.id }
+      });
+    }
+
+    return load;
+  });
+}
+```
+
+### Multi-Tenant Queries
+
+```typescript
+// ✅ CORRECT - Always filter by organizationId
+const loads = await prisma.load.findMany({
+  where: {
+    organizationId: req.auth.organizationId,
+    status: "ACTIVE",
+  },
+});
+
+// ❌ WRONG - Missing organizationId filter
+const loads = await prisma.load.findMany({
+  where: { status: "ACTIVE" },
+});
+```
+
+## API Response Format
+
+### Success Response
+
+```typescript
+{
+  success: true,
+  data: {
+    // Response data
+  },
+  meta: {
+    page: 1,
+    total: 100,
+    // Pagination info
+  }
+}
+```
+
+### Error Response
+
+```typescript
+{
+  success: false,
+  error: {
+    code: "VALIDATION_ERROR",
+    message: "Invalid input data",
+    details: {
+      field: "email",
+      message: "Invalid email format"
+    }
+  }
+}
+```
+
+## Authentication & Authorization
+
+### Protected Routes
+
+```typescript
+// ✅ CORRECT - Middleware chain
+router.use(authenticate); // Verify JWT
+router.use(validateTenant); // Ensure tenant context
+router.use(authorize(["LOAD_VIEW"])); // Check permissions
+```
+
+### Frontend Auth Check
+
+```tsx
+// ✅ CORRECT - In layout.tsx
+export default async function DashboardLayout({ children }) {
+  const session = await getServerSession();
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  return <>{children}</>;
+}
+```
+
+## Environment Variables
+
+### Required Variables
+
+```env
+# Database
+DATABASE_URL=postgresql://...
+
+# Auth
+JWT_SECRET=
+JWT_REFRESH_SECRET=
+
+# AWS
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_S3_BUCKET=
+AWS_S3_REGION=
+
+# Email
+SENDGRID_API_KEY=
+
+# File Storage
+NODE_ENV=development # Use local storage in dev
+UPLOAD_DIR=./uploads # Local directory for dev
+
+# Integrations
+DAT_API_KEY=
+TRUCKSTOP_API_KEY=
+TRUCKER_TOOLS_API_KEY=
+MACROPOINT_API_KEY=
+HIGHWAY_API_KEY=
+GOOGLE_MAPS_API_KEY=
+```
+
+## File Upload Handling
+
+```typescript
+// ✅ CORRECT - Environment-based storage
+const storage =
+  process.env.NODE_ENV === "production" ? s3Storage : localStorage;
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowed = [".pdf", ".jpg", ".png", ".doc", ".docx"];
+    const ext = path.extname(file.originalname);
+    cb(null, allowed.includes(ext));
+  },
+});
+```
+
+## Error Handling
+
+### Global Error Handler
+
+```typescript
+// ✅ CORRECT - Centralized error handling
+export class AppError extends Error {
+  constructor(
+    public message: string,
+    public statusCode: number = 500,
+    public code?: string
+  ) {
+    super(message);
+  }
+}
+
+// In middleware
+export const errorHandler = (err: Error, req, res, next) => {
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({
+      success: false,
+      error: {
+        code: err.code,
+        message: err.message,
+      },
+    });
+  }
+
+  // Log unexpected errors
+  logger.error(err);
+
+  res.status(500).json({
+    success: false,
+    error: {
+      code: "INTERNAL_ERROR",
+      message: "Something went wrong",
+    },
+  });
+};
+```
+
+## Testing Requirements
+
+### Test Structure
+
+```typescript
+// ✅ CORRECT - Comprehensive test coverage
+describe("LoadService", () => {
+  let loadService: LoadService;
+
+  beforeEach(() => {
+    // Setup
+  });
+
+  describe("create", () => {
+    it("should create a load with valid data", async () => {
+      // Test implementation
+    });
+
+    it("should enforce organization isolation", async () => {
+      // Test multi-tenancy
+    });
+  });
+});
+```
+
+## Performance Rules
+
+### Database Queries
+
+- Use `select` to limit returned fields
+- Use `include` sparingly - prefer separate queries
+- Add indexes for common query patterns
+- Use pagination for list endpoints
+
+### Frontend Performance
+
+- Use React.lazy for code splitting
+- Implement virtual scrolling for long lists
+- Optimize images with next/image
+- Use React Query for caching
+
+## Security Rules
+
+### Input Validation
+
+- Validate ALL user input with Zod
+- Sanitize data before database storage
+- Use parameterized queries (Prisma handles this)
+- Implement rate limiting on all endpoints
+
+### Authentication
+
+- JWT tokens expire in 15 minutes
+- Refresh tokens expire in 7 days
+- Store tokens in httpOnly cookies
+- Implement CSRF protection
+
+## Git Commit Rules
+
+### Commit Message Format
+
+```
+type(scope): subject
+
+body (optional)
+
+footer (optional)
+```
+
+### Types
+
+- feat: New feature
+- fix: Bug fix
+- docs: Documentation
+- style: Code style
+- refactor: Code refactoring
+- test: Tests
+- chore: Maintenance
+
+### Examples
+
+```
+feat(loads): add bulk load import functionality
+fix(auth): resolve JWT refresh token race condition
+docs(api): update carrier endpoint documentation
+```
+
+## Common Mistakes to Avoid
+
+1. **Forgetting organizationId** - ALWAYS filter by tenant
+2. **Custom UI components** - Use shadcn/ui components
+3. **Business logic in controllers** - Keep in services
+4. **Direct Prisma in controllers** - Use repositories
+5. **Missing error handling** - Always handle errors
+6. **No input validation** - Validate everything
+7. **Synchronous heavy operations** - Use queues
+8. **Missing TypeScript types** - Define all types
+9. **Console.log in production** - Use proper logging
+10. **Hardcoded values** - Use environment variables
+
+## Quick Reference
+
+### Import Order
+
+```typescript
+// 1. External packages
+import { NextRequest } from "next/server";
+import { z } from "zod";
+
+// 2. Internal aliases
+import { Button } from "@/components/ui/button";
+import { LoadService } from "@/services/load.service";
+
+// 3. Relative imports
+import { formatCurrency } from "../utils/format";
+
+// 4. Types
+import type { Load, Carrier } from "@/types";
+```
+
+### File Naming
+
+- Components: PascalCase (LoadForm.tsx)
+- Utilities: camelCase (formatDate.ts)
+- Types: PascalCase (Load.ts)
+- Routes: kebab-case (load-details/page.tsx)
+
+### CSS Classes
+
+```tsx
+// ✅ CORRECT - Tailwind classes only
+<Button className="w-full mt-4" variant="outline">
+  Save Load
+</Button>
+
+// ❌ WRONG - Custom styles
+<Button style={{ width: '100%', marginTop: '16px' }}>
+  Save Load
+</Button>
+```
+
+Remember: When in doubt, check the existing code patterns and maintain consistency!

@@ -1,0 +1,46 @@
+import { Router } from "express";
+import {
+  TwoFactorController,
+  setup2FASchema,
+  enable2FASchema,
+  disable2FASchema,
+  verify2FASchema,
+} from "../controllers/two-factor.controller.js";
+import { authenticate } from "../middleware/auth.middleware.js";
+import { validateRequest } from "../middleware/validation.middleware.js";
+
+const router = Router();
+const twoFactorController = new TwoFactorController();
+
+// All 2FA routes require authentication
+router.use(authenticate);
+
+// Setup 2FA - Generate QR code
+router.post(
+  "/setup",
+  validateRequest(setup2FASchema),
+  twoFactorController.setup
+);
+
+// Enable 2FA - Verify first token
+router.post(
+  "/enable",
+  validateRequest(enable2FASchema),
+  twoFactorController.enable
+);
+
+// Disable 2FA
+router.post(
+  "/disable",
+  validateRequest(disable2FASchema),
+  twoFactorController.disable
+);
+
+// Verify 2FA token
+router.post(
+  "/verify",
+  validateRequest(verify2FASchema),
+  twoFactorController.verify
+);
+
+export default router;

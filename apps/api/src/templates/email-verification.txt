@@ -1,0 +1,14 @@
+Verify Your Email Address
+
+Hi {{userName}},
+
+Thank you for registering with LogicorpTMS! To complete your account setup, please verify your email address by clicking the link below:
+
+{{verificationUrl}}
+
+⏰ IMPORTANT: This verification link will expire in 24 hours for security reasons.
+
+If you didn't create an account with LogicorpTMS, you can safely ignore this email.
+
+Best regards,
+The LogicorpTMS Team

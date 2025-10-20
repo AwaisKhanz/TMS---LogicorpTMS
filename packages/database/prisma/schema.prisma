@@ -1,0 +1,606 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ORGANIZATIONS ====================
+model Organization {
+  id                String   @id @default(cuid())
+  name              String
+  slug              String   @unique
+  logo              String?
+  website           String?
+  
+  // Settings
+  settings          Json     @default("{}")
+  documentNumbering Json     @default("{}")
+  
+  // Billing
+  billingEmail      String?
+  plan              String   @default("trial")
+  planExpiresAt     DateTime?
+  
+  // Status
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  users             User[]
+  loads             Load[]
+  carriers          Carrier[]
+  customers         Customer[]
+  invoices          Invoice[]
+  documents         Document[]
+  auditLogs         AuditLog[]
+
+  @@map("organizations")
+}
+
+// ==================== USERS & AUTH ====================
+model User {
+  id               String    @id @default(cuid())
+  organizationId   String
+  email            String    @unique
+  passwordHash     String
+  
+  // Profile
+  firstName        String
+  lastName         String
+  phone            String?
+  avatar           String?
+  
+  // Auth
+  emailVerified    Boolean   @default(false)
+  emailVerifiedAt  DateTime?
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret  String?
+  
+  // Status
+  isActive         Boolean   @default(true)
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  // Relations
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  roles            UserRole[]
+  sessions         Session[]
+  auditLogs        AuditLog[]
+  createdLoads     Load[]       @relation("CreatedLoads")
+  assignedLoads    Load[]       @relation("AssignedLoads")
+  passwordResets   PasswordReset[]
+  emailVerifications EmailVerification[]
+  
+  @@index([organizationId])
+  @@index([email])
+  @@map("users")
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String?
+  permissions Permission[]
+  users       UserRole[]
+  isSystem    Boolean      @default(false)
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  resource    String
+  action      String
+  roles       Role[]
+  
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+model UserRole {
+  userId  String
+  roleId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role    Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  refreshToken String   @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([token])
+  @@index([refreshToken])
+  @@map("sessions")
+}
+
+// ==================== LOADS ====================
+model Load {
+  id              String      @id @default(cuid())
+  organizationId  String
+  loadNumber      String
+  referenceNumber String?
+  status          LoadStatus  @default(QUOTE)
+  
+  // Customer & Carrier
+  customerId      String
+  carrierId       String?
+  
+  // Locations
+  shipperName     String
+  shipperAddress  Json
+  shipperPhone    String
+  shipperEmail    String?
+  pickupDate      DateTime
+  pickupStart     String
+  pickupEnd       String
+  
+  consigneeName   String
+  consigneeAddress Json
+  consigneePhone  String
+  consigneeEmail  String?
+  deliveryDate    DateTime
+  deliveryStart   String
+  deliveryEnd     String
+  
+  // Load Details
+  commodity       String
+  weight          Int
+  pieces          Int?
+  dimensions      Json?
+  equipmentType   EquipmentType
+  loadType        LoadType    @default(FULL_TRUCK)
+  
+  // Rates & Costs
+  customerRate    Decimal     @db.Decimal(12, 2)
+  carrierRate     Decimal?    @db.Decimal(12, 2)
+  margin          Decimal?    @db.Decimal(12, 2)
+  
+  // Additional Costs
+  accessorials    Json        @default("[]")
+  
+  // Tracking
+  currentLocation Json?
+  eta             DateTime?
+  trackingMethod  String?
+  
+  // Instructions
+  pickupNotes     String?
+  deliveryNotes   String?
+  internalNotes   String?
+  
+  // Status Timestamps
+  bookedAt        DateTime?
+  dispatchedAt    DateTime?
+  pickedUpAt      DateTime?
+  deliveredAt     DateTime?
+  invoicedAt      DateTime?
+  paidAt          DateTime?
+  
+  // Metadata
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  createdBy       String
+  assignedTo      String?
+  deletedAt       DateTime?
+  
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  customer        Customer     @relation(fields: [customerId], references: [id])
+  carrier         Carrier?     @relation(fields: [carrierId], references: [id])
+  creator         User         @relation("CreatedLoads", fields: [createdBy], references: [id])
+  assignee        User?        @relation("AssignedLoads", fields: [assignedTo], references: [id])
+  events          LoadEvent[]
+  invoice         InvoiceLineItem?
+  // Note: Documents use polymorphic relationship - query with entityType='LOAD' and entityId
+  
+  @@unique([organizationId, loadNumber])
+  @@index([organizationId, status])
+  @@index([organizationId, pickupDate])
+  @@index([organizationId, customerId])
+  @@index([organizationId, carrierId])
+  @@map("loads")
+}
+
+model LoadEvent {
+  id             String   @id @default(cuid())
+  loadId         String
+  eventType      String
+  eventData      Json
+  createdAt      DateTime @default(now())
+  createdBy      String?
+  
+  load           Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+
+  @@map("load_events")
+}
+
+// ==================== CARRIERS ====================
+model Carrier {
+  id              String    @id @default(cuid())
+  organizationId  String
+  
+  // Identification
+  mcNumber        String
+  dotNumber       String?
+  scac            String?
+  
+  // Company Info
+  companyName     String
+  dba             String?
+  ein             String?
+  
+  // Contact
+  email           String
+  phone           String
+  fax             String?
+  address         Json
+  
+  // Primary Contact
+  contactName     String
+  contactPhone    String
+  contactEmail    String
+  
+  // Compliance
+  authorityStatus String    @default("ACTIVE")
+  insuranceExpiry DateTime?
+  insuranceAmount Decimal?  @db.Decimal(12, 2)
+  cargoInsurance  Decimal?  @db.Decimal(12, 2)
+  liabilityInsurance Decimal? @db.Decimal(12, 2)
+  
+  // Safety
+  safetyRating    String?
+  csa             Json?
+  
+  // Financial
+  paymentTerms    String    @default("NET30")
+  paymentMethod   String    @default("CHECK")
+  w9OnFile        Boolean   @default(false)
+  factoring       Boolean   @default(false)
+  factoringCompany String?
+  
+  // Performance
+  totalLoads      Int       @default(0)
+  onTimeDelivery  Float     @default(100)
+  rating          Float     @default(5)
+  
+  // Preferences
+  preferredLanes  Json      @default("[]")
+  equipment       String[]  @default([])
+  
+  // Status
+  isActive        Boolean   @default(true)
+  isApproved      Boolean   @default(false)
+  approvedAt      DateTime?
+  approvedBy      String?
+  notes           String?
+  
+  // Metadata
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  loads           Load[]
+  contacts        CarrierContact[]
+  // Note: Documents use polymorphic relationship - query with entityType='CARRIER' and entityId
+  
+  @@unique([organizationId, mcNumber])
+  @@index([organizationId, isActive])
+  @@index([organizationId, companyName])
+  @@map("carriers")
+}
+
+model CarrierContact {
+  id         String   @id @default(cuid())
+  carrierId  String
+  name       String
+  title      String?
+  email      String
+  phone      String
+  isPrimary  Boolean  @default(false)
+  
+  carrier    Carrier  @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+  
+  @@index([carrierId])
+  @@map("carrier_contacts")
+}
+
+// ==================== CUSTOMERS ====================
+model Customer {
+  id              String    @id @default(cuid())
+  organizationId  String
+  
+  // Company Info
+  companyName     String
+  dba             String?
+  industry        String?
+  website         String?
+  ein             String?
+  
+  // Billing
+  billingAddress  Json
+  billingEmail    String
+  billingPhone    String
+  
+  // Credit
+  creditLimit     Decimal   @default(0) @db.Decimal(12, 2)
+  creditUsed      Decimal   @default(0) @db.Decimal(12, 2)
+  paymentTerms    String    @default("NET30")
+  
+  // Stats
+  totalRevenue    Decimal   @default(0) @db.Decimal(12, 2)
+  totalLoads      Int       @default(0)
+  averageMargin   Float     @default(0)
+  
+  // Preferences
+  preferredCarriers Json    @default("[]")
+  equipmentTypes    String[] @default([])
+  
+  // Status
+  isActive        Boolean   @default(true)
+  notes           String?
+  
+  // Metadata
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  loads           Load[]
+  invoices        Invoice[]
+  contacts        CustomerContact[]
+  // Note: Documents use polymorphic relationship - query with entityType='CUSTOMER' and entityId
+  
+  @@unique([organizationId, companyName])
+  @@index([organizationId, isActive])
+  @@map("customers")
+}
+
+model CustomerContact {
+  id         String   @id @default(cuid())
+  customerId String
+  name       String
+  title      String?
+  email      String
+  phone      String
+  isPrimary  Boolean  @default(false)
+  
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  @@index([customerId])
+  @@map("customer_contacts")
+}
+
+// ==================== INVOICES ====================
+model Invoice {
+  id              String    @id @default(cuid())
+  organizationId  String
+  invoiceNumber   String
+  customerId      String
+  
+  // Dates
+  invoiceDate     DateTime  @default(now())
+  dueDate         DateTime
+  
+  // Amounts
+  subtotal        Decimal   @db.Decimal(12, 2)
+  tax             Decimal   @default(0) @db.Decimal(12, 2)
+  discount        Decimal   @default(0) @db.Decimal(12, 2)
+  total           Decimal   @db.Decimal(12, 2)
+  
+  // Payment
+  status          InvoiceStatus @default(DRAFT)
+  paidAmount      Decimal   @default(0) @db.Decimal(12, 2)
+  paymentMethod   String?
+  paymentDate     DateTime?
+  paymentReference String?
+  
+  // Email Tracking
+  sentAt          DateTime?
+  sentTo          String[]  @default([])
+  viewedAt        DateTime?
+  remindersSent   Int       @default(0)
+  lastReminderAt  DateTime?
+  
+  // Metadata
+  notes           String?
+  terms           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       String
+  
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  customer        Customer     @relation(fields: [customerId], references: [id])
+  lineItems       InvoiceLineItem[]
+  
+  @@unique([organizationId, invoiceNumber])
+  @@index([organizationId, status])
+  @@index([organizationId, customerId])
+  @@map("invoices")
+}
+
+model InvoiceLineItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  loadId      String?  @unique
+  description String
+  quantity    Int      @default(1)
+  rate        Decimal  @db.Decimal(12, 2)
+  amount      Decimal  @db.Decimal(12, 2)
+  
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  load        Load?    @relation(fields: [loadId], references: [id])
+  
+  @@index([invoiceId])
+  @@map("invoice_line_items")
+}
+
+// ==================== DOCUMENTS ====================
+model Document {
+  id              String       @id @default(cuid())
+  organizationId  String
+  
+  // Reference (Polymorphic relationship - handled at application level)
+  entityType      EntityType
+  entityId        String
+  
+  // Document Info
+  type            DocumentType
+  name            String
+  fileUrl         String
+  fileSize        Int
+  mimeType        String
+  
+  // Metadata
+  uploadedAt      DateTime     @default(now())
+  uploadedBy      String
+  expiresAt       DateTime?
+  
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  // Note: entityId is a polymorphic reference, no foreign key constraints
+  // Application will handle joins based on entityType + entityId
+  
+  @@index([organizationId, entityType, entityId])
+  @@map("documents")
+}
+
+// ==================== AUDIT LOGS ====================
+model AuditLog {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  action          String
+  entityType      String
+  entityId        String
+  changes         Json?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+  
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  user            User         @relation(fields: [userId], references: [id])
+  
+  @@index([organizationId, entityType, entityId])
+  @@index([organizationId, userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ==================== ENUMS ====================
+enum LoadStatus {
+  QUOTE
+  BOOKED
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  POD_RECEIVED
+  INVOICED
+  PAID
+  CANCELLED
+}
+
+enum LoadType {
+  FULL_TRUCK
+  LTL
+  PARTIAL
+  EXPEDITED
+}
+
+enum EquipmentType {
+  DRY_VAN
+  REEFER
+  FLATBED
+  STEP_DECK
+  RGN
+  POWER_ONLY
+  HOTSHOT
+  BOX_TRUCK
+  STRAIGHT_TRUCK
+  OTHER
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PAID
+  PARTIAL
+  OVERDUE
+  VOID
+}
+
+enum EntityType {
+  LOAD
+  CARRIER
+  CUSTOMER
+  INVOICE
+  USER
+}
+
+enum DocumentType {
+  RATE_CONFIRMATION
+  BOL
+  POD
+  INVOICE
+  W9
+  INSURANCE
+  AUTHORITY
+  CONTRACT
+  OTHER
+}
+
+// ==================== PASSWORD RESET ====================
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([expiresAt])
+  @@map("password_resets")
+}
+
+// ==================== EMAIL VERIFICATION ====================
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([expiresAt])
+  @@map("email_verifications")
+}
+

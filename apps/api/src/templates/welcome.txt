@@ -1,0 +1,19 @@
+Welcome to LogicorpTMS!
+
+Hi {{userName}},
+
+Welcome to LogicorpTMS! Your account has been successfully created for {{organizationName}}.
+
+You can now access your dashboard and start managing your transportation operations:
+
+📦 Load Management - Track shipments in real-time
+🚛 Carrier Network - Build trusted partnerships  
+🔒 Secure Platform - Multi-tenant isolation
+📊 Analytics - Data-driven insights
+
+Access your dashboard: {{dashboardUrl}}
+
+If you have any questions or need assistance, please don't hesitate to contact our support team.
+
+Best regards,
+The LogicorpTMS Team
