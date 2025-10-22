@@ -1,6 +1,7 @@
 # TMS Environment Configuration Guide
 
 ## Overview
+
 This guide provides detailed instructions for setting up and configuring the TMS platform across different environments (development, staging, production).
 
 ---
@@ -84,7 +85,7 @@ CORS_ORIGIN=http://localhost:3000,http://localhost:3001
 # AWS S3 Configuration
 AWS_ACCESS_KEY_ID=your_aws_access_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-AWS_S3_BUCKET=tms-dev-bucket
+AWS_S3_BUCKET=tms-dev-bucket-123456789012
 AWS_S3_REGION=us-east-1
 AWS_S3_ENDPOINT=https://s3.amazonaws.com # Optional for S3-compatible services
 
@@ -320,6 +321,7 @@ sudo systemctl start redis-server
 4. Update environment variables
 
 **S3 Bucket Policy:**
+
 ```json
 {
   "Version": "2012-10-17",
@@ -329,13 +331,14 @@ sudo systemctl start redis-server
       "Effect": "Allow",
       "Principal": "*",
       "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::tms-dev-bucket/public/*"
+      "Resource": "arn:aws:s3:::tms-dev-bucket-123456789012/public/*"
     }
   ]
 }
 ```
 
 **CORS Configuration:**
+
 ```json
 [
   {
@@ -364,6 +367,7 @@ sudo systemctl start redis-server
 5. Create API key with restrictions
 
 **API Key Restrictions:**
+
 - HTTP referrers: `localhost:3000/*`, `*.yourdomain.com/*`
 - API restrictions: Maps JavaScript API, Places API, Distance Matrix API
 
@@ -377,47 +381,40 @@ Create `scripts/validate-env.js`:
 
 ```javascript
 const required = {
-  common: [
-    'NODE_ENV',
-    'DATABASE_URL',
-    'JWT_SECRET',
-    'JWT_REFRESH_SECRET'
-  ],
-  development: [
-    'UPLOAD_DIR'
-  ],
+  common: ["NODE_ENV", "DATABASE_URL", "JWT_SECRET", "JWT_REFRESH_SECRET"],
+  development: ["UPLOAD_DIR"],
   production: [
-    'AWS_ACCESS_KEY_ID',
-    'AWS_SECRET_ACCESS_KEY',
-    'AWS_S3_BUCKET',
-    'SENDGRID_API_KEY',
-    'SENTRY_DSN'
-  ]
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_S3_BUCKET",
+    "SENDGRID_API_KEY",
+    "SENTRY_DSN",
+  ],
 };
 
 function validateEnv() {
-  const env = process.env.NODE_ENV || 'development';
+  const env = process.env.NODE_ENV || "development";
   const missing = [];
 
   // Check common variables
-  required.common.forEach(key => {
+  required.common.forEach((key) => {
     if (!process.env[key]) missing.push(key);
   });
 
   // Check environment-specific variables
   if (required[env]) {
-    required[env].forEach(key => {
+    required[env].forEach((key) => {
       if (!process.env[key]) missing.push(key);
     });
   }
 
   if (missing.length > 0) {
-    console.error('Missing required environment variables:');
-    missing.forEach(key => console.error(`  - ${key}`));
+    console.error("Missing required environment variables:");
+    missing.forEach((key) => console.error(`  - ${key}`));
     process.exit(1);
   }
 
-  console.log('✅ Environment variables validated successfully');
+  console.log("✅ Environment variables validated successfully");
 }
 
 validateEnv();
@@ -475,25 +472,31 @@ openssl rand -hex 32     # For ENCRYPTION_KEY
 ### Common Issues
 
 1. **Database Connection Error**
+
    ```
    Error: ECONNREFUSED 127.0.0.1:5432
    ```
+
    - Check PostgreSQL is running
    - Verify DATABASE_URL format
    - Check firewall settings
 
 2. **Redis Connection Error**
+
    ```
    Error: Redis connection to localhost:6379 failed
    ```
+
    - Check Redis is running
    - Verify REDIS_URL
    - Check Redis password if set
 
 3. **S3 Upload Error**
+
    ```
    Error: Access Denied
    ```
+
    - Verify AWS credentials
    - Check S3 bucket permissions
    - Ensure bucket exists in correct region
@@ -502,6 +505,7 @@ openssl rand -hex 32     # For ENCRYPTION_KEY
    ```
    Error: Unauthorized
    ```
+
    - Verify SendGrid API key
    - Check sender domain verification
    - Ensure API key has correct permissions
@@ -581,11 +585,11 @@ JWT_SECRET=${{secret}}
 Ensure health endpoint for Railway:
 
 ```typescript
-app.get('/health', (req, res) => {
+app.get("/health", (req, res) => {
   res.json({
-    status: 'healthy',
+    status: "healthy",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV,
   });
 });
 ```

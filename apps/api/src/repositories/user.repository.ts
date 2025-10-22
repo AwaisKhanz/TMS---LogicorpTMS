@@ -1,4 +1,4 @@
-import type { User, Prisma } from "@tms/database";
+import type { User, Prisma } from "@prisma/client";
 import { BaseRepository } from "./base.repository.js";
 
 // Type for User with included relations

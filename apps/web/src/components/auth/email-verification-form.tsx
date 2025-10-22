@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { CheckCircle, Mail, ArrowLeft, RefreshCw } from "lucide-react";
@@ -20,40 +20,46 @@ export function EmailVerificationForm() {
 
   const token = searchParams.get("token");
 
+  const verifyEmail = useCallback(
+    async (verificationToken: string) => {
+      setIsVerifying(true);
+
+      try {
+        await apiClient.post("/auth/verify-email", {
+          token: verificationToken,
+        });
+
+        setIsVerified(true);
+        toast.success("Email verified successfully!", {
+          description: "Your account is now fully activated.",
+        });
+
+        // Redirect to dashboard after 2 seconds
+        setTimeout(() => {
+          router.push("/");
+        }, 2000);
+      } catch (error) {
+        const apiError = error as {
+          response?: { data?: { error?: { message?: string } } };
+        };
+        toast.error("Verification failed", {
+          description:
+            apiError.response?.data?.error?.message ||
+            "Invalid or expired verification link.",
+        });
+      } finally {
+        setIsVerifying(false);
+      }
+    },
+    [router]
+  );
+
   useEffect(() => {
     // If token is present, verify automatically
     if (token) {
       verifyEmail(token);
     }
-  }, [token]);
-
-  const verifyEmail = async (verificationToken: string) => {
-    setIsVerifying(true);
-
-    try {
-      await apiClient.post("/auth/verify-email", {
-        token: verificationToken,
-      });
-
-      setIsVerified(true);
-      toast.success("Email verified successfully!", {
-        description: "Your account is now fully activated.",
-      });
-
-      // Redirect to dashboard after 2 seconds
-      setTimeout(() => {
-        router.push("/");
-      }, 2000);
-    } catch (error: any) {
-      toast.error("Verification failed", {
-        description:
-          error.response?.data?.error?.message ||
-          "Invalid or expired verification link.",
-      });
-    } finally {
-      setIsVerifying(false);
-    }
-  };
+  }, [token, verifyEmail]);
 
   const resendVerification = async () => {
     if (!email) {
@@ -71,10 +77,13 @@ export function EmailVerificationForm() {
       toast.success("Verification email sent!", {
         description: "Please check your inbox for the verification link.",
       });
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = error as {
+        response?: { data?: { error?: { message?: string } } };
+      };
       toast.error("Failed to resend verification", {
         description:
-          error.response?.data?.error?.message || "Please try again.",
+          apiError.response?.data?.error?.message || "Please try again.",
       });
     } finally {
       setIsResending(false);
@@ -135,15 +144,15 @@ export function EmailVerificationForm() {
             </div>
             <h3 className="text-lg font-semibold">Check Your Email</h3>
             <p className="text-sm text-muted-foreground">
-              We've sent a verification link to your email address. Click the
-              link to verify your account.
+              We&apos;ve sent a verification link to your email address. Click
+              the link to verify your account.
             </p>
           </div>
 
           <div className="space-y-4">
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-4">
-                Didn't receive the email? Check your spam folder or resend
+                Didn&apos;t receive the email? Check your spam folder or resend
                 verification.
               </p>
             </div>

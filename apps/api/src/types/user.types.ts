@@ -1,21 +1,12 @@
-// User DTOs
-export interface CreateUserDto {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  roleIds?: string[];
-}
-
-export interface UpdateUserDto {
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  isActive?: boolean;
-}
-
-export interface UserFilters {
-  isActive?: boolean;
-  search?: string;
-}
+// Re-export user types from shared types package
+export type {
+  User,
+  CreateUserRequest as CreateUserDto,
+  UpdateUserRequest as UpdateUserDto,
+  UserFilters,
+  CreateUserResponse,
+  UpdateUserResponse,
+  GetUserResponse,
+  GetUsersResponse,
+  DeleteUserResponse,
+} from "@tms/shared-types";

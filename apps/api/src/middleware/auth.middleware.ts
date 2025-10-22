@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../utils/jwt.util.js";
 import { AuthenticationError } from "../utils/errors.util.js";
 import { extractToken } from "../utils/cookie.util.js";
+import prisma from "../config/database.js";
 
 export const authenticate = async (
   req: Request,
@@ -9,7 +10,7 @@ export const authenticate = async (
   next: NextFunction
 ) => {
   try {
-    // Extract token from cookie or Authorization header
+    // Extract token from Authorization header
     const tokenData = extractToken(req);
 
     if (!tokenData) {
@@ -19,6 +20,12 @@ export const authenticate = async (
     // Verify token
     const payload = verifyAccessToken(tokenData.token);
 
+    // Get user from database to check email verification status
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { emailVerified: true },
+    });
+
     // Attach auth data to request
     req.auth = {
       userId: payload.sub,
@@ -26,6 +33,7 @@ export const authenticate = async (
       email: payload.email,
       role: payload.role,
       permissions: payload.permissions,
+      emailVerified: user?.emailVerified ?? false,
     };
 
     next();
@@ -51,6 +59,9 @@ export const optionalAuthenticate = async (
         userId: payload.sub,
         organizationId: payload.org,
         email: payload.email,
+        role: payload.role,
+        permissions: payload.permissions,
+        emailVerified: false, // Default to false for optional auth
       };
     }
 

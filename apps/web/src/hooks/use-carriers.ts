@@ -1,0 +1,253 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
+import { toast } from "sonner";
+import type {
+  Carrier,
+  CarrierDocument,
+  CarrierContact,
+  CreateCarrierRequest,
+  UpdateCarrierRequest,
+  CreateCarrierContactRequest,
+  GetCarriersResponse,
+  GetCarrierLoadsResponse,
+  CarrierPerformance,
+} from "@/types/carrier.types";
+import type { ApiErrorException } from "@/types/api.types";
+
+
+export function useCarriers(filters?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ["carriers", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            params.append(key, String(value));
+          }
+        });
+      }
+      const response = await apiClient.get<GetCarriersResponse>(`/carriers?${params.toString()}`);
+      return response;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+export function useCarrierOptions() {
+  const { data, isLoading, error } = useCarriers();
+
+  return {
+    carriers:
+      data?.carriers?.map((carrier) => ({
+        id: carrier.id,
+        name: carrier.companyName,
+        mcNumber: carrier.mcNumber,
+        value: carrier.id,
+        label: `${carrier.companyName} (${carrier.mcNumber})`,
+      })) || [],
+    isLoading,
+    error,
+  };
+}
+
+export function useCarrierDocuments(carrierId: string) {
+  return useQuery({
+    queryKey: ["carrier-documents", carrierId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        success: boolean;
+        data: CarrierDocument[];
+      }>(`/documents?entityType=CARRIER&entityId=${carrierId}`);
+      return data;
+    },
+    enabled: !!carrierId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// Get single carrier
+export function useCarrier(id: string | undefined) {
+  return useQuery<Carrier>({
+    queryKey: ["carriers", id],
+    queryFn: async () => {
+      const response = await apiClient.get<{success: boolean; data: Carrier}>(`/carriers/${id}`);
+      return response.data;
+    },
+    enabled: !!id,
+    staleTime: 60 * 1000,
+  });
+}
+
+// Create carrier
+export function useCreateCarrier() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateCarrierRequest) => {
+      const response = await apiClient.post<{success: boolean; data: Carrier}>("/carriers", data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["carriers"] });
+      toast.success("Carrier created successfully");
+    },
+    onError: (error) => {
+      const apiError = error as ApiErrorException;
+      toast.error(
+        apiError.response?.data?.error?.message || "Failed to create carrier"
+      );
+    },
+  });
+}
+
+// Update carrier
+export function useUpdateCarrier() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateCarrierRequest }) => {
+      const response = await apiClient.put<{success: boolean; data: Carrier}>(`/carriers/${id}`, data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["carriers"] });
+      queryClient.invalidateQueries({ queryKey: ["carriers", data.id] });
+      toast.success("Carrier updated successfully");
+    },
+    onError: (error) => {
+      const apiError = error as ApiErrorException;
+      toast.error(
+        apiError.response?.data?.error?.message || "Failed to update carrier"
+      );
+    },
+  });
+}
+
+// Delete carrier
+export function useDeleteCarrier() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/carriers/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["carriers"] });
+      toast.success("Carrier deleted successfully");
+    },
+    onError: (error) => {
+      const apiError = error as ApiErrorException;
+      toast.error(
+        apiError.response?.data?.error?.message || "Failed to delete carrier"
+      );
+    },
+  });
+}
+
+// Approve carrier
+export function useApproveCarrier() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiClient.post<{success: boolean; data: Carrier}>(`/carriers/${id}/approve`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["carriers"] });
+      queryClient.invalidateQueries({ queryKey: ["carriers", data.id] });
+      toast.success("Carrier approved successfully");
+    },
+    onError: (error) => {
+      const apiError = error as ApiErrorException;
+      toast.error(
+        apiError.response?.data?.error?.message || "Failed to approve carrier"
+      );
+    },
+  });
+}
+
+// Carrier contacts
+export function useCarrierContacts(carrierId: string) {
+  return useQuery({
+    queryKey: ["carrier-contacts", carrierId],
+    queryFn: async () => {
+      const response = await apiClient.get<{success: boolean; data: CarrierContact[]}>(`/carriers/${carrierId}/contacts`);
+      return response.data;
+    },
+    enabled: !!carrierId,
+    staleTime: 60 * 1000,
+  });
+}
+
+// Add carrier contact
+export function useAddCarrierContact() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ carrierId, data }: { carrierId: string; data: CreateCarrierContactRequest }) => {
+      const response = await apiClient.post<{success: boolean; data: CarrierContact}>(`/carriers/${carrierId}/contacts`, data);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["carrier-contacts", variables.carrierId] });
+      toast.success("Contact added successfully");
+    },
+    onError: (error) => {
+      const apiError = error as ApiErrorException;
+      toast.error(
+        apiError.response?.data?.error?.message || "Failed to add contact"
+      );
+    },
+  });
+}
+
+// Delete carrier contact
+export function useDeleteCarrierContact() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ carrierId, contactId }: { carrierId: string; contactId: string }) => {
+      await apiClient.delete(`/carriers/${carrierId}/contacts/${contactId}`);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["carrier-contacts", variables.carrierId] });
+      toast.success("Contact deleted successfully");
+    },
+    onError: (error) => {
+      const apiError = error as ApiErrorException;
+      toast.error(
+        apiError.response?.data?.error?.message || "Failed to delete contact"
+      );
+    },
+  });
+}
+
+// Carrier loads
+export function useCarrierLoads(carrierId: string) {
+  return useQuery({
+    queryKey: ["carrier-loads", carrierId],
+    queryFn: async () => {
+      const response = await apiClient.get<GetCarrierLoadsResponse>(`/carriers/${carrierId}/loads`);
+      return response;
+    },
+    enabled: !!carrierId,
+    staleTime: 60 * 1000,
+  });
+}
+
+// Carrier performance
+export function useCarrierPerformance(carrierId: string) {
+  return useQuery({
+    queryKey: ["carrier-performance", carrierId],
+    queryFn: async () => {
+      const response = await apiClient.get<{success: boolean; data: CarrierPerformance}>(`/carriers/${carrierId}/performance`);
+      return response.data;
+    },
+    enabled: !!carrierId,
+    staleTime: 5 * 60 * 1000,
+  });
+}

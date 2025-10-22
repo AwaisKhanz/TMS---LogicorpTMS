@@ -1,13 +1,10 @@
 import jwt, { SignOptions } from "jsonwebtoken";
 import { AuthenticationError } from "./errors.util.js";
 
-const JWT_SECRET =
-  process.env.JWT_SECRET || "your-super-secret-jwt-key-minimum-32-chars";
-const JWT_REFRESH_SECRET =
-  process.env.JWT_REFRESH_SECRET ||
-  "your-refresh-token-secret-minimum-32-chars";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "15m";
-const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
+import { config } from "../config/env.js";
+
+const JWT_SECRET = config.jwt.secret;
+const JWT_EXPIRES_IN = config.jwt.expiresIn;
 
 export interface JWTPayload {
   sub: string; // User ID
@@ -27,14 +24,6 @@ export const generateAccessToken = (
   } as SignOptions);
 };
 
-export const generateRefreshToken = (
-  payload: Omit<JWTPayload, "iat" | "exp">
-): string => {
-  return jwt.sign(payload, JWT_REFRESH_SECRET, {
-    expiresIn: JWT_REFRESH_EXPIRES_IN,
-  } as SignOptions);
-};
-
 export const verifyAccessToken = (token: string): JWTPayload => {
   try {
     return jwt.verify(token, JWT_SECRET) as JWTPayload;
@@ -46,19 +35,5 @@ export const verifyAccessToken = (token: string): JWTPayload => {
       throw new AuthenticationError("Invalid token");
     }
     throw new AuthenticationError("Token verification failed");
-  }
-};
-
-export const verifyRefreshToken = (token: string): JWTPayload => {
-  try {
-    return jwt.verify(token, JWT_REFRESH_SECRET) as JWTPayload;
-  } catch (error) {
-    if (error instanceof jwt.TokenExpiredError) {
-      throw new AuthenticationError("Refresh token expired");
-    }
-    if (error instanceof jwt.JsonWebTokenError) {
-      throw new AuthenticationError("Invalid refresh token");
-    }
-    throw new AuthenticationError("Refresh token verification failed");
   }
 };

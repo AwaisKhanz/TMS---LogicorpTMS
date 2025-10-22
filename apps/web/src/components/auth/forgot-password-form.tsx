@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Mail, Loader2, CheckCircle, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,10 +47,13 @@ export function ForgotPasswordForm() {
         description:
           "Check your email for instructions to reset your password.",
       });
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = error as {
+        response?: { data?: { error?: { message?: string } } };
+      };
       toast.error("Failed to send reset link", {
         description:
-          error.response?.data?.error?.message || "Please try again.",
+          apiError.response?.data?.error?.message || "Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -69,7 +71,7 @@ export function ForgotPasswordForm() {
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Check your email</h3>
               <p className="text-sm text-muted-foreground">
-                We've sent a password reset link to{" "}
+                We&apos;ve sent a password reset link to{" "}
                 <span className="font-medium">{form.getValues("email")}</span>
               </p>
             </div>

@@ -28,7 +28,7 @@ export const config = {
     refreshSecret:
       process.env.JWT_REFRESH_SECRET ||
       "your-refresh-token-secret-minimum-32-chars",
-    expiresIn: process.env.JWT_EXPIRES_IN || "15m",
+    expiresIn: process.env.JWT_EXPIRES_IN || "24h",
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
   },
 
@@ -39,6 +39,21 @@ export const config = {
   upload: {
     dir: process.env.UPLOAD_DIR || "./uploads",
     maxFileSize: parseInt(process.env.MAX_FILE_SIZE || "10485760", 10), // 10MB
+  },
+
+  storage: {
+    type: process.env.STORAGE_TYPE || "local", // "local" or "s3"
+    local: {
+      uploadDir: process.env.UPLOAD_DIR || "./uploads",
+      publicUrl: process.env.PUBLIC_URL || "http://localhost:4000/uploads",
+    },
+    s3: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      region: process.env.AWS_S3_REGION,
+      bucket: process.env.AWS_S3_BUCKET,
+      publicUrl: process.env.AWS_S3_PUBLIC_URL, // Optional: CloudFront URL
+    },
   },
 
   logging: {

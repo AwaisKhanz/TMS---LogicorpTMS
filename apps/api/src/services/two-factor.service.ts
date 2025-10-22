@@ -3,6 +3,7 @@ import qrcode from "qrcode";
 import prisma from "../config/database.js";
 import { AuthenticationError } from "../utils/errors.util.js";
 import { logger } from "../config/logger.js";
+import { auditService } from "./audit.service.js";
 
 export class TwoFactorService {
   /**
@@ -53,6 +54,12 @@ export class TwoFactorService {
     const isValid = this.verifyToken(user.twoFactorSecret, token);
 
     if (!isValid) {
+      // Audit log - Failed 2FA verification
+      await auditService.logAuthentication(
+        userId,
+        user.organizationId,
+        "2FA_FAILED"
+      );
       throw new AuthenticationError("Invalid 2FA token");
     }
 
@@ -65,6 +72,13 @@ export class TwoFactorService {
     });
 
     logger.info(`2FA enabled for user ${userId}`);
+
+    // Audit log - 2FA enabled
+    await auditService.logAuthentication(
+      userId,
+      user.organizationId,
+      "2FA_ENABLED"
+    );
 
     return { message: "2FA enabled successfully" };
   }
@@ -85,19 +99,40 @@ export class TwoFactorService {
     const isValid = this.verifyToken(user.twoFactorSecret, token);
 
     if (!isValid) {
+      // Audit log - Failed 2FA verification
+      await auditService.logAuthentication(
+        userId,
+        user.organizationId,
+        "2FA_FAILED"
+      );
       throw new AuthenticationError("Invalid 2FA token");
     }
 
-    // Disable 2FA
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        twoFactorEnabled: false,
-        twoFactorSecret: null,
-      },
+    // Disable 2FA and invalidate all sessions
+    await prisma.$transaction(async (tx) => {
+      // Disable 2FA
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          twoFactorEnabled: false,
+          twoFactorSecret: null,
+        },
+      });
+
+      // Invalidate all sessions for security
+      await tx.session.deleteMany({
+        where: { userId },
+      });
     });
 
     logger.info(`2FA disabled for user ${userId}`);
+
+    // Audit log - 2FA disabled
+    await auditService.logAuthentication(
+      userId,
+      user.organizationId,
+      "2FA_DISABLED"
+    );
 
     return { message: "2FA disabled successfully" };
   }

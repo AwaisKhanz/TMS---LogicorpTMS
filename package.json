@@ -18,12 +18,15 @@
     "db:studio": "cd packages/database && prisma studio"
   },
   "devDependencies": {
-    "turbo": "^1.11.0",
-    "prettier": "^3.1.0"
+    "prettier": "^3.1.0",
+    "turbo": "^1.11.0"
   },
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1692.0",
+    "dotenv": "^17.2.3"
   }
 }
-

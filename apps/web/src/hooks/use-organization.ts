@@ -1,13 +1,14 @@
 "use client";
 
-import { useAuth } from "./use-auth";
+import { useAuth } from "@/contexts/auth-context";
 
 export function useOrganization() {
-  const { organizationId, organizationName, isLoading } = useAuth();
+  const { organization, isLoading } = useAuth();
 
   return {
-    organizationId,
-    organizationName,
+    organizationId: organization?.id,
+    organizationName: organization?.name,
+    organization,
     isLoading,
   };
 }

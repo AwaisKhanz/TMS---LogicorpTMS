@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@tms/database";
+import type { PrismaClient } from "@prisma/client";
 import prisma from "../config/database.js";
 
 export abstract class BaseRepository<T> {

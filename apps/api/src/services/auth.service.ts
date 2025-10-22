@@ -1,15 +1,11 @@
-import type { User, Organization } from "@tms/database";
+import type { User, Organization } from "@prisma/client";
 import prisma from "../config/database.js";
 import {
   UserRepository,
   UserWithRelations,
 } from "../repositories/user.repository.js";
 import { hashPassword, comparePassword } from "../utils/hash.util.js";
-import {
-  generateAccessToken,
-  generateRefreshToken,
-  verifyRefreshToken,
-} from "../utils/jwt.util.js";
+import { generateAccessToken } from "../utils/jwt.util.js";
 import { AuthenticationError, ConflictError } from "../utils/errors.util.js";
 import { emailService } from "./email.service.js";
 import { emailVerificationService } from "./email-verification.service.js";
@@ -22,6 +18,7 @@ import type {
   ForgotPasswordDto,
   ResetPasswordDto,
 } from "../types/auth.types.js";
+import type { Address } from "../types/common.types.js";
 
 export class AuthService {
   private userRepo: UserRepository;
@@ -41,6 +38,14 @@ export class AuthService {
       throw new ConflictError("User with this email already exists");
     }
 
+    // Check if MC# already exists
+    const existingMC = await prisma.organization.findUnique({
+      where: { mcNumber: data.mcNumber },
+    });
+    if (existingMC) {
+      throw new ConflictError("An organization with this MC# already exists");
+    }
+
     // Hash password
     const hashedPassword = await hashPassword(data.password);
 
@@ -51,6 +56,9 @@ export class AuthService {
         data: {
           name: data.organizationName,
           slug: this.generateSlug(data.organizationName),
+          mcNumber: data.mcNumber,
+          dotNumber: data.dotNumber,
+          address: data.companyAddress,
         },
       });
 
@@ -97,9 +105,6 @@ export class AuthService {
     // Generate tokens
     const tokens = await this.generateTokens(result.user, result.organization);
 
-    // Create session
-    await this.createSession(result.user.id, tokens.refreshToken);
-
     // Send welcome email
     try {
       await emailService.sendWelcomeEmail(
@@ -137,8 +142,17 @@ export class AuthService {
     const { passwordHash, ...userWithoutPassword } = result.user;
 
     return {
-      user: userWithoutPassword,
-      organization: result.organization,
+      user: {
+        ...userWithoutPassword,
+        createdAt: userWithoutPassword.createdAt.toISOString(),
+        updatedAt: userWithoutPassword.updatedAt.toISOString(),
+      },
+      organization: {
+        ...result.organization,
+        createdAt: result.organization.createdAt.toISOString(),
+        updatedAt: result.organization.updatedAt.toISOString(),
+        address: (result.organization.address as Address) || null,
+      },
       tokens,
     };
   }
@@ -181,11 +195,19 @@ export class AuthService {
         // Return response indicating 2FA is required
         const { passwordHash, ...userWithoutPassword } = user;
         return {
-          user: userWithoutPassword,
-          organization: user.organization,
+          user: {
+            ...userWithoutPassword,
+            createdAt: userWithoutPassword.createdAt.toISOString(),
+            updatedAt: userWithoutPassword.updatedAt.toISOString(),
+          },
+          organization: {
+            ...user.organization,
+            createdAt: user.organization.createdAt.toISOString(),
+            updatedAt: user.organization.updatedAt.toISOString(),
+            address: (user.organization.address as Address) || null,
+          },
           tokens: {
             accessToken: "",
-            refreshToken: "",
             expiresIn: 0,
           },
           requires2FA: true,
@@ -206,9 +228,6 @@ export class AuthService {
     // Generate tokens
     const tokens = await this.generateTokens(user, user.organization);
 
-    // Create session
-    await this.createSession(user.id, tokens.refreshToken);
-
     // Update last login
     await this.userRepo.updateLastLogin(user.id);
 
@@ -225,86 +244,24 @@ export class AuthService {
     const { passwordHash, ...userWithoutPassword } = user;
 
     return {
-      user: userWithoutPassword,
-      organization: user.organization,
+      user: {
+        ...userWithoutPassword,
+        createdAt: userWithoutPassword.createdAt.toISOString(),
+        updatedAt: userWithoutPassword.updatedAt.toISOString(),
+      },
+      organization: {
+        ...user.organization,
+        createdAt: user.organization.createdAt.toISOString(),
+        updatedAt: user.organization.updatedAt.toISOString(),
+        address: (user.organization.address as Address) || null,
+      },
       tokens,
     };
   }
 
-  async refreshToken(
-    refreshToken: string
-  ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
-    // Verify refresh token
-    verifyRefreshToken(refreshToken);
-
-    // Find session
-    const session = await prisma.session.findUnique({
-      where: { refreshToken },
-      include: {
-        user: {
-          include: {
-            organization: true,
-          },
-        },
-      },
-    });
-
-    if (!session) {
-      throw new AuthenticationError("Invalid refresh token");
-    }
-
-    // Check if session is expired
-    if (session.expiresAt < new Date()) {
-      await prisma.session.delete({ where: { id: session.id } });
-      throw new AuthenticationError("Session expired");
-    }
-
-    // Generate new tokens
-    const tokens = await this.generateTokens(
-      session.user,
-      session.user.organization
-    );
-
-    // Update session with new refresh token
-    await prisma.session.update({
-      where: { id: session.id },
-      data: {
-        refreshToken: tokens.refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      },
-    });
-
-    // Delete old session
-    await prisma.session.delete({ where: { refreshToken } }).catch(() => {});
-
-    return tokens;
-  }
-
-  async logout(refreshToken: string): Promise<void> {
-    const session = await prisma.session.findUnique({
-      where: { refreshToken },
-      include: {
-        user: {
-          include: {
-            organization: true,
-          },
-        },
-      },
-    });
-
-    if (session) {
-      // Audit log - User logout
-      await auditService.logAuthentication(
-        session.userId,
-        session.user.organizationId,
-        "LOGOUT"
-      );
-
-      // Delete session
-      await prisma.session.delete({
-        where: { refreshToken },
-      });
-    }
+  async logout(userId: string, organizationId: string): Promise<void> {
+    // Audit log - User logout
+    await auditService.logAuthentication(userId, organizationId, "LOGOUT");
   }
 
   async getCurrentUser(userId: string, organizationId: string) {
@@ -317,8 +274,40 @@ export class AuthService {
       throw new AuthenticationError("User not found");
     }
 
+    // Get user's roles and permissions
+    const userWithRoles = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Extract roles and permissions
+    const roles =
+      userWithRoles?.roles.map((userRole) => userRole.role.name) || [];
+    const permissions = new Set<string>();
+    userWithRoles?.roles.forEach((userRole) => {
+      userRole.role.permissions.forEach((permission) => {
+        permissions.add(permission.name);
+      });
+    });
+
     const { passwordHash, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return {
+      ...userWithoutPassword,
+      roles,
+      permissions: Array.from(permissions),
+      createdAt: userWithoutPassword.createdAt.toISOString(),
+      updatedAt: userWithoutPassword.updatedAt.toISOString(),
+    };
   }
 
   private async generateTokens(
@@ -361,30 +350,11 @@ export class AuthService {
     };
 
     const accessToken = generateAccessToken(payload);
-    const refreshToken = generateRefreshToken(payload);
 
     return {
       accessToken,
-      refreshToken,
-      expiresIn: 900, // 15 minutes in seconds
+      expiresIn: 24 * 60 * 60, // 24 hours in seconds
     };
-  }
-
-  private async createSession(userId: string, refreshToken: string) {
-    await prisma.session.create({
-      data: {
-        userId,
-        token: generateAccessToken({
-          sub: userId,
-          org: "",
-          email: "",
-          role: "USER",
-          permissions: [],
-        }), // Temporary token for session
-        refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      },
-    });
   }
 
   private generateSlug(name: string): string {
@@ -470,11 +440,6 @@ export class AuthService {
 
     // Delete all reset tokens for this user
     await prisma.passwordReset.deleteMany({
-      where: { userId: resetRecord.userId },
-    });
-
-    // Delete all sessions for this user (force re-login)
-    await prisma.session.deleteMany({
       where: { userId: resetRecord.userId },
     });
 

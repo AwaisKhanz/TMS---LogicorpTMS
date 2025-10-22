@@ -1,11 +1,11 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
+import { cookieUtils } from "./cookies";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 
 class APIClient {
   private client: AxiosInstance;
-  private csrfToken: string | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -13,24 +13,18 @@ class APIClient {
       headers: {
         "Content-Type": "application/json",
       },
-      withCredentials: true, // Enable sending cookies with requests
     });
 
-    // Request interceptor
+    // Request interceptor - add Authorization header from cookies
     this.client.interceptors.request.use(
       (config) => {
-        // Tokens are sent automatically via HTTP-only cookies
-        // No need to manually add Authorization header
-
-        // Add CSRF token to non-GET requests
-        if (
-          this.csrfToken &&
-          config.method &&
-          !["get", "head", "options"].includes(config.method.toLowerCase())
-        ) {
-          config.headers["X-CSRF-Token"] = this.csrfToken;
+        // Get token from cookies and add to Authorization header
+        if (typeof window !== "undefined") {
+          const token = cookieUtils.getToken();
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
         }
-
         return config;
       },
       (error) => Promise.reject(error)
@@ -38,55 +32,29 @@ class APIClient {
 
     // Response interceptor for error handling
     this.client.interceptors.response.use(
-      (response) => {
-        // Extract and store CSRF token from response headers
-        const csrfToken = response.headers["x-csrf-token"];
-        if (csrfToken) {
-          this.csrfToken = csrfToken;
-        }
-        return response;
-      },
+      (response) => response,
       async (error: AxiosError) => {
         if (error.response?.status === 401) {
-          // Token expired, try to refresh using cookies
-          try {
-            await axios.post(
-              `${API_URL}/auth/refresh`,
-              {},
-              { withCredentials: true } // Send refresh token cookie
-            );
+          const url = error.config?.url || "";
+          const isAuthEndpoint =
+            url.includes("/auth/") || url.includes("/two-factor/");
 
-            // Retry original request (new token is in cookie)
-            if (error.config) {
-              return this.client.request(error.config);
-            }
-          } catch (refreshError) {
-            // Refresh failed, redirect to login
-            if (typeof window !== "undefined") {
-              window.location.href = "/login";
-            }
+          // For auth endpoints, only redirect if it's a token validation failure
+          // (not validation errors like wrong password, missing 2FA, etc.)
+          const isTokenValidationFailure =
+            url.includes("/auth/me") ||
+            url.includes("/auth/refresh") ||
+            !isAuthEndpoint;
+
+          if (isTokenValidationFailure && typeof window !== "undefined") {
+            // Clear invalid token and redirect to login
+            cookieUtils.clearAuth();
+            window.location.href = "/login";
           }
         }
         return Promise.reject(error);
       }
     );
-  }
-
-  /**
-   * Fetch initial CSRF token from the server
-   */
-  async fetchCsrfToken(): Promise<void> {
-    try {
-      // Make a simple GET request to trigger CSRF token generation
-      const response = await this.client.get("/auth/me");
-      const csrfToken = response.headers["x-csrf-token"];
-      if (csrfToken) {
-        this.csrfToken = csrfToken;
-      }
-    } catch (error) {
-      // Ignore errors (user might not be authenticated yet)
-      // CSRF token will be fetched on first authenticated request
-    }
   }
 
   async get<T>(url: string, config?: AxiosRequestConfig) {
@@ -113,6 +81,69 @@ class APIClient {
     const response = await this.client.patch<T>(url, data, config);
     return response.data;
   }
+
+  // Upload with progress tracking
+  async uploadWithProgress<T>(
+    url: string,
+    formData: FormData,
+    onProgress?: (progress: number) => void
+  ) {
+    const response = await this.client.post<T>(url, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const progress = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          onProgress(progress);
+        }
+      },
+    });
+    return response.data;
+  }
+
+  // Download file
+  async downloadFile(url: string, filename: string) {
+    const response = await this.client.get(url, {
+      responseType: "blob",
+    });
+
+    // Create blob link to download
+    const blob = new Blob([response.data]);
+    const link = document.createElement("a");
+    link.href = window.URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(link.href);
+  }
 }
 
 export const apiClient = new APIClient();
+
+// Utility function for extracting error messages
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  const apiError = error as {
+    response?: {
+      data?: {
+        error?: {
+          message?: string;
+        };
+      };
+    };
+    message?: string;
+  };
+
+  return (
+    apiError.response?.data?.error?.message ||
+    apiError.message ||
+    "An unexpected error occurred"
+  );
+}

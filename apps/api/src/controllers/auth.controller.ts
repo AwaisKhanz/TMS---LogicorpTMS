@@ -4,15 +4,9 @@ import { z } from "zod";
 import type {
   RegisterDto,
   LoginDto,
-  RefreshTokenDto,
   ForgotPasswordDto,
   ResetPasswordDto,
 } from "../types/auth.types.js";
-import {
-  setAccessTokenCookie,
-  setRefreshTokenCookie,
-  clearAuthCookies,
-} from "../utils/cookie.util.js";
 
 const authService = new AuthService();
 
@@ -23,6 +17,21 @@ export const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   organizationName: z.string().min(1, "Organization name is required"),
+  mcNumber: z
+    .string()
+    .min(2, "MC# must be at least 2 characters")
+    .regex(/^[A-Za-z0-9]+$/, "MC# must contain only letters and numbers"),
+  dotNumber: z
+    .string()
+    .min(2, "DOT# must be at least 2 characters")
+    .regex(/^[A-Za-z0-9]+$/, "DOT# must contain only letters and numbers"),
+  companyAddress: z.object({
+    street: z.string().min(1, "Street address is required"),
+    city: z.string().min(1, "City is required"),
+    state: z.string().min(2, "State is required"),
+    zip: z.string().min(5, "ZIP code is required"),
+    country: z.string().min(2, "Country is required"),
+  }),
   phone: z.string().optional(),
 }) satisfies z.ZodType<RegisterDto>;
 
@@ -30,10 +39,6 @@ export const loginSchema = z.object({
   email: z.string().email("Invalid email format"),
   password: z.string().min(1, "Password is required"),
 }) satisfies z.ZodType<LoginDto>;
-
-export const refreshTokenSchema = z.object({
-  refreshToken: z.string().min(1, "Refresh token is required"),
-}) satisfies z.ZodType<RefreshTokenDto>;
 
 export class AuthController {
   async register(req: Request, res: Response, next: NextFunction) {
@@ -43,16 +48,21 @@ export class AuthController {
 
       const result = await authService.register(req.body, ipAddress, userAgent);
 
-      // Set HTTP-only cookies
-      setAccessTokenCookie(res, result.tokens.accessToken);
-      setRefreshTokenCookie(res, result.tokens.refreshToken);
+      // Set httpOnly cookies for tokens
+      res.cookie("tms_token", result.tokens.accessToken, {
+        httpOnly: false, // Allow frontend to read the token
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: result.tokens.expiresIn * 1000, // Convert seconds to milliseconds
+        path: "/",
+      });
 
       res.status(201).json({
         success: true,
         data: {
           user: result.user,
           organization: result.organization,
-          // Don't send tokens in response body (they're in cookies)
+          tokens: result.tokens,
         },
       });
     } catch (error) {
@@ -67,37 +77,34 @@ export class AuthController {
 
       const result = await authService.login(req.body, ipAddress, userAgent);
 
-      // Set HTTP-only cookies
-      setAccessTokenCookie(res, result.tokens.accessToken);
-      setRefreshTokenCookie(res, result.tokens.refreshToken);
+      // If 2FA is required, don't return tokens
+      if (result.requires2FA) {
+        res.status(200).json({
+          success: true,
+          data: {
+            user: result.user,
+            organization: result.organization,
+            requires2FA: true,
+          },
+        });
+        return;
+      }
+
+      // Set httpOnly cookies for tokens
+      res.cookie("tms_token", result.tokens.accessToken, {
+        httpOnly: false, // Allow frontend to read the token
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: result.tokens.expiresIn * 1000, // Convert seconds to milliseconds
+        path: "/",
+      });
 
       res.status(200).json({
         success: true,
         data: {
           user: result.user,
           organization: result.organization,
-          // Don't send tokens in response body (they're in cookies)
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async refreshToken(req: Request, res: Response, next: NextFunction) {
-    try {
-      // Get refresh token from cookie or body
-      const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
-      const tokens = await authService.refreshToken(refreshToken);
-
-      // Set new HTTP-only cookies
-      setAccessTokenCookie(res, tokens.accessToken);
-      setRefreshTokenCookie(res, tokens.refreshToken);
-
-      res.status(200).json({
-        success: true,
-        data: {
-          message: "Tokens refreshed successfully",
+          tokens: result.tokens,
         },
       });
     } catch (error) {
@@ -107,12 +114,19 @@ export class AuthController {
 
   async logout(req: Request, res: Response, next: NextFunction) {
     try {
-      // Get refresh token from cookie or body
-      const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
-      await authService.logout(refreshToken);
+      if (!req.auth) {
+        throw new Error("Authentication required");
+      }
 
-      // Clear authentication cookies
-      clearAuthCookies(res);
+      await authService.logout(req.auth.userId, req.auth.organizationId);
+
+      // Clear httpOnly cookies
+      res.clearCookie("tms_token", {
+        httpOnly: false, // Allow frontend to read the token
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        path: "/",
+      });
 
       res.status(200).json({
         success: true,

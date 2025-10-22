@@ -82,10 +82,13 @@ export function ResetPasswordForm() {
       setTimeout(() => {
         router.push("/login");
       }, 2000);
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = error as {
+        response?: { data?: { error?: { message?: string } } };
+      };
       toast.error("Failed to reset password", {
         description:
-          error.response?.data?.error?.message || "Please try again.",
+          apiError.response?.data?.error?.message || "Please try again.",
       });
     } finally {
       setIsLoading(false);

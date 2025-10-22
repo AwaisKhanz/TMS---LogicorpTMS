@@ -9,6 +9,10 @@ import {
   notFoundHandler,
 } from "./middleware/error.middleware.js";
 import { rateLimiter } from "./middleware/rate-limit.middleware.js";
+import {
+  staticFilesMiddleware,
+  storageHealthCheck,
+} from "./middleware/static-files.middleware.js";
 
 const app = express();
 
@@ -24,8 +28,7 @@ app.use(
     origin: config.cors.origin,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
-    exposedHeaders: ["X-CSRF-Token"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -36,10 +39,6 @@ app.use("/api/", rateLimiter);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// CSRF token generation for frontend (available on all routes)
-import { csrfToken } from "./middleware/csrf.middleware.js";
-app.use(csrfToken);
-
 // Request logging in development
 if (config.env === "development") {
   app.use((req, _res, next) => {
@@ -47,6 +46,12 @@ if (config.env === "development") {
     next();
   });
 }
+
+// Static file serving for local development
+app.use("/uploads", staticFilesMiddleware());
+
+// Storage health check endpoint
+app.get("/api/v1/health/storage", storageHealthCheck());
 
 // API routes
 app.use("/api/v1", routes);

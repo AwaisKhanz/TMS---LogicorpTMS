@@ -1,35 +1,10 @@
-// API Response Types
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  meta?: PaginationMeta;
-}
-
-export interface ApiErrorResponse {
-  success: false;
-  error: {
-    code: string;
-    message: string;
-    details?: unknown;
-  };
-}
-
-export interface ApiErrorException {
-  response?: {
-    data?: ApiErrorResponse;
-  };
-}
-
-export interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
-
-export interface PaginationParams {
-  page?: number;
-  limit?: number;
-  sort?: string;
-  order?: "asc" | "desc";
-}
+// Re-export API types from shared types package
+export type {
+  ApiResponse,
+  ApiErrorResponse,
+  ApiErrorException,
+  PaginationMeta,
+  PaginationParams,
+  Address,
+  WhereClause,
+} from "@tms/shared-types";

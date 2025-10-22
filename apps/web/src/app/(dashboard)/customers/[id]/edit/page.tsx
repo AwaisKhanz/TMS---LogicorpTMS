@@ -1,0 +1,83 @@
+"use client";
+
+import { useParams, useRouter } from "next/navigation";
+import { useCustomer, useUpdateCustomer } from "@/hooks/use-customer";
+import type { UpdateCustomerRequest } from "@/types/customer.types";
+import { CustomerForm } from "@/components/features/customers/customer-form";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/api-client";
+
+export default function EditCustomerPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id as string;
+
+  const { data: customer, isLoading, error } = useCustomer(id);
+  const updateCustomer = useUpdateCustomer(id);
+
+  const handleSubmit = async (data: UpdateCustomerRequest) => {
+    try {
+      await updateCustomer.mutateAsync(data);
+      toast.success("Customer updated successfully!");
+      router.push(`/customers/${id}`);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
+      throw error;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading customer...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !customer) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <p className="text-lg text-muted-foreground">Customer not found</p>
+        <Button asChild>
+          <Link href="/customers">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Customers
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/customers/${id}`}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Customer
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Edit Customer</h1>
+          <p className="text-muted-foreground">
+            Update {customer.companyName}&apos;s information
+          </p>
+        </div>
+      </div>
+
+      {/* Form */}
+      <CustomerForm
+        initialData={customer}
+        onSubmit={handleSubmit}
+        isSubmitting={updateCustomer.isPending}
+      />
+    </div>
+  );
+}

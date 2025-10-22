@@ -1,5 +1,6 @@
 import prisma from "../config/database.js";
 import { logger } from "../config/logger.js";
+import type { Prisma } from "@prisma/client";
 
 export interface AuditLogData {
   organizationId: string;
@@ -7,7 +8,7 @@ export interface AuditLogData {
   action: string; // "CREATE", "UPDATE", "DELETE", "VIEW", "LOGIN", "LOGOUT"
   entityType: string; // "USER", "LOAD", "CARRIER", etc.
   entityId: string;
-  changes?: Record<string, unknown>;
+  changes?: Prisma.InputJsonValue;
   ipAddress?: string;
   userAgent?: string;
 }
@@ -22,7 +23,7 @@ export class AuditService {
           action: data.action,
           entityType: data.entityType,
           entityId: data.entityId,
-          changes: data.changes || {},
+          changes: data.changes || (null as unknown as Prisma.InputJsonValue),
           ipAddress: data.ipAddress,
           userAgent: data.userAgent,
         },
@@ -47,7 +48,11 @@ export class AuditService {
       | "LOGOUT"
       | "REGISTER"
       | "PASSWORD_RESET"
-      | "EMAIL_VERIFIED",
+      | "EMAIL_VERIFIED"
+      | "2FA_ENABLED"
+      | "2FA_DISABLED"
+      | "2FA_VERIFIED"
+      | "2FA_FAILED",
     ipAddress?: string,
     userAgent?: string
   ) {
@@ -77,7 +82,7 @@ export class AuditService {
       action: "CREATE",
       entityType,
       entityId,
-      changes: { new: data },
+      changes: { new: data } as unknown as Prisma.InputJsonValue,
       ipAddress,
       userAgent,
     });
@@ -99,7 +104,10 @@ export class AuditService {
       action: "UPDATE",
       entityType,
       entityId,
-      changes: { old: oldData, new: newData },
+      changes: {
+        old: oldData,
+        new: newData,
+      } as unknown as Prisma.InputJsonValue,
       ipAddress,
       userAgent,
     });
@@ -120,7 +128,7 @@ export class AuditService {
       action: "DELETE",
       entityType,
       entityId,
-      changes: { old: data },
+      changes: { old: data } as unknown as Prisma.InputJsonValue,
       ipAddress,
       userAgent,
     });

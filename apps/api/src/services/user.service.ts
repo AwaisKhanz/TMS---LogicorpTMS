@@ -1,4 +1,4 @@
-import type { User } from "@tms/database";
+import type { User } from "@prisma/client";
 import { UserRepository } from "../repositories/user.repository.js";
 import { hashPassword } from "../utils/hash.util.js";
 import { NotFoundError, ConflictError } from "../utils/errors.util.js";

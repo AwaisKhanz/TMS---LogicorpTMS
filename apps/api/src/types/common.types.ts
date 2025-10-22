@@ -1,29 +1,30 @@
-// API Response Types
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  meta?: PaginationMeta;
+// Re-export common types from shared types package
+export type {
+  ApiResponse,
+  ApiErrorResponse as ApiError,
+  PaginationMeta,
+  PaginationParams,
+  Address,
+  WhereClause,
+} from "@tms/shared-types";
+
+// Document Numbering Types
+export interface DocumentNumberingSettings {
+  prefix: string;
+  startNumber: number;
+  currentNumber: number;
 }
 
-export interface ApiError {
-  success: false;
-  error: {
-    code: string;
-    message: string;
-    details?: unknown;
-  };
+export interface OrganizationDocumentNumbering {
+  LOAD?: DocumentNumberingSettings;
+  INVOICE?: DocumentNumberingSettings;
+  BOL?: DocumentNumberingSettings;
+  RATE_CONFIRMATION?: DocumentNumberingSettings;
 }
 
-export interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
-
-export interface PaginationParams {
-  page?: number;
-  limit?: number;
-  sort?: string;
-  order?: "asc" | "desc";
+// Organization Settings Types
+export interface OrganizationSettings {
+  id: string;
+  name: string;
+  documentNumbering?: OrganizationDocumentNumbering;
 }

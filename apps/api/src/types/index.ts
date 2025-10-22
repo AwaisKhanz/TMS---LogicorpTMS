@@ -1,4 +1,4 @@
-// Re-export Prisma types from shared database package
+// Re-export Prisma types from Prisma client
 export type {
   User,
   Organization,
@@ -21,9 +21,14 @@ export type {
   InvoiceStatus,
   EntityType,
   DocumentType,
-} from "@tms/database";
+} from "@prisma/client";
 
 // Re-export custom types
 export * from "./common.types";
 export * from "./auth.types";
 export * from "./user.types";
+export * from "./storage.types";
+export * from "./document.types";
+export * from "./load.types";
+export * from "./carrier.types";
+export * from "./customer.types";
