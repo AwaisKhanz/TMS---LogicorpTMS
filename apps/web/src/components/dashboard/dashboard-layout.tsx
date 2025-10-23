@@ -35,7 +35,14 @@ export function DashboardLayout({
 
   // Handle sidebar toggle
   const handleSidebarToggle = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
+    // On mobile, toggle the mobile menu
+    // On desktop, toggle the sidebar collapse
+    if (window.innerWidth < 1024) {
+      // lg breakpoint
+      setMobileMenuOpen(!mobileMenuOpen);
+    } else {
+      setSidebarCollapsed(!sidebarCollapsed);
+    }
   };
 
   return (
@@ -73,9 +80,7 @@ export function DashboardLayout({
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
-            {children}
-          </div>
+          <div className="p-6 space-y-6">{children}</div>
         </main>
       </div>
     </div>

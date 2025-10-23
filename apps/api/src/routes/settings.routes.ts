@@ -26,13 +26,7 @@ const updateProfileSchema = z.object({
   language: z.string().optional(),
 });
 
-const updateNotificationSettingsSchema = z.object({
-  emailNotifications: z.boolean().optional(),
-  loadUpdates: z.boolean().optional(),
-  documentNotifications: z.boolean().optional(),
-  weeklyReports: z.boolean().optional(),
-  marketingEmails: z.boolean().optional(),
-});
+// Notification settings schema removed - using simplified notification system
 
 const changePasswordSchema = z
   .object({
@@ -115,12 +109,6 @@ router.put(
   authorize(PERMISSIONS.SETTINGS_EDIT),
   validateRequest(updateProfileSchema),
   settingsController.updateProfile
-);
-router.put(
-  "/profile/notifications",
-  authorize(PERMISSIONS.SETTINGS_EDIT),
-  validateRequest(updateNotificationSettingsSchema),
-  settingsController.updateNotificationSettings
 );
 
 // ==================== SECURITY SETTINGS ====================

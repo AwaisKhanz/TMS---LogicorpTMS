@@ -79,6 +79,11 @@ class LocalStorageService implements StorageService {
     return `${this.publicUrl}/${key}`;
   }
 
+  getSignedUrl(key: string, _expiresIn: number = 3600): string {
+    // For local storage, just return the regular URL
+    return this.getUrl(key);
+  }
+
   async exists(key: string): Promise<boolean> {
     try {
       const filePath = path.join(this.uploadDir, key);
@@ -121,6 +126,7 @@ class S3StorageService implements StorageService {
         Body: file.buffer,
         ContentType: options?.contentType || file.mimetype,
         Metadata: options?.metadata || {},
+        // Remove ACL - use signed URLs instead for security
       };
 
       const result = await this.s3.upload(uploadParams).promise();
@@ -165,6 +171,25 @@ class S3StorageService implements StorageService {
       return `${this.publicUrl}/${key}`;
     }
     return `https://${this.bucket}.s3.${config.storage.s3.region}.amazonaws.com/${key}`;
+  }
+
+  getSignedUrl(key: string, expiresIn: number = 3600): string {
+    try {
+      // Ensure the key is properly formatted
+      const cleanKey = key.startsWith("/") ? key.substring(1) : key;
+
+      const signedUrl = this.s3.getSignedUrl("getObject", {
+        Bucket: this.bucket,
+        Key: cleanKey,
+        Expires: expiresIn,
+      });
+
+      return signedUrl;
+    } catch (error) {
+      throw new Error(
+        `Failed to generate signed URL: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
   }
 
   async exists(key: string): Promise<boolean> {

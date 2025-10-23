@@ -27,6 +27,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isEmailVerified: boolean;
   isLoading: boolean;
+  token: string | null;
   hasPermission: (permission: Permission) => boolean;
   hasAnyPermission: (...permissions: Permission[]) => boolean;
   hasAllPermissions: (...permissions: Permission[]) => boolean;
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
   const router = useRouter();
 
   const isAuthenticated = !!user;
@@ -80,20 +82,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Load user from token on mount
   useEffect(() => {
     const loadUser = async () => {
-      const token = cookieUtils.getToken();
+      const currentToken = cookieUtils.getToken();
+      setToken(currentToken || null);
 
-      if (token) {
+      if (currentToken) {
         try {
           const response = await apiClient.get<{
             success: boolean;
-            data: any; // The API returns user data directly, not wrapped in AuthResponse
+            data: AuthUser & {
+              organization: AuthOrganization;
+              roles: Role[];
+              permissions: Permission[];
+            };
           }>("/auth/me");
 
           if (response.success && response.data) {
             // Extract user data (excluding organization and roles)
             const { organization, roles, permissions, ...userData } =
               response.data;
-            setUser(userData);
+            setUser({ ...userData, roles, permissions });
             setOrganization(organization);
             setRoles(roles || []);
             setPermissions(permissions || []);
@@ -143,11 +150,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (tokens) {
         // Store token in cookies for API client to use
         cookieUtils.setToken(tokens.accessToken);
+        setToken(tokens.accessToken);
 
-        // Set user and organization state
+        // Set user and organization state with roles and permissions
         setUser(userData);
         setOrganization(orgData);
-        // Note: roles and permissions will be loaded from /auth/me on next refresh
+        setRoles(userData.roles);
+        setPermissions(userData.permissions);
       }
 
       return response.data;
@@ -167,11 +176,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Store token in cookies for API client to use
       cookieUtils.setToken(tokens.accessToken);
+      setToken(tokens.accessToken);
 
-      // Set user and organization state
+      // Set user and organization state with roles and permissions
       setUser(userData);
       setOrganization(orgData);
-      // Note: roles and permissions will be loaded from /auth/me on next refresh
+      setRoles(userData.roles || []);
+      setPermissions(userData.permissions || []);
     }
   };
 
@@ -189,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setOrganization(null);
       setRoles([]);
       setPermissions([]);
+      setToken(null);
       router.push("/login");
     }
   };
@@ -197,13 +209,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await apiClient.get<{
         success: boolean;
-        data: any; // The API returns user data directly, not wrapped in AuthResponse
+        data: AuthUser & {
+          organization: AuthOrganization;
+          roles: Role[];
+          permissions: Permission[];
+        };
       }>("/auth/me");
       if (response.success && response.data) {
         const { organization, roles, permissions, ...userData } = response.data;
-        setUser(userData);
+        setUser({
+          ...userData,
+          roles: roles as Role[],
+          permissions: permissions as Permission[],
+        });
         setOrganization(organization);
-        setRoles(roles || []);
+        setRoles((roles as Role[]) || []);
         setPermissions(permissions || []);
       }
     } catch (error) {
@@ -222,6 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isEmailVerified,
         isLoading,
+        token,
         hasPermission,
         hasAnyPermission,
         hasAllPermissions,

@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,9 +47,17 @@ import {
   Edit,
   Trash2,
   Loader2,
+  Truck,
+  MapPin,
+  Calendar,
+  DollarSign,
+  Package,
+  Grid3X3,
+  List,
 } from "lucide-react";
 import { CanEdit, CanDelete } from "@/components/auth/can";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 const statusConfig = {
   QUOTE: { label: "Quote", variant: "secondary" as const },
@@ -69,6 +77,7 @@ export function LoadsDataTable() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteLoadId, setDeleteLoadId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
   const deleteLoad = useDeleteLoad();
 
@@ -117,21 +126,44 @@ export function LoadsDataTable() {
 
   return (
     <>
-      <div className="space-y-4">
-        {/* Filters */}
-        <Card className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+      <div className="space-y-6">
+        {/* Enhanced Filters */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <CardTitle className="text-lg">Loads Overview</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={viewMode === "grid" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "table" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("table")}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col lg:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search loads, commodities, customers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
+                  className="pl-9 h-10"
               />
             </div>
+              <div className="flex gap-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48">
+                  <SelectTrigger className="w-full sm:w-48 h-10">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -145,14 +177,196 @@ export function LoadsDataTable() {
                 <SelectItem value="PAID">Paid</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="h-10">
               <Filter className="h-4 w-4 mr-2" />
               More Filters
             </Button>
           </div>
+            </div>
+          </CardContent>
         </Card>
 
-        {/* Table */}
+        {/* Content */}
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : loads.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Truck className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No loads found</h3>
+              <p className="text-muted-foreground text-center mb-4">
+                Get started by creating your first load or adjust your filters.
+              </p>
+              <Button asChild>
+                <Link href="/loads/new">Create Load</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {loads.map((load) => (
+              <Card
+                key={load.id}
+                className="group cursor-pointer hover:shadow-lg transition-all duration-200 border-l-4 border-l-primary/20 hover:border-l-primary"
+                onClick={() => router.push(`/loads/${load.id}`)}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg font-semibold">
+                        {load.loadNumber}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {load.customer.companyName}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={
+                        statusConfig[load.status as keyof typeof statusConfig]
+                          ?.variant
+                      }
+                      className="ml-2"
+                    >
+                      {
+                        statusConfig[load.status as keyof typeof statusConfig]
+                          ?.label
+                      }
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Route */}
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex-1">
+                      <div className="font-medium">
+                        {load.shipperAddress.city}, {load.shipperAddress.state}
+                      </div>
+                      <div className="text-muted-foreground">→</div>
+                      <div className="font-medium">
+                        {load.consigneeAddress.city},{" "}
+                        {load.consigneeAddress.state}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pickup Date */}
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      {format(new Date(load.pickupDate), "MMM dd, yyyy")}
+                    </span>
+                  </div>
+
+                  {/* Commodity & Weight */}
+                  <div className="flex items-center gap-2 text-sm">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="font-medium">{load.commodity}</div>
+                      <div className="text-muted-foreground">
+                        {formatWeight(load.weight)} •{" "}
+                        {load.equipmentType.replace("_", " ")}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Carrier */}
+                  <div className="flex items-center gap-2 text-sm">
+                    <Truck className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      {load.carrier ? (
+                        <>
+                          <div className="font-medium">
+                            {load.carrier.companyName}
+                          </div>
+                          <div className="text-muted-foreground">
+                            {load.carrier.mcNumber}
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Not assigned
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Rate & Margin */}
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="flex items-center gap-2 text-sm">
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <div className="font-semibold">
+                          {formatCurrency(load.customerRate)}
+                        </div>
+                        {load.carrierRate && (
+                          <div className="text-muted-foreground text-xs">
+                            Cost: {formatCurrency(load.carrierRate)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {load.margin !== null && load.margin !== undefined && (
+                      <Badge
+                        variant={load.margin > 0 ? "success" : "secondary"}
+                        className="text-xs"
+                      >
+                        {formatCurrency(load.margin ?? null)}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end pt-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        asChild
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => router.push(`/loads/${load.id}`)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </DropdownMenuItem>
+                        <CanEdit resource="load">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              router.push(`/loads/${load.id}/edit`)
+                            }
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Load
+                          </DropdownMenuItem>
+                        </CanEdit>
+                        <CanDelete resource="load">
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDeleteLoadId(load.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Load
+                          </DropdownMenuItem>
+                        </CanDelete>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
         <Card>
           <div className="overflow-x-auto">
             <Table>
@@ -171,23 +385,7 @@ export function LoadsDataTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center">
-                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                    </TableCell>
-                  </TableRow>
-                ) : loads.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={10}
-                      className="h-24 text-center text-muted-foreground"
-                    >
-                      No loads found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  loads.map((load) => (
+                  {loads.map((load) => (
                     <TableRow
                       key={load.id}
                       className="cursor-pointer hover:bg-muted/50"
@@ -303,62 +501,68 @@ export function LoadsDataTable() {
                               View Details
                             </DropdownMenuItem>
                             <CanEdit resource="load">
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  router.push(`/loads/${load.id}/edit`)
-                                }
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit Load
-                              </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push(`/loads/${load.id}/edit`)
+                              }
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit Load
+                            </DropdownMenuItem>
                             </CanEdit>
                             <CanDelete resource="load">
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => setDeleteLoadId(load.id)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete Load
-                              </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => setDeleteLoadId(load.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Load
+                            </DropdownMenuItem>
                             </CanDelete>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
+                  ))}
               </TableBody>
             </Table>
           </div>
+          </Card>
+        )}
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-4 py-3 border-t">
+        {pagination && pagination.pages > 1 && (
+          <Card>
+            <CardContent className="flex items-center justify-between py-4">
             <p className="text-sm text-muted-foreground">
-              Showing {loads.length} of {pagination?.total || 0} loads
+                Showing {loads.length} of {pagination.total} loads
             </p>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                disabled={!pagination || currentPage === 1}
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
               >
                 Previous
               </Button>
-              <span className="text-sm">
-                Page {currentPage} of {pagination?.pages || 1}
+                <span className="text-sm px-2">
+                  Page {currentPage} of {pagination.pages}
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                disabled={!pagination || currentPage === pagination.pages}
+                  disabled={currentPage === pagination.pages}
                 onClick={() => setCurrentPage((prev) => prev + 1)}
               >
                 Next
               </Button>
             </div>
-          </div>
+            </CardContent>
         </Card>
+        )}
       </div>
 
       {/* Delete Confirmation Dialog */}

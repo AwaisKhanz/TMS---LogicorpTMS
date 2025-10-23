@@ -19,6 +19,7 @@ import type {
   ResetPasswordDto,
 } from "../types/auth.types.js";
 import type { Address } from "../types/common.types.js";
+import type { Role, Permission } from "@tms/shared-types";
 
 export class AuthService {
   private userRepo: UserRepository;
@@ -138,12 +139,40 @@ export class AuthService {
       userAgent
     );
 
+    // Get user's roles and permissions
+    const userWithRoles = await prisma.user.findUnique({
+      where: { id: result.user.id },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Extract roles and permissions with proper typing
+    const roles: Role[] =
+      userWithRoles?.roles.map((userRole) => userRole.role.name as Role) || [];
+    const permissions = new Set<Permission>();
+    userWithRoles?.roles.forEach((userRole) => {
+      userRole.role.permissions.forEach((permission) => {
+        permissions.add(permission.name as Permission);
+      });
+    });
+
     // Remove password hash from response
     const { passwordHash, ...userWithoutPassword } = result.user;
 
     return {
       user: {
         ...userWithoutPassword,
+        roles,
+        permissions: Array.from(permissions),
         createdAt: userWithoutPassword.createdAt.toISOString(),
         updatedAt: userWithoutPassword.updatedAt.toISOString(),
       },
@@ -197,6 +226,8 @@ export class AuthService {
         return {
           user: {
             ...userWithoutPassword,
+            roles: [],
+            permissions: [],
             createdAt: userWithoutPassword.createdAt.toISOString(),
             updatedAt: userWithoutPassword.updatedAt.toISOString(),
           },
@@ -240,12 +271,40 @@ export class AuthService {
       userAgent
     );
 
+    // Get user's roles and permissions
+    const userWithRoles = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Extract roles and permissions with proper typing
+    const roles: Role[] =
+      userWithRoles?.roles.map((userRole) => userRole.role.name as Role) || [];
+    const permissions = new Set<Permission>();
+    userWithRoles?.roles.forEach((userRole) => {
+      userRole.role.permissions.forEach((permission) => {
+        permissions.add(permission.name as Permission);
+      });
+    });
+
     // Remove password hash from response
     const { passwordHash, ...userWithoutPassword } = user;
 
     return {
       user: {
         ...userWithoutPassword,
+        roles,
+        permissions: Array.from(permissions),
         createdAt: userWithoutPassword.createdAt.toISOString(),
         updatedAt: userWithoutPassword.updatedAt.toISOString(),
       },
@@ -290,13 +349,13 @@ export class AuthService {
       },
     });
 
-    // Extract roles and permissions
-    const roles =
-      userWithRoles?.roles.map((userRole) => userRole.role.name) || [];
-    const permissions = new Set<string>();
+    // Extract roles and permissions with proper typing
+    const roles: Role[] =
+      userWithRoles?.roles.map((userRole) => userRole.role.name as Role) || [];
+    const permissions = new Set<Permission>();
     userWithRoles?.roles.forEach((userRole) => {
       userRole.role.permissions.forEach((permission) => {
-        permissions.add(permission.name);
+        permissions.add(permission.name as Permission);
       });
     });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Search, Menu } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth-context";
+import { NotificationDropdown, ConnectionStatus } from "@/components/features/notifications";
 
 interface HeaderProps {
   user: {
@@ -77,59 +77,11 @@ export function Header({ user, organizationName, onMenuClick }: HeaderProps) {
 
         {/* Right Section */}
         <div className="flex items-center gap-4">
+          {/* Connection Status */}
+          <ConnectionStatus />
+
           {/* Notifications */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="relative h-8 w-8 p-0"
-              >
-                <Bell className="h-4 w-4" />
-                <Badge
-                  variant="destructive"
-                  className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs"
-                >
-                  3
-                </Badge>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-4">
-                <div className="flex w-full items-center justify-between">
-                  <span className="text-sm font-medium">New load assigned</span>
-                  <span className="text-xs text-muted-foreground">2m ago</span>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  Load #LB001 has been assigned to carrier John Doe
-                </span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-4">
-                <div className="flex w-full items-center justify-between">
-                  <span className="text-sm font-medium">Payment received</span>
-                  <span className="text-xs text-muted-foreground">1h ago</span>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  Invoice #INV-001 has been paid
-                </span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-4">
-                <div className="flex w-full items-center justify-between">
-                  <span className="text-sm font-medium">
-                    New carrier registered
-                  </span>
-                  <span className="text-xs text-muted-foreground">3h ago</span>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  Fast Logistics LLC has joined your network
-                </span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <NotificationDropdown />
 
           {/* Theme Toggle */}
           <ThemeToggle />

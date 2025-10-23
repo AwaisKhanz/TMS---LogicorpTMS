@@ -13,13 +13,8 @@ export enum DocumentType {
   OTHER = "OTHER",
 }
 
-export enum EntityType {
-  LOAD = "LOAD",
-  CARRIER = "CARRIER",
-  CUSTOMER = "CUSTOMER",
-  INVOICE = "INVOICE",
-  USER = "USER",
-}
+// Import EntityType from notification types to avoid conflicts
+import type { EntityType } from "./notification.types";
 
 // Main Document Interface
 export interface Document {
@@ -249,7 +244,8 @@ export interface CreateDocumentTemplateRequest {
   isDefault?: boolean;
 }
 
-export interface UpdateDocumentTemplateRequest extends Partial<CreateDocumentTemplateRequest> {}
+export interface UpdateDocumentTemplateRequest
+  extends Partial<CreateDocumentTemplateRequest> {}
 
 // Document Statistics
 export interface DocumentStatistics {

@@ -43,12 +43,6 @@ export type {
   User,
   Role,
   Permission,
-
-  // Organization Types
-  Organization,
-
-  // Invoice Types
-  InvoiceStatus,
 } from "@tms/shared-types";
 
 // Re-export Prisma types that are needed

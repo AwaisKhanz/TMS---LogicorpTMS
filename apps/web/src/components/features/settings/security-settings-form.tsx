@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -67,6 +68,7 @@ import type {
   ChangePasswordRequest,
   EnableTwoFactorRequest,
   DisableTwoFactorRequest,
+  TwoFactorSetupResponse,
 } from "@tms/shared-types";
 
 const changePasswordSchema = z
@@ -97,7 +99,8 @@ export function SecuritySettingsForm() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [twoFactorSetup, setTwoFactorSetup] = useState<any>(null);
+  const [twoFactorSetup, setTwoFactorSetup] =
+    useState<TwoFactorSetupResponse | null>(null);
   const [showTwoFactorDialog, setShowTwoFactorDialog] = useState(false);
   const [showDisableTwoFactorDialog, setShowDisableTwoFactorDialog] =
     useState(false);
@@ -468,9 +471,11 @@ export function SecuritySettingsForm() {
           {twoFactorSetup && (
             <div className="space-y-4">
               <div className="flex justify-center">
-                <img
+                <Image
                   src={twoFactorSetup.qrCode}
                   alt="QR Code"
+                  width={200}
+                  height={200}
                   className="border rounded-lg"
                 />
               </div>

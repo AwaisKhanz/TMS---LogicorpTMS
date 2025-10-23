@@ -8,7 +8,7 @@ import { AuthorizationError } from "../utils/errors.util.js";
  * @returns Express middleware function
  */
 export const requireRole = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     try {
       if (!req.auth || !req.auth.role) {
         throw new AuthorizationError("Authentication required");
@@ -35,7 +35,7 @@ export const requireRole = (...roles: string[]) => {
  * @returns Express middleware function
  */
 export const requireAllRoles = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     try {
       if (!req.auth || !req.auth.role) {
         throw new AuthorizationError("Authentication required");
@@ -104,7 +104,7 @@ export const requireRoleLevel = (requiredLevel: string) => {
     ADMIN: 4,
   };
 
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     try {
       if (!req.auth || !req.auth.role) {
         throw new AuthorizationError("Authentication required");

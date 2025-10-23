@@ -2,8 +2,15 @@
   "name": "@tms/shared-types",
   "version": "1.0.0",
   "description": "Shared TypeScript types for TMS backend and frontend",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"

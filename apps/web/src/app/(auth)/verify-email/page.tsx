@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
@@ -28,12 +28,45 @@ export default function VerifyEmailPage() {
   const token = searchParams.get("token");
   const email = user?.email;
 
+  const verifyEmail = useCallback(
+    async (verificationToken: string) => {
+      setIsVerifying(true);
+      setError(null);
+
+      try {
+        const response = await apiClient.post<{
+          success: boolean;
+          data: { message: string };
+        }>("/auth/verify-email", {
+          token: verificationToken,
+        });
+
+        if (response.success) {
+          setVerificationStatus("success");
+          // Refresh user data to get updated emailVerified status
+          await refreshUser();
+          // Redirect to dashboard after a short delay
+          setTimeout(() => {
+            router.push("/");
+          }, 2000);
+        }
+      } catch (err: unknown) {
+        console.error("Email verification error:", err);
+        setError(getErrorMessage(err));
+        setVerificationStatus("error");
+      } finally {
+        setIsVerifying(false);
+      }
+    },
+    [refreshUser, router]
+  );
+
   // Auto-verify if token is present
   useEffect(() => {
     if (token && verificationStatus === "pending") {
       verifyEmail(token);
     }
-  }, [token]);
+  }, [token, verificationStatus, verifyEmail]);
 
   // Redirect if user is already verified
   useEffect(() => {
@@ -41,36 +74,6 @@ export default function VerifyEmailPage() {
       router.push("/");
     }
   }, [user?.emailVerified, router]);
-
-  const verifyEmail = async (verificationToken: string) => {
-    setIsVerifying(true);
-    setError(null);
-
-    try {
-      const response = await apiClient.post<{
-        success: boolean;
-        data: { message: string };
-      }>("/auth/verify-email", {
-        token: verificationToken,
-      });
-
-      if (response.success) {
-        setVerificationStatus("success");
-        // Refresh user data to get updated emailVerified status
-        await refreshUser();
-        // Redirect to dashboard after a short delay
-        setTimeout(() => {
-          router.push("/");
-        }, 2000);
-      }
-    } catch (err: unknown) {
-      console.error("Email verification error:", err);
-      setError(getErrorMessage(err));
-      setVerificationStatus("error");
-    } finally {
-      setIsVerifying(false);
-    }
-  };
 
   const resendVerification = async () => {
     if (!email) return;
@@ -154,8 +157,8 @@ export default function VerifyEmailPage() {
             {!token && (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground text-center">
-                  Didn't receive the email? Check your spam folder or request a
-                  new one.
+                  Didn&apos;t receive the email? Check your spam folder or
+                  request a new one.
                 </p>
                 <Button
                   onClick={resendVerification}

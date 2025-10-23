@@ -13,9 +13,9 @@ import type {
   GetCarriersResponse,
   GetCarrierLoadsResponse,
   CarrierPerformance,
-} from "@/types/carrier.types";
+  CarrierOption,
+} from "@tms/shared-types";
 import type { ApiErrorException } from "@/types/api.types";
-
 
 export function useCarriers(filters?: Record<string, unknown>) {
   return useQuery({
@@ -29,25 +29,33 @@ export function useCarriers(filters?: Record<string, unknown>) {
           }
         });
       }
-      const response = await apiClient.get<GetCarriersResponse>(`/carriers?${params.toString()}`);
+      const response = await apiClient.get<GetCarriersResponse>(
+        `/carriers?${params.toString()}`
+      );
       return response;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
-export function useCarrierOptions() {
+export function useCarrierOptions(): {
+  carriers: CarrierOption[];
+  isLoading: boolean;
+  error: Error | null;
+} {
   const { data, isLoading, error } = useCarriers();
 
   return {
     carriers:
-      data?.carriers?.map((carrier) => ({
-        id: carrier.id,
-        name: carrier.companyName,
-        mcNumber: carrier.mcNumber,
-        value: carrier.id,
-        label: `${carrier.companyName} (${carrier.mcNumber})`,
-      })) || [],
+      data?.data.map(
+        (carrier: Carrier): CarrierOption => ({
+          id: carrier.id,
+          name: carrier.companyName,
+          mcNumber: carrier.mcNumber,
+          value: carrier.id,
+          label: `${carrier.companyName} (${carrier.mcNumber})`,
+        })
+      ) || [],
     isLoading,
     error,
   };
@@ -73,7 +81,9 @@ export function useCarrier(id: string | undefined) {
   return useQuery<Carrier>({
     queryKey: ["carriers", id],
     queryFn: async () => {
-      const response = await apiClient.get<{success: boolean; data: Carrier}>(`/carriers/${id}`);
+      const response = await apiClient.get<{ success: boolean; data: Carrier }>(
+        `/carriers/${id}`
+      );
       return response.data;
     },
     enabled: !!id,
@@ -87,7 +97,10 @@ export function useCreateCarrier() {
 
   return useMutation({
     mutationFn: async (data: CreateCarrierRequest) => {
-      const response = await apiClient.post<{success: boolean; data: Carrier}>("/carriers", data);
+      const response = await apiClient.post<{
+        success: boolean;
+        data: Carrier;
+      }>("/carriers", data);
       return response.data;
     },
     onSuccess: () => {
@@ -108,8 +121,17 @@ export function useUpdateCarrier() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateCarrierRequest }) => {
-      const response = await apiClient.put<{success: boolean; data: Carrier}>(`/carriers/${id}`, data);
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdateCarrierRequest;
+    }) => {
+      const response = await apiClient.put<{ success: boolean; data: Carrier }>(
+        `/carriers/${id}`,
+        data
+      );
       return response.data;
     },
     onSuccess: (data) => {
@@ -153,7 +175,10 @@ export function useApproveCarrier() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiClient.post<{success: boolean; data: Carrier}>(`/carriers/${id}/approve`);
+      const response = await apiClient.post<{
+        success: boolean;
+        data: Carrier;
+      }>(`/carriers/${id}/approve`);
       return response.data;
     },
     onSuccess: (data) => {
@@ -175,7 +200,10 @@ export function useCarrierContacts(carrierId: string) {
   return useQuery({
     queryKey: ["carrier-contacts", carrierId],
     queryFn: async () => {
-      const response = await apiClient.get<{success: boolean; data: CarrierContact[]}>(`/carriers/${carrierId}/contacts`);
+      const response = await apiClient.get<{
+        success: boolean;
+        data: CarrierContact[];
+      }>(`/carriers/${carrierId}/contacts`);
       return response.data;
     },
     enabled: !!carrierId,
@@ -188,12 +216,23 @@ export function useAddCarrierContact() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ carrierId, data }: { carrierId: string; data: CreateCarrierContactRequest }) => {
-      const response = await apiClient.post<{success: boolean; data: CarrierContact}>(`/carriers/${carrierId}/contacts`, data);
+    mutationFn: async ({
+      carrierId,
+      data,
+    }: {
+      carrierId: string;
+      data: CreateCarrierContactRequest;
+    }) => {
+      const response = await apiClient.post<{
+        success: boolean;
+        data: CarrierContact;
+      }>(`/carriers/${carrierId}/contacts`, data);
       return response.data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["carrier-contacts", variables.carrierId] });
+      queryClient.invalidateQueries({
+        queryKey: ["carrier-contacts", variables.carrierId],
+      });
       toast.success("Contact added successfully");
     },
     onError: (error) => {
@@ -210,11 +249,19 @@ export function useDeleteCarrierContact() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ carrierId, contactId }: { carrierId: string; contactId: string }) => {
+    mutationFn: async ({
+      carrierId,
+      contactId,
+    }: {
+      carrierId: string;
+      contactId: string;
+    }) => {
       await apiClient.delete(`/carriers/${carrierId}/contacts/${contactId}`);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["carrier-contacts", variables.carrierId] });
+      queryClient.invalidateQueries({
+        queryKey: ["carrier-contacts", variables.carrierId],
+      });
       toast.success("Contact deleted successfully");
     },
     onError: (error) => {
@@ -231,7 +278,9 @@ export function useCarrierLoads(carrierId: string) {
   return useQuery({
     queryKey: ["carrier-loads", carrierId],
     queryFn: async () => {
-      const response = await apiClient.get<GetCarrierLoadsResponse>(`/carriers/${carrierId}/loads`);
+      const response = await apiClient.get<GetCarrierLoadsResponse>(
+        `/carriers/${carrierId}/loads`
+      );
       return response;
     },
     enabled: !!carrierId,
@@ -244,7 +293,10 @@ export function useCarrierPerformance(carrierId: string) {
   return useQuery({
     queryKey: ["carrier-performance", carrierId],
     queryFn: async () => {
-      const response = await apiClient.get<{success: boolean; data: CarrierPerformance}>(`/carriers/${carrierId}/performance`);
+      const response = await apiClient.get<{
+        success: boolean;
+        data: CarrierPerformance;
+      }>(`/carriers/${carrierId}/performance`);
       return response.data;
     },
     enabled: !!carrierId,

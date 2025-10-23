@@ -15,6 +15,7 @@ export interface ApiErrorResponse {
 }
 
 export interface ApiErrorException {
+  message: string;
   response?: {
     data?: ApiErrorResponse;
   };

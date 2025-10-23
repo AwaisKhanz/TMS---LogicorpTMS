@@ -18,8 +18,10 @@ export default function NewCustomerPage() {
       const newCustomer = await createCustomer.mutateAsync(data);
       toast.success("Customer created successfully!");
       router.push(`/customers/${newCustomer.id}`);
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to create customer");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to create customer";
+      toast.error(errorMessage);
       throw error;
     }
   };

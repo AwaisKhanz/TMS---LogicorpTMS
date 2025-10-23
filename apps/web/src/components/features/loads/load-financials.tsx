@@ -1,10 +1,14 @@
 "use client";
 
-import { useLoad } from "@/hooks/use-loads";
+import { useState } from "react";
+import { useLoad, useUpdateLoad } from "@/hooks/use-loads";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { DollarSign, Receipt, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { DollarSign, Receipt, Loader2, Edit, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LoadFinancialsProps {
@@ -13,6 +17,10 @@ interface LoadFinancialsProps {
 
 export function LoadFinancials({ loadId }: LoadFinancialsProps) {
   const { data: load, isLoading } = useLoad(loadId);
+  const updateLoad = useUpdateLoad();
+  const [isEditing, setIsEditing] = useState(false);
+  const [customerRate, setCustomerRate] = useState("");
+  const [carrierRate, setCarrierRate] = useState("");
 
   if (isLoading) {
     return (
@@ -39,29 +47,100 @@ export function LoadFinancials({ loadId }: LoadFinancialsProps) {
     ? ((load.margin || 0) / load.customerRate) * 100
     : 0;
 
+  const handleEdit = () => {
+    setCustomerRate(load.customerRate?.toString() || "");
+    setCarrierRate(load.carrierRate?.toString() || "");
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setCustomerRate("");
+    setCarrierRate("");
+  };
+
+  const handleSave = async () => {
+    try {
+      await updateLoad.mutateAsync({
+        id: loadId,
+        data: {
+          customerRate: parseFloat(customerRate),
+          carrierRate: carrierRate ? parseFloat(carrierRate) : undefined,
+        },
+      });
+      setIsEditing(false);
+    } catch (error) {
+      // Error is handled by the mutation
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5" />
-          Financial Summary
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Financial Summary
+          </CardTitle>
+          {!isEditing && (
+            <Button variant="outline" size="sm" onClick={handleEdit}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Rates
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Revenue */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Customer Rate</span>
-            <span className="text-2xl font-bold">
-              {formatCurrency(load.customerRate)}
-            </span>
-          </div>
+          {isEditing ? (
+            <div className="space-y-2">
+              <Label htmlFor="customerRate">Customer Rate</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">$</span>
+                <Input
+                  id="customerRate"
+                  type="number"
+                  step="0.01"
+                  value={customerRate}
+                  onChange={(e) => setCustomerRate(e.target.value)}
+                  placeholder="Enter customer rate"
+                  className="flex-1"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                Customer Rate
+              </span>
+              <span className="text-2xl font-bold">
+                {formatCurrency(load.customerRate)}
+              </span>
+            </div>
+          )}
         </div>
 
         <Separator />
 
         {/* Cost */}
-        {load.carrierRate ? (
+        {isEditing ? (
+          <div className="space-y-2">
+            <Label htmlFor="carrierRate">Carrier Rate</Label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">$</span>
+              <Input
+                id="carrierRate"
+                type="number"
+                step="0.01"
+                value={carrierRate}
+                onChange={(e) => setCarrierRate(e.target.value)}
+                placeholder="Enter carrier rate (optional)"
+                className="flex-1"
+              />
+            </div>
+          </div>
+        ) : load.carrierRate ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
@@ -166,6 +245,34 @@ export function LoadFinancials({ loadId }: LoadFinancialsProps) {
             <p className="text-sm font-medium">Calculate with distance</p>
           </div>
         </div>
+
+        {/* Edit Actions */}
+        {isEditing && (
+          <>
+            <Separator />
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={updateLoad.isPending}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={updateLoad.isPending || !customerRate}
+              >
+                {updateLoad.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Save Changes
+              </Button>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

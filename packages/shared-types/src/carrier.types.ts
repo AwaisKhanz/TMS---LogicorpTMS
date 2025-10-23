@@ -12,7 +12,8 @@ export interface CSAScores extends Record<string, number | undefined> {
 }
 
 // Preferred Lane Configuration
-export interface PreferredLane extends Record<string, string | number | undefined> {
+export interface PreferredLane
+  extends Record<string, string | number | undefined> {
   pickup: string; // State or city
   delivery: string; // State or city
   equipmentType?: string;
@@ -162,7 +163,8 @@ export interface CreateCarrierContactRequest {
   isPrimary?: boolean;
 }
 
-export interface UpdateCarrierContactRequest extends Partial<CreateCarrierContactRequest> {}
+export interface UpdateCarrierContactRequest
+  extends Partial<CreateCarrierContactRequest> {}
 
 export interface CarrierRatingRequest {
   rating: number; // 1-5
@@ -197,7 +199,7 @@ export interface GetCarrierResponse {
 }
 
 export interface GetCarriersResponse {
-  carriers: Carrier[];
+  data: Carrier[];
   pagination?: PaginationMeta;
 }
 

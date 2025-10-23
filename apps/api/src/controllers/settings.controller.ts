@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import { SettingsService } from "../services/settings.service";
 import type {
   UpdateProfileRequest,
-  UpdateNotificationSettingsRequest,
   ChangePasswordRequest,
   UpdateOrganizationRequest,
   UpdateBusinessSettingsRequest,
@@ -54,31 +53,6 @@ export class SettingsController {
       res.json({
         success: true,
         data: profile,
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  updateNotificationSettings = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      if (!req.auth) {
-        throw new Error("Authentication required");
-      }
-
-      const updateData = req.body as UpdateNotificationSettingsRequest;
-      const settings = await this.settingsService.updateNotificationSettings(
-        req.auth.userId,
-        updateData
-      );
-
-      res.json({
-        success: true,
-        data: settings,
       });
     } catch (error) {
       next(error);

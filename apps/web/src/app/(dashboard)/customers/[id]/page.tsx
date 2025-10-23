@@ -42,8 +42,10 @@ export default function CustomerDetailsPage() {
       await deleteCustomer.mutateAsync(id);
       toast.success("Customer deleted successfully");
       router.push("/customers");
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to delete customer");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to delete customer";
+      toast.error(errorMessage);
     }
   };
 

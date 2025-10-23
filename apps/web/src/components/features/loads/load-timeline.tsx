@@ -6,7 +6,7 @@ function convertEventData(eventData: unknown): Record<string, unknown> {
   if (eventData === null || eventData === undefined) {
     return {};
   }
-  if (typeof eventData === 'object' && eventData !== null) {
+  if (typeof eventData === "object" && eventData !== null) {
     return eventData as Record<string, unknown>;
   }
   // For primitive values, wrap in an object
@@ -113,26 +113,27 @@ export function LoadTimeline({ loadId }: LoadTimelineProps) {
                       <p className="text-sm font-medium">
                         {getEventTitle({
                           ...event,
-                          eventData: convertEventData(event.eventData)
+                          eventData: convertEventData(event.eventData),
                         })}
                       </p>
                       <time className="text-xs text-muted-foreground">
-                        {format(
-                          event.createdAt instanceof Date
-                            ? event.createdAt
-                            : new Date(event.createdAt),
-                          "MMM dd, HH:mm"
-                        )}
+                        {format(new Date(event.createdAt), "MMM dd, HH:mm")}
                       </time>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {getEventDescription({
                         ...event,
-                        eventData: convertEventData(event.eventData)
+                        eventData: convertEventData(event.eventData),
                       })}
                     </p>
+                    {event.user && (
+                      <p className="text-xs text-muted-foreground">
+                        by {event.user.firstName} {event.user.lastName}
+                      </p>
+                    )}
                     {event.eventData &&
-                      Object.keys(convertEventData(event.eventData)).length > 0 && (
+                      Object.keys(convertEventData(event.eventData)).length >
+                        0 && (
                         <div className="mt-2 rounded-md bg-muted p-2">
                           {renderEventData(convertEventData(event.eventData))}
                         </div>
@@ -162,6 +163,7 @@ function getEventTitle(event: LoadEvent): string {
     CARRIER_ASSIGNED: "Carrier Assigned",
     LOAD_DUPLICATED: "Load Duplicated",
     DOCUMENT_UPLOADED: "Document Uploaded",
+    DOCUMENT_DELETED: "Document Deleted",
   };
 
   return titles[event.eventType] || event.eventType.replace(/_/g, " ");
@@ -181,6 +183,10 @@ function getEventDescription(event: LoadEvent): string {
       return `Updated: ${Array.isArray(eventData.updatedFields) ? eventData.updatedFields.join(", ") : "multiple fields"}`;
     case "LOAD_DUPLICATED":
       return `Duplicated from load ${eventData.originalLoadNumber}`;
+    case "DOCUMENT_UPLOADED":
+      return `Document uploaded: ${eventData.documentName}`;
+    case "DOCUMENT_DELETED":
+      return `Document deleted: ${eventData.documentName}`;
     default:
       return "Event occurred";
   }
@@ -191,7 +197,9 @@ function renderEventData(data: Record<string, unknown>) {
     <div className="space-y-1">
       {Object.entries(data).map(([key, value]) => {
         // Skip certain fields
-        if (["createdBy", "updatedBy", "assignedBy"].includes(key)) {
+        if (
+          ["createdBy", "updatedBy", "assignedBy", "uploadedBy"].includes(key)
+        ) {
           return null;
         }
 

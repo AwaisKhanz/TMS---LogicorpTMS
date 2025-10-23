@@ -70,6 +70,12 @@ export interface LoadEvent {
   eventData: Record<string, unknown>;
   createdAt: string;
   createdBy?: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
 }
 
 export interface LoadDocument {

@@ -303,14 +303,25 @@ export class LoadController {
       }
 
       const { id } = req.params;
-      const documents = await loadService.getLoadDocuments(
+      const { page, limit, search, type } = req.query;
+
+      const options = {
+        page: page ? parseInt(page as string) : undefined,
+        limit: limit ? parseInt(limit as string) : undefined,
+        search: search as string,
+        type: type as string,
+      };
+
+      const result = await loadService.getLoadDocuments(
         id,
-        req.auth.organizationId
+        req.auth.organizationId,
+        options
       );
 
       res.status(200).json({
         success: true,
-        data: documents,
+        data: result.documents,
+        pagination: result.pagination,
       });
     } catch (error) {
       next(error);

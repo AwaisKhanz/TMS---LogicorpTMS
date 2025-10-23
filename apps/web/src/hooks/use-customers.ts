@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import type { LoadCustomer } from "@tms/shared-types";
+import type { LoadCustomer, CustomerOption } from "@tms/shared-types";
 
 interface CustomersResponse {
   success: boolean;
@@ -26,17 +26,23 @@ export function useCustomers() {
   });
 }
 
-export function useCustomerOptions() {
+export function useCustomerOptions(): {
+  customers: CustomerOption[];
+  isLoading: boolean;
+  error: Error | null;
+} {
   const { data, isLoading, error } = useCustomers();
 
   return {
     customers:
-      data?.map((customer) => ({
-        id: customer.id,
-        name: customer.companyName,
-        value: customer.id,
-        label: customer.companyName,
-      })) || [],
+      data?.map(
+        (customer): CustomerOption => ({
+          id: customer.id,
+          name: customer.companyName,
+          value: customer.id,
+          label: customer.companyName,
+        })
+      ) || [],
     isLoading,
     error,
   };

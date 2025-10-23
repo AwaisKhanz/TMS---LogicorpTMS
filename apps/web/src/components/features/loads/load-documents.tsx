@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useLoadDocuments } from "@/hooks/use-loads";
+import { useState, useRef, useEffect } from "react";
+import { useLoadDocumentsPaginated } from "@/hooks/use-loads";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +35,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileText, Upload, Download, Trash2, Loader2 } from "lucide-react";
+import {
+  FileText,
+  Upload,
+  Download,
+  Trash2,
+  Loader2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { format } from "date-fns";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
@@ -57,7 +67,16 @@ interface LoadDocumentsProps {
 }
 
 export function LoadDocuments({ loadId }: LoadDocumentsProps) {
-  const { data: documents, isLoading, refetch } = useLoadDocuments(loadId);
+  // Pagination and search state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+
+  // Debounced search query (500ms delay)
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
+  // Upload dialog state
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState("");
@@ -65,6 +84,45 @@ export function LoadDocuments({ loadId }: LoadDocumentsProps) {
   const [uploading, setUploading] = useState(false);
   const [deleteDocId, setDeleteDocId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch documents with pagination
+  const {
+    data: documentsData,
+    isLoading,
+    refetch,
+  } = useLoadDocumentsPaginated(loadId, {
+    page: currentPage,
+    limit: pageSize,
+    search: debouncedSearchQuery,
+    type: typeFilter,
+  });
+
+  const documents = documentsData?.data || [];
+  const pagination = documentsData?.pagination;
+
+  // Search and filter handlers
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
+  // Reset page when debounced search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
+
+  const handleTypeFilter = (type: string) => {
+    setTypeFilter(type === "all" ? "" : type);
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -131,21 +189,75 @@ export function LoadDocuments({ loadId }: LoadDocumentsProps) {
     id: string;
     fileUrl: string;
     name: string;
+    mimeType: string;
   }) => {
     try {
-      const response = await apiClient.get<Blob>(`/documents/${doc.id}`, {
-        responseType: "blob",
-      });
+      // For S3 files, get the signed URL and fetch the file
+      if (doc.fileUrl.includes("amazonaws.com")) {
+        const response = await apiClient.get<{
+          success: boolean;
+          downloadUrl: string;
+          filename: string;
+          mimeType: string;
+          fileSize: number;
+        }>(`/documents/${doc.id}/download`);
 
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", doc.name);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+        if (response.success && response.downloadUrl) {
+          try {
+            // Fetch the file from the signed URL
+            const fileResponse = await fetch(response.downloadUrl);
+            if (!fileResponse.ok) {
+              throw new Error(`HTTP error! status: ${fileResponse.status}`);
+            }
+
+            // Create blob from the response
+            const blob = await fileResponse.blob();
+
+            // Create download link with blob
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            // Ensure filename has proper extension for PDFs
+            let filename = response.filename || doc.name;
+            if (doc.mimeType === 'application/pdf' && !filename.toLowerCase().endsWith('.pdf')) {
+              filename = `${filename}.pdf`;
+            }
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+          } catch (error) {
+            // Fallback: open in new tab
+            window.open(response.downloadUrl, "_blank");
+          }
+        } else {
+          toast.error("Failed to get download URL");
+        }
+      } else {
+        // For local files, use the blob approach
+        const response = await apiClient.get<Blob>(
+          `/documents/${doc.id}/download`,
+          {
+            responseType: "blob",
+          }
+        );
+
+        // Create download link
+        const url = window.URL.createObjectURL(new Blob([response]));
+        const link = document.createElement("a");
+        link.href = url;
+        // Ensure filename has proper extension for PDFs
+        let filename = doc.name;
+        if (doc.mimeType === 'application/pdf' && !filename.toLowerCase().endsWith('.pdf')) {
+          filename = `${filename}.pdf`;
+        }
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      }
     } catch (error) {
       toast.error("Failed to download document");
     }
@@ -259,6 +371,60 @@ export function LoadDocuments({ loadId }: LoadDocumentsProps) {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            {/* Search Input */}
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search documents..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Type Filter */}
+            <div className="w-full sm:w-48">
+              <Select
+                value={typeFilter || "all"}
+                onValueChange={handleTypeFilter}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {Object.entries(documentTypeLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Page Size Selector */}
+            <div className="w-full sm:w-32">
+              <Select
+                value={pageSize.toString()}
+                onValueChange={(value) => handlePageSizeChange(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 per page</SelectItem>
+                  <SelectItem value="10">10 per page</SelectItem>
+                  <SelectItem value="20">20 per page</SelectItem>
+                  <SelectItem value="50">50 per page</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -276,61 +442,119 @@ export function LoadDocuments({ loadId }: LoadDocumentsProps) {
           ) : (
             <ScrollArea className="h-[400px]">
               <div className="space-y-2">
-                {documents.map(
-                  (doc: {
-                    id: string;
-                    name: string;
-                    type: string;
-                    fileSize: number;
-                    uploadedAt: string;
-                    fileUrl: string;
-                  }) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
-                    >
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <FileText className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {doc.name}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                            <Badge variant="outline" className="text-xs">
-                              {documentTypeLabels[doc.type] || doc.type}
-                            </Badge>
-                            <span>•</span>
-                            <span>{formatFileSize(doc.fileSize)}</span>
-                            <span>•</span>
-                            <span>
-                              {format(new Date(doc.uploadedAt), "MMM dd, yyyy")}
-                            </span>
-                          </div>
+                {documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
+                  >
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <FileText className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {doc.name}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {documentTypeLabels[
+                              doc.type as unknown as string
+                            ] || String(doc.type)}
+                          </Badge>
+                          <span>•</span>
+                          <span>{formatFileSize(doc.fileSize)}</span>
+                          <span>•</span>
+                          <span>
+                            {format(new Date(doc.uploadedAt), "MMM dd, yyyy")}
+                          </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleDownload(doc)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => setDeleteDocId(doc.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
                     </div>
-                  )
-                )}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleDownload(doc)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => setDeleteDocId(doc.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </ScrollArea>
+          )}
+
+          {/* Pagination Controls */}
+          {pagination && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+                {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+                of {pagination.total} documents
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={!pagination.hasPrev}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from(
+                    { length: Math.min(5, pagination.totalPages) },
+                    (_, i) => {
+                      let pageNum;
+                      if (pagination.totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (pagination.page <= 3) {
+                        pageNum = i + 1;
+                      } else if (pagination.page >= pagination.totalPages - 2) {
+                        pageNum = pagination.totalPages - 4 + i;
+                      } else {
+                        pageNum = pagination.page - 2 + i;
+                      }
+
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={
+                            pageNum === pagination.page ? "default" : "outline"
+                          }
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    }
+                  )}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={!pagination.hasNext}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

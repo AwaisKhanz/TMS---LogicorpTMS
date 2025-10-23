@@ -10,5 +10,12 @@ router.use(authenticate);
 
 // Routes
 router.get("/stats", dashboardController.getDashboardStats);
+router.get("/charts/revenue", dashboardController.getRevenueChartData);
+router.get("/charts/load-status", dashboardController.getLoadStatusChartData);
+router.get("/charts/performance", dashboardController.getPerformanceChartData);
+router.get(
+  "/charts/carrier-performance",
+  dashboardController.getCarrierPerformanceChartData
+);
 
 export default router;

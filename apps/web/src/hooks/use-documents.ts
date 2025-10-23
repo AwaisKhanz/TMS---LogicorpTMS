@@ -242,7 +242,7 @@ export function useGenerateDocument() {
  */
 export function useDownloadDocument() {
   return useMutation({
-    mutationFn: async (doc: { id: string; name: string }) => {
+    mutationFn: async (doc: { id: string; name: string; mimeType?: string }) => {
       const response = await apiClient.get<Blob>(
         `/documents/${doc.id}/download`,
         {
@@ -250,11 +250,17 @@ export function useDownloadDocument() {
         }
       );
 
+      // Ensure filename has proper extension for PDFs
+      let filename = doc.name;
+      if (doc.mimeType === 'application/pdf' && !filename.toLowerCase().endsWith('.pdf')) {
+        filename = `${filename}.pdf`;
+      }
+
       // Create download link
       const url = window.URL.createObjectURL(new Blob([response]));
       const link = window.document.createElement("a");
       link.href = url;
-      link.setAttribute("download", doc.name);
+      link.setAttribute("download", filename);
       window.document.body.appendChild(link);
       link.click();
       link.remove();

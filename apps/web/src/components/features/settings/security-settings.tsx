@@ -164,8 +164,8 @@ export function SecuritySettings() {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
+          <div className="h-4 bg-muted rounded w-1/4 mb-4"></div>
+          <div className="h-32 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -314,11 +314,11 @@ export function SecuritySettings() {
                     )}
                   />
 
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-blue-900 mb-2">
+                  <div className="bg-primary/5 p-4 rounded-lg">
+                    <h4 className="font-medium text-primary mb-2">
                       Password Requirements
                     </h4>
-                    <ul className="text-sm text-blue-800 space-y-1">
+                    <ul className="text-sm text-primary/80 space-y-1">
                       <li className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4" />
                         At least 8 characters
@@ -430,7 +430,7 @@ export function SecuritySettings() {
                       </AlertDialogTitle>
                       <AlertDialogDescription>
                         This will log out all other devices except this one.
-                        You'll need to log in again on those devices.
+                        You&apos;ll need to log in again on those devices.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -490,7 +490,7 @@ export function SecuritySettings() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                        <code className="text-sm bg-muted px-2 py-1 rounded">
                           {session.ipAddress}
                         </code>
                       </TableCell>
@@ -578,9 +578,9 @@ export function SecuritySettings() {
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
                 {securitySettings?.twoFactorEnabled ? (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <CheckCircle className="h-5 w-5 text-emerald-500" />
                 ) : (
-                  <XCircle className="h-5 w-5 text-red-500" />
+                  <XCircle className="h-5 w-5 text-destructive" />
                 )}
               </div>
               <div>
@@ -593,7 +593,7 @@ export function SecuritySettings() {
 
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
-                <CheckCircle className="h-5 w-5 text-green-500" />
+                <CheckCircle className="h-5 w-5 text-emerald-500" />
               </div>
               <div>
                 <p className="font-medium">Use a Strong Password</p>
@@ -606,7 +606,7 @@ export function SecuritySettings() {
 
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
-                <CheckCircle className="h-5 w-5 text-green-500" />
+                <CheckCircle className="h-5 w-5 text-emerald-500" />
               </div>
               <div>
                 <p className="font-medium">Regularly Review Active Sessions</p>
@@ -619,7 +619,7 @@ export function SecuritySettings() {
 
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
-                <CheckCircle className="h-5 w-5 text-green-500" />
+                <CheckCircle className="h-5 w-5 text-emerald-500" />
               </div>
               <div>
                 <p className="font-medium">Keep Your Information Updated</p>

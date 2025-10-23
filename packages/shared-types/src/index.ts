@@ -9,24 +9,10 @@ export * from "./dashboard.types";
 export * from "./document.types";
 export * from "./settings.types";
 export * from "./permission.types";
+export * from "./chart.types";
+export * from "./load-form.types";
+export * from "./form-option.types";
+export * from "./notification.types";
 
-// Re-export common Prisma types that might be needed (as types only)
-// Note: Removed Load, Carrier, Customer, Document exports to avoid conflicts with our shared types
-export type {
-  User,
-  Organization,
-  Session,
-  LoadEvent,
-  CarrierContact,
-  CustomerContact,
-  Invoice,
-  InvoiceLineItem,
-  AuditLog,
-  InvoiceStatus,
-} from "@prisma/client";
-
-// Re-export our custom types with different names to avoid conflicts
-export type {
-  Permission as PrismaPermission,
-  Role as PrismaRole,
-} from "@prisma/client";
+// Note: Prisma types are not exported from shared-types to avoid dependency issues
+// Import Prisma types directly in apps that need them

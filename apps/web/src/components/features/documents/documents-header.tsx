@@ -45,26 +45,28 @@ const entityTypes = [
 
 interface DocumentsHeaderProps {
   onSearch?: (query: string) => void;
-  onFilter?: (filters: any) => void;
+  onFilter?: (filters: Record<string, unknown>) => void;
   totalCount?: number;
 }
 
 export function DocumentsHeader({
   onSearch,
   onFilter,
-  totalCount = 0
+  totalCount = 0,
 }: DocumentsHeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<any>({});
+  const [activeFilters, setActiveFilters] = useState<Record<string, unknown>>(
+    {}
+  );
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch?.(searchQuery);
   };
 
-  const handleFilterApply = (filters: any) => {
+  const handleFilterApply = (filters: Record<string, unknown>) => {
     setActiveFilters(filters);
     onFilter?.(filters);
     setFilterDialogOpen(false);
@@ -76,12 +78,12 @@ export function DocumentsHeader({
   };
 
   const activeFilterCount = Object.keys(activeFilters).filter(
-    key => activeFilters[key]
+    (key) => activeFilters[key]
   ).length;
 
   return (
     <>
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 items-start ">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <FileText className="h-8 w-8" />
@@ -97,15 +99,15 @@ export function DocumentsHeader({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full ">
           {/* Search */}
-          <form onSubmit={handleSearch} className="relative">
+          <form onSubmit={handleSearch} className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search documents..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-[300px]"
+              className="pl-9 w-full"
             />
           </form>
 
@@ -231,10 +233,7 @@ export function DocumentsHeader({
 
                 <div className="space-y-2">
                   <Label>File</Label>
-                  <Input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                  />
+                  <Input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
                 </div>
 
                 <div className="space-y-2">
@@ -244,7 +243,10 @@ export function DocumentsHeader({
               </div>
 
               <DialogFooter>
-                <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setUploadDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button>

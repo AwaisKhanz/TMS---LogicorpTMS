@@ -61,8 +61,23 @@ export const config = {
     format: process.env.LOG_FORMAT || "pretty",
   },
 
+  aws: {
+    region: process.env.AWS_REGION || "us-east-1",
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    ses: {
+      fromEmail: process.env.AWS_SES_FROM_EMAIL || "noreply@logicorptms.com",
+      fromName: process.env.AWS_SES_FROM_NAME || "LogicorpTMS",
+      configurationSet: process.env.AWS_SES_CONFIGURATION_SET,
+    },
+    sns: {
+      smsType: process.env.AWS_SNS_SMS_TYPE || "Transactional", // or 'Promotional'
+    },
+  },
+
+  // Legacy email config (deprecated - use AWS SES instead)
   email: {
-    sendgridApiKey: process.env.SENDGRID_API_KEY,
+    sendgridApiKey: process.env.SENDGRID_API_KEY, // DEPRECATED - will be removed
     fromEmail: process.env.FROM_EMAIL || "noreply@logicorptms.com",
     frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
   },

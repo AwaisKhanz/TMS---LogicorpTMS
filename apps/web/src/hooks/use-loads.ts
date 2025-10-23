@@ -426,3 +426,39 @@ export function useLoadDocuments(id: string | undefined) {
     enabled: !!id,
   });
 }
+
+export function useLoadDocumentsPaginated(
+  id: string | undefined,
+  options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    type?: string;
+  }
+) {
+  return useQuery({
+    queryKey: [...loadKeys.documents(id!), options],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (options?.page) params.append("page", options.page.toString());
+      if (options?.limit) params.append("limit", options.limit.toString());
+      if (options?.search) params.append("search", options.search);
+      if (options?.type) params.append("type", options.type);
+
+      const response = await apiClient.get<{
+        success: boolean;
+        data: Document[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+          hasNext: boolean;
+          hasPrev: boolean;
+        };
+      }>(`/loads/${id}/documents?${params.toString()}`);
+      return response;
+    },
+    enabled: !!id,
+  });
+}

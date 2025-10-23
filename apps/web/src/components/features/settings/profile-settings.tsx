@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -21,16 +21,19 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import {
-  useProfile,
-  useUpdateProfile,
-  useUpdateNotificationSettings,
-} from "@/hooks/use-settings";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useProfile, useUpdateProfile } from "@/hooks/use-settings";
 import { useAuth } from "@/contexts/auth-context";
-import { User, Mail, Bell, Upload } from "lucide-react";
+import { User, Mail, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 const profileSchema = z.object({
@@ -39,14 +42,6 @@ const profileSchema = z.object({
   phone: z.string().optional(),
   timezone: z.string().min(1, "Timezone is required"),
   language: z.string().min(1, "Language is required"),
-});
-
-const notificationSchema = z.object({
-  emailNotifications: z.boolean(),
-  loadUpdates: z.boolean(),
-  documentNotifications: z.boolean(),
-  weeklyReports: z.boolean(),
-  marketingEmails: z.boolean(),
 });
 
 const timezones = [
@@ -70,8 +65,11 @@ export function ProfileSettings() {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const updateProfile = useUpdateProfile();
-  const updateNotifications = useUpdateNotificationSettings();
   const [isEditing, setIsEditing] = useState(false);
+  const [showAvatarDialog, setShowAvatarDialog] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -81,18 +79,6 @@ export function ProfileSettings() {
       phone: profile?.phone || "",
       timezone: profile?.timezone || "America/New_York",
       language: profile?.language || "en",
-    },
-  });
-
-  const notificationForm = useForm<z.infer<typeof notificationSchema>>({
-    resolver: zodResolver(notificationSchema),
-    defaultValues: {
-      emailNotifications: profile?.notifications?.emailNotifications || true,
-      loadUpdates: profile?.notifications?.loadUpdates || true,
-      documentNotifications:
-        profile?.notifications?.documentNotifications || true,
-      weeklyReports: profile?.notifications?.weeklyReports || false,
-      marketingEmails: profile?.notifications?.marketingEmails || false,
     },
   });
 
@@ -106,15 +92,8 @@ export function ProfileSettings() {
         timezone: profile.timezone,
         language: profile.language,
       });
-      notificationForm.reset({
-        emailNotifications: profile.notifications.emailNotifications,
-        loadUpdates: profile.notifications.loadUpdates,
-        documentNotifications: profile.notifications.documentNotifications,
-        weeklyReports: profile.notifications.weeklyReports,
-        marketingEmails: profile.notifications.marketingEmails,
-      });
     }
-  }, [profile, profileForm, notificationForm]);
+  }, [profile, profileForm]);
 
   const onProfileSubmit = async (data: z.infer<typeof profileSchema>) => {
     try {
@@ -125,19 +104,7 @@ export function ProfileSettings() {
     }
   };
 
-  const onNotificationSubmit = async (
-    data: z.infer<typeof notificationSchema>
-  ) => {
-    try {
-      await updateNotifications.mutateAsync(data);
-    } catch (error) {
-      // Error is handled by the hook
-    }
-  };
-
-  const handleAvatarUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -153,10 +120,21 @@ export function ProfileSettings() {
       return;
     }
 
+    // Set selected file and create preview
+    setSelectedFile(file);
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    setShowAvatarDialog(true);
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!selectedFile) return;
+
+    setIsUploading(true);
     try {
       // Create FormData for file upload
       const formData = new FormData();
-      formData.append("avatar", file);
+      formData.append("avatar", selectedFile);
 
       // Upload avatar
       const response = await fetch("/api/settings/profile/avatar", {
@@ -166,6 +144,13 @@ export function ProfileSettings() {
 
       if (response.ok) {
         toast.success("Avatar updated successfully");
+        // Close dialog and reset state
+        setShowAvatarDialog(false);
+        setSelectedFile(null);
+        if (previewUrl) {
+          URL.revokeObjectURL(previewUrl);
+          setPreviewUrl(null);
+        }
         // Refresh profile data
         window.location.reload();
       } else {
@@ -173,15 +158,35 @@ export function ProfileSettings() {
       }
     } catch (error) {
       toast.error("Failed to upload avatar");
+    } finally {
+      setIsUploading(false);
     }
   };
+
+  const handleCancelUpload = () => {
+    setShowAvatarDialog(false);
+    setSelectedFile(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  };
+
+  // Cleanup object URL on component unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   if (profileLoading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
+          <div className="h-4 bg-muted rounded w-1/4 mb-4"></div>
+          <div className="h-32 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -290,11 +295,11 @@ export function ProfileSettings() {
                   )}
                 />
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-foreground">
                     Email
                   </label>
-                  <div className="flex items-center gap-2 p-3 border rounded-md bg-gray-50">
-                    <Mail className="h-4 w-4 text-gray-500" />
+                  <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">{user?.email}</span>
                     <span className="text-xs text-muted-foreground">
                       (Cannot be changed)
@@ -380,139 +385,85 @@ export function ProfileSettings() {
         </CardContent>
       </Card>
 
-      {/* Notification Preferences */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notification Preferences
-          </CardTitle>
-          <CardDescription>
-            Choose what notifications you want to receive
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...notificationForm}>
-            <form
-              onSubmit={notificationForm.handleSubmit(onNotificationSubmit)}
-              className="space-y-4"
-            >
-              <div className="space-y-4">
-                <FormField
-                  control={notificationForm.control}
-                  name="emailNotifications"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <FormLabel>Email Notifications</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Receive email notifications for important updates
-                        </p>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+      {/* Avatar Upload Confirmation Dialog */}
+      <Dialog open={showAvatarDialog} onOpenChange={setShowAvatarDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Avatar Upload</DialogTitle>
+            <DialogDescription>
+              Please review your new avatar before uploading. This will replace
+              your current profile picture.
+            </DialogDescription>
+          </DialogHeader>
 
-                <FormField
-                  control={notificationForm.control}
-                  name="loadUpdates"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <FormLabel>Load Updates</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Get notified about load status changes
-                        </p>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
+          <div className="space-y-4">
+            {/* Current Avatar */}
+            <div className="text-center">
+              <p className="text-sm font-medium text-muted-foreground mb-2">
+                Current Avatar
+              </p>
+              <Avatar className="h-20 w-20 mx-auto">
+                <AvatarImage
+                  src={profile?.avatar || ""}
+                  alt="Current Profile"
                 />
+                <AvatarFallback className="text-lg">
+                  {profile?.firstName?.[0]}
+                  {profile?.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+            </div>
 
-                <FormField
-                  control={notificationForm.control}
-                  name="documentNotifications"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <FormLabel>Document Notifications</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Get notified when documents are uploaded or processed
-                        </p>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+            {/* Arrow */}
+            <div className="flex justify-center">
+              <div className="text-2xl text-muted-foreground">↓</div>
+            </div>
 
-                <FormField
-                  control={notificationForm.control}
-                  name="weeklyReports"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <FormLabel>Weekly Reports</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Receive weekly summary reports
-                        </p>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+            {/* New Avatar Preview */}
+            <div className="text-center">
+              <p className="text-sm font-medium text-muted-foreground mb-2">
+                New Avatar
+              </p>
+              <Avatar className="h-20 w-20 mx-auto">
+                <AvatarImage src={previewUrl || ""} alt="New Profile" />
+                <AvatarFallback className="text-lg">
+                  {profile?.firstName?.[0]}
+                  {profile?.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+            </div>
 
-                <FormField
-                  control={notificationForm.control}
-                  name="marketingEmails"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <FormLabel>Marketing Emails</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Receive product updates and marketing communications
-                        </p>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+            {/* File Info */}
+            {selectedFile && (
+              <div className="bg-muted/50 p-3 rounded-lg">
+                <p className="text-sm font-medium">File Details</p>
+                <p className="text-xs text-muted-foreground">
+                  Name: {selectedFile.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Type: {selectedFile.type}
+                </p>
               </div>
+            )}
+          </div>
 
-              <Button type="submit" disabled={updateNotifications.isPending}>
-                {updateNotifications.isPending
-                  ? "Saving..."
-                  : "Save Preferences"}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelUpload}
+              disabled={isUploading}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmUpload} disabled={isUploading}>
+              {isUploading ? "Uploading..." : "Upload Avatar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

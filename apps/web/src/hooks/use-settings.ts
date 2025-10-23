@@ -5,7 +5,6 @@ import type { ApiErrorException } from "@/types/api.types";
 import type {
   ProfileSettings,
   UpdateProfileRequest,
-  UpdateNotificationSettingsRequest,
   SecuritySettings,
   ChangePasswordRequest,
   EnableTwoFactorRequest,
@@ -27,6 +26,7 @@ import type {
   ActiveSessionsResponse,
   TeamMembersResponse,
   BillingHistoryResponse,
+  BillingInvoice,
 } from "@tms/shared-types";
 
 // ==================== QUERY KEYS ====================
@@ -79,30 +79,7 @@ export function useUpdateProfile() {
   });
 }
 
-export function useUpdateNotificationSettings() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (data: UpdateNotificationSettingsRequest) => {
-      const response = await apiClient.put<ProfileSettingsResponse>(
-        "/settings/profile/notifications",
-        data
-      );
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: settingsKeys.profile() });
-      toast.success("Notification settings updated successfully");
-    },
-    onError: (error) => {
-      const apiError = error as ApiErrorException;
-      toast.error(
-        apiError.response?.data?.error?.message ||
-          "Failed to update notification settings"
-      );
-    },
-  });
-}
+// Notification settings removed - using simplified notification system
 
 // ==================== SECURITY SETTINGS ====================
 
@@ -443,7 +420,7 @@ export function useBillingSettings() {
 }
 
 export function useBillingHistory() {
-  return useQuery<any[]>({
+  return useQuery<BillingInvoice[]>({
     queryKey: settingsKeys.billingHistory(),
     queryFn: async () => {
       const response = await apiClient.get<BillingHistoryResponse>(

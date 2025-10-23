@@ -1,3 +1,17 @@
+import type { Request } from "express";
+
+// Authenticated request interface that matches the actual middleware implementation
+export interface AuthenticatedRequest extends Request {
+  auth: {
+    userId: string;
+    organizationId: string;
+    email: string;
+    role: string;
+    permissions: string[];
+    emailVerified: boolean;
+  };
+}
+
 // Re-export auth types from shared types package
 export type {
   LoginRequest as LoginDto,

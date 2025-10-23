@@ -369,18 +369,78 @@ export class LoadRepository extends BaseRepository<Load> {
     return this.prisma.loadEvent.findMany({
       where: { loadId },
       orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
     });
   }
 
-  async getLoadDocuments(loadId: string, organizationId: string) {
-    return this.prisma.document.findMany({
-      where: {
-        organizationId,
-        entityType: "LOAD",
-        entityId: loadId,
+  async getLoadDocuments(
+    loadId: string,
+    organizationId: string,
+    options?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      type?: string;
+    }
+  ) {
+    const page = options?.page || 1;
+    const limit = options?.limit || 10;
+    const skip = (page - 1) * limit;
+    const search = options?.search?.trim();
+    const type = options?.type;
+
+    // Build where clause
+    const where: any = {
+      organizationId,
+      entityType: "LOAD",
+      entityId: loadId,
+    };
+
+    // Add search filter
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        // Only search type if it's a string field, otherwise skip
+        // { type: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    // Add type filter
+    if (type) {
+      where.type = type;
+    }
+
+    // Get documents with pagination
+    const [documents, total] = await Promise.all([
+      this.prisma.document.findMany({
+        where,
+        orderBy: { uploadedAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      this.prisma.document.count({ where }),
+    ]);
+
+    return {
+      documents,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
       },
-      orderBy: { uploadedAt: "desc" },
-    });
+    };
   }
 
   async getCarrier(carrierId: string, organizationId: string) {
@@ -509,5 +569,150 @@ export class LoadRepository extends BaseRepository<Load> {
         {} as Record<string, number>
       ),
     };
+  }
+
+  async getRevenueChartData(organizationId: string, months: number = 6) {
+    const currentDate = new Date();
+    const results = [];
+
+    for (let i = months - 1; i >= 0; i--) {
+      const date = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() - i,
+        1
+      );
+      const nextMonth = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() - i + 1,
+        1
+      );
+      const monthName = date.toLocaleDateString("en-US", { month: "short" });
+
+      const [revenueData, loadCount] = await Promise.all([
+        this.prisma.load.aggregate({
+          where: {
+            organizationId,
+            deliveredAt: {
+              gte: date,
+              lt: nextMonth,
+            },
+            deletedAt: null,
+          },
+          _sum: {
+            customerRate: true,
+          },
+        }),
+        this.prisma.load.count({
+          where: {
+            organizationId,
+            createdAt: {
+              gte: date,
+              lt: nextMonth,
+            },
+            deletedAt: null,
+          },
+        }),
+      ]);
+
+      results.push({
+        month: monthName,
+        revenue: Number(revenueData._sum.customerRate) || 0,
+        loads: loadCount,
+      });
+    }
+
+    return results;
+  }
+
+  async getLoadStatusChartData(organizationId: string) {
+    const statusCounts = await this.prisma.load.groupBy({
+      by: ["status"],
+      where: {
+        organizationId,
+        deletedAt: null,
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    return statusCounts.map((status) => ({
+      status: status.status,
+      count: status._count.id,
+    }));
+  }
+
+  async getPerformanceChartData(organizationId: string, weeks: number = 4) {
+    const currentDate = new Date();
+    const results = [];
+
+    for (let i = weeks - 1; i >= 0; i--) {
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(currentDate.getDate() - i * 7);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+
+      const [pickups, deliveries] = await Promise.all([
+        this.prisma.load.count({
+          where: {
+            organizationId,
+            pickupDate: {
+              gte: weekStart,
+              lte: weekEnd,
+            },
+            deletedAt: null,
+          },
+        }),
+        this.prisma.load.count({
+          where: {
+            organizationId,
+            deliveryDate: {
+              gte: weekStart,
+              lte: weekEnd,
+            },
+            deletedAt: null,
+          },
+        }),
+      ]);
+
+      results.push({
+        week: `Week ${weeks - i}`,
+        pickups,
+        deliveries,
+      });
+    }
+
+    return results;
+  }
+
+  async getCarrierPerformanceChartData(
+    organizationId: string,
+    limit: number = 4
+  ) {
+    const carrierPerformance = await this.prisma.load.groupBy({
+      by: ["carrierId"],
+      where: {
+        organizationId,
+        carrierId: {
+          not: null,
+        },
+        deletedAt: null,
+      },
+      _count: {
+        id: true,
+      },
+      orderBy: {
+        _count: {
+          id: "desc",
+        },
+      },
+      take: limit,
+    });
+
+    // Transform the data to ensure _count is a number
+    return carrierPerformance.map((item) => ({
+      ...item,
+      _count: typeof item._count === "object" ? item._count.id : item._count,
+    }));
   }
 }

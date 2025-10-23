@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import {
   ChevronLeft,
@@ -11,6 +12,7 @@ import {
   Users,
   Building2,
   FileText,
+  Bell,
   Settings,
   HelpCircle,
   LogOut,
@@ -66,6 +68,11 @@ const mainNavItems: NavItem[] = [
     icon: FileText,
     permission: PERMISSIONS.LOAD_VIEW_ALL, // Documents are typically associated with loads
   },
+  {
+    title: "Notifications",
+    href: "/notifications",
+    icon: Bell,
+  },
 ];
 
 const bottomNavItems: NavItem[] = [
@@ -91,12 +98,27 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const { logout } = useAuth();
 
+  // Professional expand button state
+  const [showExpandButton, setShowExpandButton] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
   const handleLogout = async () => {
     try {
       await logout();
     } catch (error) {
       console.error("Logout failed:", error);
     }
+  };
+
+  // Professional hover handlers
+  const handleMouseEnter = () => {
+    if (isCollapsed) {
+      setShowExpandButton(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setShowExpandButton(false);
   };
 
   const NavLink = ({ item }: { item: NavItem }) => {
@@ -107,16 +129,30 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       <Link
         href={item.href}
         className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent hover:text-accent-foreground",
+          "flex items-center rounded-lg text-sm transition-all duration-200 group",
+          "hover:bg-accent/80 hover:text-accent-foreground",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          isCollapsed
+            ? "justify-center px-3 py-3 w-full" // Centered for collapsed state
+            : "gap-3 px-3 py-2.5", // Normal spacing for expanded state
           isActive
-            ? "bg-primary text-primary-foreground hover:bg-primary/90"
-            : "text-muted-foreground"
+            ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+            : "text-muted-foreground hover:text-foreground"
         )}
       >
-        <Icon className="h-4 w-4 flex-shrink-0" />
-        {!isCollapsed && <span className="truncate">{item.title}</span>}
+        <Icon
+          className={cn(
+            "h-4 w-4 flex-shrink-0 transition-colors",
+            isActive
+              ? "text-primary-foreground"
+              : "text-muted-foreground group-hover:text-foreground"
+          )}
+        />
+        {!isCollapsed && (
+          <span className="truncate font-medium">{item.title}</span>
+        )}
         {!isCollapsed && item.badge && (
-          <span className="ml-auto rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">
+          <span className="ml-auto rounded-full bg-primary/10 text-primary px-2 py-1 text-xs font-medium">
             {item.badge}
           </span>
         )}
@@ -159,62 +195,84 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   return (
     <div
+      ref={sidebarRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className={cn(
-        "relative flex h-full flex-col border-r bg-card transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
+        "relative flex h-full flex-col border-r bg-card/95 backdrop-blur-sm transition-all duration-300 shadow-lg",
+        // Mobile responsive widths
+        isCollapsed ? "w-16 md:w-16" : "w-72 md:w-64"
       )}
     >
       {/* Header */}
-      <div className="flex h-16 items-center justify-between px-4 border-b">
-        {!isCollapsed && <Logo size="sm" showText={true} href="/" />}
-        {isCollapsed && <Logo size="sm" showText={false} href="/" />}
+      <div className="flex h-16 items-center justify-between px-4 border-b border-border/50 bg-card/50 backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          {!isCollapsed && <Logo size="sm" showText={true} href="/" />}
+          {isCollapsed && <Logo size="sm" showText={false} href="/" />}
+        </div>
+
+        {/* Toggle Button */}
         <Button
           variant="ghost"
           size="sm"
           onClick={onToggle}
-          className="h-8 w-8 p-0"
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
+          className={cn(
+            "h-8 w-8 p-0 transition-all duration-200 hover:bg-accent/50",
+            isCollapsed
+              ? "opacity-0 pointer-events-none" // Hide when collapsed
+              : "ml-0"
           )}
+        >
+          <ChevronLeft className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="space-y-2 p-4">
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+        <div className={cn("space-y-1", isCollapsed ? "p-2" : "p-4")}>
           {/* Main Navigation */}
           <div className="space-y-1">
             {!isCollapsed && (
-              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Main
-              </p>
+              <div className="px-3 py-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Main
+                </p>
+              </div>
             )}
-            {mainNavItems.map((item) => (
-              <NavLink key={item.href} item={item} />
-            ))}
+            <div className="space-y-1">
+              {mainNavItems.map((item) => (
+                <NavLink key={item.href} item={item} />
+              ))}
+            </div>
           </div>
 
-          <Separator className="my-4" />
+          <Separator className="my-4 bg-border/50" />
 
           {/* Bottom Navigation */}
           <div className="space-y-1">
             {!isCollapsed && (
-              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Account
-              </p>
+              <div className="px-3 py-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Account
+                </p>
+              </div>
             )}
-            {bottomNavItems.map((item) => (
-              <NavLink key={item.href} item={item} />
-            ))}
+            <div className="space-y-1">
+              {bottomNavItems.map((item) => (
+                <NavLink key={item.href} item={item} />
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       {/* User Section */}
-      <div className="border-t p-4">
+      <div
+        className={cn(
+          "border-t border-border/50 bg-card/30 backdrop-blur-sm",
+          isCollapsed ? "p-2" : "p-4"
+        )}
+      >
         {isCollapsed ? (
           <TooltipProvider>
             <Tooltip>
@@ -222,26 +280,45 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                  className="h-10 w-full p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex justify-center transition-all duration-200"
                   onClick={handleLogout}
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right">Sign Out</TooltipContent>
+              <TooltipContent
+                side="right"
+                className="bg-popover/95 backdrop-blur-sm"
+              >
+                Sign Out
+              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         ) : (
           <Button
             variant="ghost"
-            className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive"
+            className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200 h-10"
             onClick={handleLogout}
           >
             <LogOut className="h-4 w-4" />
-            Sign Out
+            <span className="font-medium">Sign Out</span>
           </Button>
         )}
       </div>
+
+      {/* Professional expand button - appears on hover when collapsed */}
+      {isCollapsed && showExpandButton && (
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-50 hidden md:block">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onToggle}
+            className="h-9 w-9 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 bg-primary hover:bg-primary/90 border-2 border-background"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

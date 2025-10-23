@@ -164,6 +164,10 @@ export class CarrierService {
     return this.carrierRepo.getStatistics(organizationId);
   }
 
+  getCarrierRepository() {
+    return this.carrierRepo;
+  }
+
   async searchCarriersByLane(
     organizationId: string,
     pickupState: string,
@@ -382,7 +386,7 @@ export class CarrierService {
       "On-Time Delivery %",
     ];
 
-    const rows = carriers.map((carrier) => [
+    const rows = carriers.map((carrier: CarrierExportData) => [
       carrier.mcNumber,
       carrier.companyName,
       carrier.contactName,

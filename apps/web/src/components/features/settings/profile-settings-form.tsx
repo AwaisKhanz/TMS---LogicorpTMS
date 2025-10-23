@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,7 +14,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -24,12 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Mail, Phone, Globe, Clock, Bell } from "lucide-react";
-import {
-  useProfile,
-  useUpdateProfile,
-  useUpdateNotificationSettings,
-} from "@/hooks/use-settings";
+import { User, Mail, Phone, Globe, Clock } from "lucide-react";
+import { useProfile, useUpdateProfile } from "@/hooks/use-settings";
 import type { UpdateProfileRequest } from "@tms/shared-types";
 
 const profileSchema = z.object({
@@ -58,15 +53,6 @@ const languages = [
 export function ProfileSettingsForm() {
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
-  const updateNotifications = useUpdateNotificationSettings();
-
-  const [notifications, setNotifications] = useState({
-    emailNotifications: true,
-    loadUpdates: true,
-    documentNotifications: true,
-    weeklyReports: false,
-    marketingEmails: false,
-  });
 
   const {
     register,
@@ -88,21 +74,11 @@ export function ProfileSettingsForm() {
       setValue("phone", profile.phone || "");
       setValue("timezone", profile.timezone);
       setValue("language", profile.language);
-      setNotifications(profile.notifications);
     }
   }, [profile, setValue]);
 
   const onSubmit = async (data: UpdateProfileRequest) => {
     updateProfile.mutate(data);
-  };
-
-  const handleNotificationChange = (
-    key: keyof typeof notifications,
-    value: boolean
-  ) => {
-    const newNotifications = { ...notifications, [key]: value };
-    setNotifications(newNotifications);
-    updateNotifications.mutate(newNotifications);
   };
 
   const getInitials = (firstName?: string, lastName?: string) => {
@@ -266,105 +242,6 @@ export function ProfileSettingsForm() {
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
-
-      {/* Notification Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notification Preferences
-          </CardTitle>
-          <CardDescription>
-            Manage how and when you receive notifications
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Email Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receive notifications via email
-                </p>
-              </div>
-              <Switch
-                checked={notifications.emailNotifications}
-                onCheckedChange={(checked) =>
-                  handleNotificationChange("emailNotifications", checked)
-                }
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Load Updates</Label>
-                <p className="text-sm text-muted-foreground">
-                  Get notified when loads are updated or status changes
-                </p>
-              </div>
-              <Switch
-                checked={notifications.loadUpdates}
-                onCheckedChange={(checked) =>
-                  handleNotificationChange("loadUpdates", checked)
-                }
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Document Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Get notified about document uploads and changes
-                </p>
-              </div>
-              <Switch
-                checked={notifications.documentNotifications}
-                onCheckedChange={(checked) =>
-                  handleNotificationChange("documentNotifications", checked)
-                }
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Weekly Reports</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receive weekly summary reports via email
-                </p>
-              </div>
-              <Switch
-                checked={notifications.weeklyReports}
-                onCheckedChange={(checked) =>
-                  handleNotificationChange("weeklyReports", checked)
-                }
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Marketing Emails</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receive updates about new features and promotions
-                </p>
-              </div>
-              <Switch
-                checked={notifications.marketingEmails}
-                onCheckedChange={(checked) =>
-                  handleNotificationChange("marketingEmails", checked)
-                }
-              />
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

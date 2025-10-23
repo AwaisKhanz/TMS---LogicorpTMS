@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useLoad, useAssignCarrier } from "@/hooks/use-loads";
+import { useCarrierOptions } from "@/hooks/use-carriers";
 import type { Load } from "@tms/shared-types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,36 +27,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Truck, Building2, Shield, CheckCircle2, Loader2 } from "lucide-react";
 
-// Mock carriers - replace with actual API call
-const mockCarriers = [
-  {
-    id: "1",
-    companyName: "Fast Transport LLC",
-    mcNumber: "MC123456",
-    dotNumber: "DOT654321",
-    isActive: true,
-    isApproved: true,
-    rating: 4.8,
-    insuranceExpiry: "2025-12-31",
-  },
-  {
-    id: "2",
-    companyName: "Reliable Freight Co.",
-    mcNumber: "MC789012",
-    dotNumber: "DOT210987",
-    isActive: true,
-    isApproved: true,
-    rating: 4.6,
-    insuranceExpiry: "2025-11-30",
-  },
-];
-
 interface LoadAssignmentProps {
   loadId: string;
 }
 
 export function LoadAssignment({ loadId }: LoadAssignmentProps) {
   const { data: loadData, isLoading } = useLoad(loadId);
+  const {
+    carriers,
+    isLoading: carriersLoading,
+    error: carriersError,
+  } = useCarrierOptions();
 
   // Explicit type assertion to ensure we use the correct shared Load type
   const load = loadData as Load;
@@ -146,59 +128,77 @@ export function LoadAssignment({ loadId }: LoadAssignmentProps) {
                           <SelectValue placeholder="Select a carrier" />
                         </SelectTrigger>
                         <SelectContent>
-                          {mockCarriers.map((carrier) => (
-                            <SelectItem key={carrier.id} value={carrier.id}>
-                              <div className="flex flex-col items-start">
-                                <span className="font-medium">
-                                  {carrier.companyName}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {carrier.mcNumber} • Rating: {carrier.rating}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
+                          {carriersLoading ? (
+                            <div className="p-2 text-sm text-muted-foreground text-center">
+                              Loading carriers...
+                            </div>
+                          ) : carriersError ? (
+                            <div className="p-2 text-sm text-destructive text-center">
+                              Error loading carriers
+                            </div>
+                          ) : carriers.length === 0 ? (
+                            <div className="p-2 text-sm text-muted-foreground text-center">
+                              No carriers available
+                            </div>
+                          ) : (
+                            (() => {
+                              const availableCarriers = carriers.filter(
+                                (carrier) => carrier.value !== load.carrierId
+                              );
+                              return availableCarriers.length === 0 ? (
+                                <div className="p-2 text-sm text-muted-foreground text-center">
+                                  No other carriers available for reassignment
+                                </div>
+                              ) : (
+                                availableCarriers.map((carrier) => (
+                                  <SelectItem
+                                    key={carrier.id}
+                                    value={carrier.value}
+                                  >
+                                    <div className="flex flex-col items-start">
+                                      <span className="font-medium">
+                                        {carrier.name}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {carrier.mcNumber}
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                ))
+                              );
+                            })()
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
 
                     {selectedCarrier && (
                       <div className="rounded-lg border p-3 space-y-2 text-sm">
-                        {mockCarriers
-                          .filter((c) => c.id === selectedCarrier)
-                          .map((carrier) => (
-                            <div key={carrier.id} className="space-y-1">
+                        {(() => {
+                          const selectedCarrierData = carriers.find(
+                            (c) => c.value === selectedCarrier
+                          );
+                          return selectedCarrierData ? (
+                            <div className="space-y-1">
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">
-                                  DOT Number:
+                                  Company:
                                 </span>
                                 <span className="font-medium">
-                                  {carrier.dotNumber}
+                                  {selectedCarrierData.name}
                                 </span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">
-                                  Status:
-                                </span>
-                                <Badge
-                                  variant="default"
-                                  className="h-5 text-xs"
-                                >
-                                  {carrier.isActive && carrier.isApproved
-                                    ? "Active"
-                                    : "Inactive"}
-                                </Badge>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">
-                                  Insurance Valid Until:
+                                  MC Number:
                                 </span>
                                 <span className="font-medium">
-                                  {carrier.insuranceExpiry}
+                                  {selectedCarrierData.mcNumber}
                                 </span>
                               </div>
                             </div>
-                          ))}
+                          ) : null;
+                        })()}
                       </div>
                     )}
 
@@ -268,56 +268,77 @@ export function LoadAssignment({ loadId }: LoadAssignmentProps) {
                         <SelectValue placeholder="Select a carrier" />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockCarriers.map((carrier) => (
-                          <SelectItem key={carrier.id} value={carrier.id}>
-                            <div className="flex flex-col items-start">
-                              <span className="font-medium">
-                                {carrier.companyName}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {carrier.mcNumber} • Rating: {carrier.rating}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
+                        {carriersLoading ? (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            Loading carriers...
+                          </div>
+                        ) : carriersError ? (
+                          <div className="p-2 text-sm text-destructive text-center">
+                            Error loading carriers
+                          </div>
+                        ) : carriers.length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            No carriers available
+                          </div>
+                        ) : (
+                          (() => {
+                            const availableCarriers = carriers.filter(
+                              (carrier) => carrier.value !== load.carrierId
+                            );
+                            return availableCarriers.length === 0 ? (
+                              <div className="p-2 text-sm text-muted-foreground text-center">
+                                No other carriers available for assignment
+                              </div>
+                            ) : (
+                              availableCarriers.map((carrier) => (
+                                <SelectItem
+                                  key={carrier.id}
+                                  value={carrier.value}
+                                >
+                                  <div className="flex flex-col items-start">
+                                    <span className="font-medium">
+                                      {carrier.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {carrier.mcNumber}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))
+                            );
+                          })()
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
 
                   {selectedCarrier && (
                     <div className="rounded-lg border p-3 space-y-2 text-sm">
-                      {mockCarriers
-                        .filter((c) => c.id === selectedCarrier)
-                        .map((carrier) => (
-                          <div key={carrier.id} className="space-y-1">
+                      {(() => {
+                        const selectedCarrierData = carriers.find(
+                          (c) => c.value === selectedCarrier
+                        );
+                        return selectedCarrierData ? (
+                          <div className="space-y-1">
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">
-                                DOT Number:
+                                Company:
                               </span>
                               <span className="font-medium">
-                                {carrier.dotNumber}
+                                {selectedCarrierData.name}
                               </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">
-                                Status:
-                              </span>
-                              <Badge variant="default" className="h-5 text-xs">
-                                {carrier.isActive && carrier.isApproved
-                                  ? "Active"
-                                  : "Inactive"}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">
-                                Insurance Valid Until:
+                                MC Number:
                               </span>
                               <span className="font-medium">
-                                {carrier.insuranceExpiry}
+                                {selectedCarrierData.mcNumber}
                               </span>
                             </div>
                           </div>
-                        ))}
+                        ) : null;
+                      })()}
                     </div>
                   )}
 

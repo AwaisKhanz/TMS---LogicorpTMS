@@ -9,6 +9,7 @@ import documentRoutes from "./document.routes.js";
 import documentTemplateRoutes from "./document-template.routes.js";
 import dashboardRoutes from "./dashboard.routes.js";
 import settingsRoutes from "./settings.routes.js";
+import notificationRoutes from "./notification.routes.js";
 
 const router = Router();
 
@@ -23,6 +24,7 @@ router.use("/documents", documentRoutes);
 router.use("/document-templates", documentTemplateRoutes);
 router.use("/dashboard", dashboardRoutes);
 router.use("/settings", settingsRoutes);
+router.use("/notifications", notificationRoutes);
 
 // Health check
 router.get("/health", (_req, res) => {

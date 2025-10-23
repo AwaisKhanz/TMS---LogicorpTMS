@@ -44,6 +44,7 @@ model Organization {
   documents Document[]
   documentTemplates DocumentTemplate[]
   auditLogs AuditLog[]
+  notifications Notification[]
 
   @@map("organizations")
 }
@@ -59,6 +60,7 @@ model User {
   firstName String
   lastName  String
   phone     String?
+  phoneVerified Boolean @default(false)
   avatar    String?
 
   // Auth
@@ -83,6 +85,8 @@ model User {
   createdDocumentTemplates DocumentTemplate[] @relation("CreatedDocumentTemplates")
   passwordResets     PasswordReset[]
   emailVerifications EmailVerification[]
+  events             LoadEvent[]
+  receivedNotifications Notification[]   @relation("ReceivedNotifications")
 
   @@index([organizationId])
   @@index([email])
@@ -238,6 +242,7 @@ model LoadEvent {
   createdBy String?
 
   load Load @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@map("load_events")
 }
@@ -595,8 +600,11 @@ enum EntityType {
   LOAD
   CARRIER
   CUSTOMER
+  DOCUMENT
   INVOICE
+  PAYMENT
   USER
+  ORGANIZATION
 }
 
 enum DocumentType {
@@ -642,3 +650,52 @@ model EmailVerification {
   @@index([expiresAt])
   @@map("email_verifications")
 }
+
+// ==================== NOTIFICATIONS ====================
+enum NotificationType {
+  LOAD_STATUS_CHANGE
+  LOAD_ASSIGNED
+  DOCUMENT_GENERATED
+  INVOICE_CREATED
+  PAYMENT_RECEIVED
+  CARRIER_APPROVED
+  CARRIER_SUSPENDED
+  CUSTOMER_CREATED
+  CUSTOMER_UPDATED
+  SYSTEM_ALERT
+}
+
+
+model Notification {
+  id             String   @id @default(cuid())
+  organizationId String
+  recipientId    String
+  
+  // Content
+  type           NotificationType
+  title          String
+  message        String
+  
+  // Optional link to entity
+  entityType     EntityType?
+  entityId       String?
+  
+  // Status (simple)
+  isRead         Boolean  @default(false)
+  readAt         DateTime?
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  recipient      User         @relation("ReceivedNotifications", fields: [recipientId], references: [id])
+  
+  @@index([organizationId, recipientId, isRead])
+  @@index([recipientId, createdAt])
+  @@map("notifications")
+}
+
+
+
+

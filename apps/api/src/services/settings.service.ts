@@ -5,7 +5,6 @@ import { NotFoundError, ConflictError } from "../utils/errors.util.js";
 import type {
   ProfileSettings,
   UpdateProfileRequest,
-  UpdateNotificationSettingsRequest,
   SecuritySettings,
   ChangePasswordRequest,
   EnableTwoFactorRequest,
@@ -37,15 +36,6 @@ export class SettingsService {
       throw new NotFoundError("User");
     }
 
-    // Default notification settings (since we don't have a settings field in User model)
-    const notifications = {
-      emailNotifications: true,
-      loadUpdates: true,
-      documentNotifications: true,
-      weeklyReports: false,
-      marketingEmails: false,
-    };
-
     return {
       firstName: user.firstName,
       lastName: user.lastName,
@@ -54,7 +44,6 @@ export class SettingsService {
       avatar: user.avatar,
       timezone: "America/New_York",
       language: "en",
-      notifications,
     };
   }
 
@@ -83,23 +72,7 @@ export class SettingsService {
     return this.getProfile(userId);
   }
 
-  async updateNotificationSettings(
-    userId: string,
-    _updateData: UpdateNotificationSettingsRequest
-  ): Promise<ProfileSettings> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new NotFoundError("User");
-    }
-
-    // Since we don't have a settings field, we'll just return the current profile
-    // In a real implementation, you'd need to add a settings field to the User model
-
-    return this.getProfile(userId);
-  }
+  // Notification settings removed - using simplified notification system
 
   // ==================== SECURITY SETTINGS ====================
 

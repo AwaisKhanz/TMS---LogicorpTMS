@@ -1,4 +1,5 @@
 import express from "express";
+import { createServer } from "http";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
@@ -13,8 +14,10 @@ import {
   staticFilesMiddleware,
   storageHealthCheck,
 } from "./middleware/static-files.middleware.js";
+import { webSocketService } from "./services/websocket.service.js";
 
 const app = express();
+const httpServer = createServer(app);
 
 // Security middleware
 app.use(helmet());
@@ -62,10 +65,13 @@ app.use(notFoundHandler);
 // Error handler (must be last)
 app.use(errorHandler);
 
+// Initialize WebSocket service
+webSocketService.initialize(httpServer);
+
 // Start server
 const PORT = config.port;
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════╗
 ║                                          ║
@@ -74,6 +80,7 @@ app.listen(PORT, () => {
 ║   Environment: ${config.env.padEnd(28)}║
 ║   Port: ${PORT.toString().padEnd(33)}║
 ║   URL: ${config.apiUrl.padEnd(34)}║
+║   WebSocket: Enabled                     ║
 ║                                          ║
 ╚══════════════════════════════════════════╝
   `);
@@ -82,11 +89,13 @@ app.listen(PORT, () => {
 // Graceful shutdown
 process.on("SIGTERM", () => {
   console.log("SIGTERM signal received: closing HTTP server");
+  webSocketService.shutdown();
   process.exit(0);
 });
 
 process.on("SIGINT", () => {
   console.log("SIGINT signal received: closing HTTP server");
+  webSocketService.shutdown();
   process.exit(0);
 });
 

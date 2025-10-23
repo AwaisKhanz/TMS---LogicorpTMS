@@ -53,10 +53,11 @@ router.post(
   documentController.uploadDocument
 );
 router.post("/generate", documentController.generateDocument);
-router.get("/:entityType/:entityId", documentController.getEntityDocuments);
-router.get("/:id", documentController.getDocument);
+// Specific routes must come before generic parameterized routes
 router.get("/:id/download", documentController.downloadDocument);
+router.get("/:id", documentController.getDocument);
 router.delete("/:id", documentController.deleteDocument);
+router.get("/:entityType/:entityId", documentController.getEntityDocuments);
 
 // Load-specific document generation routes
 router.post(
@@ -64,6 +65,21 @@ router.post(
   documentController.generateRateConfirmation
 );
 router.post("/loads/:loadId/bol", documentController.generateBOL);
+router.post("/loads/:loadId/invoice", documentController.generateInvoice);
+router.post("/loads/:loadId/pod", documentController.generatePOD);
+
+// Document delivery routes
+router.post("/:id/send", documentController.sendDocument);
+router.post("/send-multiple", documentController.sendMultipleDocuments);
+
+// Load-specific document delivery routes
+router.post(
+  "/loads/:loadId/send-rate-confirmation",
+  documentController.sendRateConfirmation
+);
+router.post("/loads/:loadId/send-bol", documentController.sendBOL);
+router.post("/loads/:loadId/send-invoice", documentController.sendInvoice);
+router.post("/loads/:loadId/send-pod", documentController.sendPOD);
 
 // Document expiration management routes
 router.get("/expiring", documentController.getExpiringDocuments);

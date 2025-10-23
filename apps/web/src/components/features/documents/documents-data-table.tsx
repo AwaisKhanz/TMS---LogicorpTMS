@@ -29,12 +29,13 @@ import {
   Trash2,
   ExternalLink,
   Calendar,
-  HardDrive
+  HardDrive,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import type { ApiErrorException } from "@/types/api.types";
+import type { Document } from "@tms/shared-types";
 
 const documentTypeLabels: Record<string, string> = {
   RATE_CONFIRMATION: "Rate Confirmation",
@@ -89,17 +90,26 @@ export function DocumentsDataTable() {
     }
   };
 
-  const handleDownload = async (doc: any) => {
+  const handleDownload = async (doc: Document) => {
     try {
-      const response = await apiClient.get<Blob>(`/documents/${doc.id}/download`, {
-        responseType: "blob",
-      });
+      const response = await apiClient.get<Blob>(
+        `/documents/${doc.id}/download`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      // Ensure filename has proper extension for PDFs
+      let filename = doc.name;
+      if (doc.mimeType === 'application/pdf' && !filename.toLowerCase().endsWith('.pdf')) {
+        filename = `${filename}.pdf`;
+      }
 
       // Create download link
       const url = window.URL.createObjectURL(new Blob([response]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", doc.name);
+      link.setAttribute("download", filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -139,9 +149,7 @@ export function DocumentsDataTable() {
             <FileText className="h-5 w-5" />
             All Documents
             {pagination && (
-              <Badge variant="secondary">
-                {pagination.total} total
-              </Badge>
+              <Badge variant="secondary">{pagination.total} total</Badge>
             )}
           </CardTitle>
         </CardHeader>
@@ -172,7 +180,7 @@ export function DocumentsDataTable() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  documents.map((doc: any) => (
+                  documents.map((doc: Document) => (
                     <TableRow key={doc.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -233,7 +241,9 @@ export function DocumentsDataTable() {
                             {format(new Date(doc.expiresAt), "MMM dd, yyyy")}
                           </div>
                         ) : (
-                          <span className="text-sm text-muted-foreground">—</span>
+                          <span className="text-sm text-muted-foreground">
+                            —
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -268,8 +278,8 @@ export function DocumentsDataTable() {
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">
                 Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
-                {pagination.total} documents
+                {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+                of {pagination.total} documents
               </p>
               {/* Add pagination controls here */}
             </div>

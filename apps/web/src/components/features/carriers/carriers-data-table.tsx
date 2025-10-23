@@ -91,7 +91,7 @@ export function CarriersDataTable() {
     limit: 50,
   });
 
-  const carriers = carriersData?.carriers || [];
+  const carriers = carriersData?.data || [];
   const pagination = carriersData?.pagination;
 
   const handleDeleteCarrier = async () => {

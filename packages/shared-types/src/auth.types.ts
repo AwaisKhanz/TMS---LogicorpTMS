@@ -1,4 +1,5 @@
 import type { Address } from "./api.types";
+import type { Role, Permission } from "./permission.types";
 
 // Auth Request Types (DTOs)
 export interface LoginRequest {
@@ -53,8 +54,8 @@ export interface AuthUser {
   organizationId: string;
   twoFactorEnabled?: boolean;
   emailVerified: boolean;
-  roles: string[];
-  permissions: string[];
+  roles: Role[];
+  permissions: Permission[];
   createdAt: string;
   updatedAt: string;
 }

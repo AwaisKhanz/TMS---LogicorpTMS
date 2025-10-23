@@ -6,23 +6,23 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadStatus } from "@tms/shared-types";
+import { LOAD_STATUS_OPTIONS } from "@tms/shared-constants";
 
-const statuses = [
-  { value: LoadStatus.QUOTE, label: "Quote" },
-  { value: LoadStatus.BOOKED, label: "Booked" },
-  { value: LoadStatus.DISPATCHED, label: "Dispatched" },
-  { value: LoadStatus.IN_TRANSIT, label: "In Transit" },
-  { value: LoadStatus.DELIVERED, label: "Delivered" },
-  { value: LoadStatus.POD_RECEIVED, label: "POD" },
-  { value: LoadStatus.INVOICED, label: "Invoiced" },
-  { value: LoadStatus.PAID, label: "Paid" },
-];
+// Use shared constants for statuses
+const statuses = LOAD_STATUS_OPTIONS;
+
+// For sidebar, show only key statuses
+const sidebarStatuses = LOAD_STATUS_OPTIONS;
 
 interface LoadStatusWorkflowProps {
   loadId: string;
+  compact?: boolean;
 }
 
-export function LoadStatusWorkflow({ loadId }: LoadStatusWorkflowProps) {
+export function LoadStatusWorkflow({
+  loadId,
+  compact = false,
+}: LoadStatusWorkflowProps) {
   const { data: load, isLoading } = useLoad(loadId);
   const updateStatus = useUpdateLoadStatus();
 
@@ -40,19 +40,86 @@ export function LoadStatusWorkflow({ loadId }: LoadStatusWorkflowProps) {
     return null;
   }
 
-  const currentStatusIndex = statuses.findIndex((s) => s.value === load.status);
+  const statusList = compact ? sidebarStatuses : statuses;
+  const currentStatusIndex = statusList.findIndex(
+    (s) => s.value === load.status
+  );
+
+  // Define valid status transitions (matching backend logic)
+  const validTransitions: Record<string, string[]> = {
+    [LoadStatus.QUOTE]: [LoadStatus.BOOKED, LoadStatus.CANCELLED],
+    [LoadStatus.BOOKED]: [
+      LoadStatus.DISPATCHED,
+      LoadStatus.CANCELLED,
+      LoadStatus.QUOTE,
+    ],
+    [LoadStatus.DISPATCHED]: [
+      LoadStatus.IN_TRANSIT,
+      LoadStatus.CANCELLED,
+      LoadStatus.BOOKED,
+    ],
+    [LoadStatus.IN_TRANSIT]: [LoadStatus.DELIVERED, LoadStatus.CANCELLED],
+    [LoadStatus.DELIVERED]: [LoadStatus.POD_RECEIVED, LoadStatus.CANCELLED],
+    [LoadStatus.POD_RECEIVED]: [LoadStatus.INVOICED, LoadStatus.CANCELLED],
+    [LoadStatus.INVOICED]: [LoadStatus.PAID],
+    [LoadStatus.PAID]: [],
+    [LoadStatus.CANCELLED]: [],
+  };
+
+  const isStatusTransitionValid = (
+    fromStatus: string,
+    toStatus: string
+  ): boolean => {
+    const allowedTransitions = validTransitions[fromStatus] || [];
+    return allowedTransitions.includes(toStatus);
+  };
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
-          {statuses.map((status, index) => {
+    <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+      <CardContent className="p-4">
+        <div className="mb-4">
+          <h3 className="font-semibold text-sm text-foreground">
+            Status Progress
+          </h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Current:{" "}
+            <span className="font-medium text-foreground">
+              {load.status.replace("_", " ")}
+            </span>
+          </p>
+        </div>
+        <div className="space-y-3">
+          {statusList.map((status, index) => {
             const isCompleted = index < currentStatusIndex;
             const isCurrent = status.value === load.status;
-            const isNext = index === currentStatusIndex + 1;
+            const canTransition = isStatusTransitionValid(
+              load.status,
+              status.value
+            );
 
             return (
-              <div key={status.value} className="flex items-center gap-2">
+              <div key={status.value} className="flex items-center gap-3">
+                {/* Status indicator */}
+                <div
+                  className={cn(
+                    "flex items-center justify-center w-6 h-6 rounded-full border-2",
+                    isCompleted
+                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20"
+                      : isCurrent
+                        ? "border-primary bg-primary/10"
+                        : "border-muted-foreground/30 bg-background"
+                  )}
+                >
+                  {isCompleted ? (
+                    <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                  ) : isCurrent ? (
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                  ) : (
+                    <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                  )}
+                </div>
+
+                {/* Status button */}
                 <Button
                   variant={
                     isCurrent
@@ -62,28 +129,19 @@ export function LoadStatusWorkflow({ loadId }: LoadStatusWorkflowProps) {
                         : "outline"
                   }
                   size="sm"
-                  className={cn(
-                    "relative whitespace-nowrap",
-                    isCompleted && "bg-green-100 dark:bg-green-900"
-                  )}
+                  className="w-full"
                   onClick={() => {
-                    if (isNext && !updateStatus.isPending) {
-                      updateStatus.mutate({ id: loadId, status: status.value });
+                    if (canTransition && !updateStatus.isPending) {
+                      updateStatus.mutate({
+                        id: loadId,
+                        status: status.value as LoadStatus,
+                      });
                     }
                   }}
-                  disabled={!isNext || updateStatus.isPending}
+                  disabled={!canTransition || updateStatus.isPending}
                 >
-                  {isCompleted && <Check className="h-3 w-3 mr-1" />}
-                  {status.label}
+                  <span className="truncate">{status.label}</span>
                 </Button>
-                {index < statuses.length - 1 && (
-                  <div
-                    className={cn(
-                      "h-px w-4 bg-border",
-                      isCompleted && "bg-green-500"
-                    )}
-                  />
-                )}
               </div>
             );
           })}

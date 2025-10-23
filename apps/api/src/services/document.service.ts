@@ -15,6 +15,7 @@ import {
   EmailNotificationService,
   type DocumentExpirationData,
 } from "./email-notification.service.js";
+// Notification rule imports removed - using simplified notification system
 
 export class DocumentService {
   private uploadsDir = process.env.UPLOADS_DIR || "uploads";
@@ -109,7 +110,7 @@ export class DocumentService {
       // Generate unique file key for storage
       const fileKey = generateFileKey(
         organizationId,
-        documentData.entityType,
+        String(documentData.entityType),
         documentData.entityId,
         file.originalname
       );
@@ -118,7 +119,7 @@ export class DocumentService {
       const uploadResult = await storageService.upload(file, fileKey, {
         contentType: file.mimetype,
         metadata: {
-          entityType: documentData.entityType,
+          entityType: String(documentData.entityType),
           entityId: documentData.entityId,
           uploadedBy: userId,
         },
@@ -130,14 +131,46 @@ export class DocumentService {
       const document = await prisma.document.create({
         data: {
           organizationId,
-          ...documentData,
+          entityType: documentData.entityType,
+          entityId: documentData.entityId,
+          type: documentData.type,
           name: documentData.name || file.originalname,
           fileUrl: uploadResult.url, // Store full URL
           fileSize: uploadResult.size,
           mimeType: uploadResult.mimetype,
           uploadedBy: userId,
+          expiresAt: documentData.expiresAt,
         },
       });
+
+      // Create load event for document upload (if it's a load document)
+      if (String(documentData.entityType) === "LOAD") {
+        const { LoadRepository } = await import(
+          "../repositories/load.repository.js"
+        );
+        const loadRepo = new LoadRepository();
+
+        // Get user details for the event
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { firstName: true, lastName: true, email: true },
+        });
+
+        await loadRepo.createLoadEvent(
+          documentData.entityId,
+          "DOCUMENT_UPLOADED",
+          {
+            documentId: document.id,
+            documentName: document.name,
+            documentType: documentData.type,
+            uploadedBy: userId,
+            uploadedByName: user
+              ? `${user.firstName} ${user.lastName}`
+              : "Unknown User",
+          },
+          userId
+        );
+      }
 
       return document;
     } catch (error) {
@@ -159,7 +192,7 @@ export class DocumentService {
       // Generate unique file key for storage
       const fileKey = generateFileKey(
         organizationId,
-        entityType,
+        String(entityType),
         entityId,
         `${name}.pdf`
       );
@@ -182,7 +215,7 @@ export class DocumentService {
       const uploadResult = await storageService.upload(mockFile, fileKey, {
         contentType: "application/pdf",
         metadata: {
-          entityType,
+          entityType: String(entityType),
           entityId,
           uploadedBy: userId,
           generated: "true",
@@ -197,9 +230,9 @@ export class DocumentService {
       const document = await prisma.document.create({
         data: {
           organizationId,
-          entityType,
+          entityType: entityType,
           entityId,
-          type,
+          type: type,
           name,
           fileUrl: uploadResult.url,
           fileSize: uploadResult.size,

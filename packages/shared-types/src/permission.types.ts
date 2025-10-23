@@ -40,6 +40,17 @@ export const PERMISSIONS = {
   // Settings permissions
   SETTINGS_VIEW: "settings:view",
   SETTINGS_EDIT: "settings:edit",
+
+  // Notification permissions
+  NOTIFICATIONS_READ: "notifications:read",
+  NOTIFICATIONS_CREATE: "notifications:create",
+  NOTIFICATIONS_UPDATE: "notifications:update",
+  NOTIFICATIONS_DELETE: "notifications:delete",
+  NOTIFICATIONS_ADMIN: "notifications:admin",
+  NOTIFICATIONS_TEMPLATES_READ: "notifications:templates:read",
+  NOTIFICATIONS_TEMPLATES_CREATE: "notifications:templates:create",
+  NOTIFICATIONS_TEMPLATES_UPDATE: "notifications:templates:update",
+  NOTIFICATIONS_TEMPLATES_DELETE: "notifications:templates:delete",
 } as const;
 
 // ==================== ROLE CONSTANTS ====================
@@ -97,8 +108,29 @@ export const SETTINGS_PERMISSIONS = [
   PERMISSIONS.SETTINGS_EDIT,
 ] as const;
 
+export const NOTIFICATION_PERMISSIONS = [
+  PERMISSIONS.NOTIFICATIONS_READ,
+  PERMISSIONS.NOTIFICATIONS_CREATE,
+  PERMISSIONS.NOTIFICATIONS_UPDATE,
+  PERMISSIONS.NOTIFICATIONS_DELETE,
+  PERMISSIONS.NOTIFICATIONS_ADMIN,
+  PERMISSIONS.NOTIFICATIONS_TEMPLATES_READ,
+  PERMISSIONS.NOTIFICATIONS_TEMPLATES_CREATE,
+  PERMISSIONS.NOTIFICATIONS_TEMPLATES_UPDATE,
+  PERMISSIONS.NOTIFICATIONS_TEMPLATES_DELETE,
+] as const;
+
 // ==================== TYPE DEFINITIONS ====================
-export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+// Flatten the PERMISSIONS object to get all permission values
+type FlattenPermissions<T> = T extends string
+  ? T
+  : T extends Record<string, any>
+  ? {
+      [K in keyof T]: FlattenPermissions<T[K]>
+    }[keyof T]
+  : never;
+
+export type Permission = FlattenPermissions<typeof PERMISSIONS>;
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
 // Permission checking types
@@ -158,9 +190,25 @@ export const hasAllRoles = (
   return requiredRoles.every((role) => userRoles.includes(role));
 };
 
+// Helper function to flatten permissions object
+const flattenPermissions = (obj: any): string[] => {
+  const result: string[] = [];
+  for (const value of Object.values(obj)) {
+    if (typeof value === 'string') {
+      result.push(value);
+    } else if (typeof value === 'object') {
+      result.push(...flattenPermissions(value));
+    }
+  }
+  return result;
+};
+
+// Get all flattened permissions
+const ALL_PERMISSIONS = flattenPermissions(PERMISSIONS);
+
 // ==================== ROLE PERMISSION MAPPING ====================
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
-  [ROLES.ADMIN]: Object.values(PERMISSIONS),
+  [ROLES.ADMIN]: ALL_PERMISSIONS as Permission[],
   [ROLES.MANAGER]: [
     ...LOAD_PERMISSIONS,
     ...CARRIER_PERMISSIONS,
@@ -168,7 +216,13 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     ...INVOICE_PERMISSIONS,
     ...REPORT_PERMISSIONS,
     PERMISSIONS.USER_VIEW,
-  ],
+    PERMISSIONS.NOTIFICATIONS_READ,
+    PERMISSIONS.NOTIFICATIONS_CREATE,
+    PERMISSIONS.NOTIFICATIONS_UPDATE,
+    PERMISSIONS.NOTIFICATIONS_TEMPLATES_READ,
+    PERMISSIONS.NOTIFICATIONS_TEMPLATES_CREATE,
+    PERMISSIONS.NOTIFICATIONS_TEMPLATES_UPDATE,
+  ] as Permission[],
   [ROLES.DISPATCHER]: [
     PERMISSIONS.LOAD_VIEW_ALL,
     PERMISSIONS.LOAD_VIEW_OWN,
@@ -177,12 +231,15 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     PERMISSIONS.CARRIER_VIEW,
     PERMISSIONS.CUSTOMER_VIEW,
     PERMISSIONS.REPORT_VIEW,
-  ],
+    PERMISSIONS.NOTIFICATIONS_READ,
+    PERMISSIONS.NOTIFICATIONS_UPDATE,
+  ] as Permission[],
   [ROLES.USER]: [
     PERMISSIONS.LOAD_VIEW_OWN,
     PERMISSIONS.CARRIER_VIEW,
     PERMISSIONS.CUSTOMER_VIEW,
-  ],
+    PERMISSIONS.NOTIFICATIONS_READ,
+  ] as Permission[],
 };
 
 // ==================== PERMISSION VALIDATION ====================

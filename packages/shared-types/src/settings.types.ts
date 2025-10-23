@@ -9,15 +9,6 @@ export interface ProfileSettings {
   avatar?: string | null;
   timezone: string;
   language: string;
-  notifications: NotificationSettings;
-}
-
-export interface NotificationSettings {
-  emailNotifications: boolean;
-  loadUpdates: boolean;
-  documentNotifications: boolean;
-  weeklyReports: boolean;
-  marketingEmails: boolean;
 }
 
 export interface UpdateProfileRequest {
@@ -27,14 +18,6 @@ export interface UpdateProfileRequest {
   avatar?: string | null;
   timezone?: string;
   language?: string;
-}
-
-export interface UpdateNotificationSettingsRequest {
-  emailNotifications?: boolean;
-  loadUpdates?: boolean;
-  documentNotifications?: boolean;
-  weeklyReports?: boolean;
-  marketingEmails?: boolean;
 }
 
 // ==================== SECURITY SETTINGS ====================

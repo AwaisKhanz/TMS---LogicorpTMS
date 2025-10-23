@@ -23,6 +23,7 @@ export interface StorageService {
   ): Promise<UploadResult>;
   delete(key: string): Promise<void>;
   getUrl(key: string): string;
+  getSignedUrl(key: string, expiresIn?: number): string;
   exists(key: string): Promise<boolean>;
 }
 

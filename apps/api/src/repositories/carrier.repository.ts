@@ -647,4 +647,28 @@ export class CarrierRepository extends BaseRepository<Carrier> {
     // For now, this is a placeholder
     // The rating will be updated manually or from load feedback
   }
+
+  async getCarrierNamesByIds(organizationId: string, carrierIds: string[]) {
+    // Filter out undefined/null values
+    const validCarrierIds = carrierIds.filter((id): id is string => id != null);
+
+    if (validCarrierIds.length === 0) {
+      return [];
+    }
+
+    const carriers = await this.prisma.carrier.findMany({
+      where: {
+        id: {
+          in: validCarrierIds,
+        },
+        organizationId,
+      },
+      select: {
+        id: true,
+        companyName: true,
+      },
+    });
+
+    return carriers;
+  }
 }
