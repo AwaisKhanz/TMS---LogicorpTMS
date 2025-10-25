@@ -110,7 +110,7 @@ export function TwoFactorSetupDialog({
                   className="shrink-0"
                 >
                   {secretCopied ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <CheckCircle2 className="h-4 w-4 text-success" />
                   ) : (
                     <Copy className="h-4 w-4" />
                   )}

@@ -106,13 +106,13 @@ export function LoadActivity({ loadId }: LoadActivityProps) {
   const getActivityColor = (type: string) => {
     switch (type) {
       case "success":
-        return "bg-green-500";
+        return "bg-success";
       case "primary":
-        return "bg-blue-500";
+        return "bg-primary";
       case "info":
-        return "bg-gray-500";
+        return "bg-muted";
       case "warning":
-        return "bg-yellow-500";
+        return "bg-warning";
       default:
         return "bg-muted";
     }

@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
 import type {
   Carrier,
+  CarrierWithLoads,
   CarrierDocument,
   CarrierContact,
   CreateCarrierRequest,
@@ -16,6 +17,7 @@ import type {
   CarrierOption,
 } from "@tms/shared-types";
 import type { ApiErrorException } from "@/types/api.types";
+import type { ApiResponse } from "@tms/shared-types";
 
 export function useCarriers(filters?: Record<string, unknown>) {
   return useQuery({
@@ -65,11 +67,10 @@ export function useCarrierDocuments(carrierId: string) {
   return useQuery({
     queryKey: ["carrier-documents", carrierId],
     queryFn: async () => {
-      const { data } = await apiClient.get<{
-        success: boolean;
-        data: CarrierDocument[];
-      }>(`/documents?entityType=CARRIER&entityId=${carrierId}`);
-      return data;
+      const response = await apiClient.get<ApiResponse<CarrierDocument[]>>(
+        `/carriers/${carrierId}/documents`
+      );
+      return response.data;
     },
     enabled: !!carrierId,
     staleTime: 5 * 60 * 1000,
@@ -78,12 +79,13 @@ export function useCarrierDocuments(carrierId: string) {
 
 // Get single carrier
 export function useCarrier(id: string | undefined) {
-  return useQuery<Carrier>({
+  return useQuery<CarrierWithLoads>({
     queryKey: ["carriers", id],
     queryFn: async () => {
-      const response = await apiClient.get<{ success: boolean; data: Carrier }>(
-        `/carriers/${id}`
-      );
+      const response = await apiClient.get<{
+        success: boolean;
+        data: CarrierWithLoads;
+      }>(`/carriers/${id}`);
       return response.data;
     },
     enabled: !!id,
@@ -105,7 +107,7 @@ export function useCreateCarrier() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["carriers"] });
-      toast.success("Carrier created successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -137,7 +139,7 @@ export function useUpdateCarrier() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["carriers"] });
       queryClient.invalidateQueries({ queryKey: ["carriers", data.id] });
-      toast.success("Carrier updated successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -175,7 +177,7 @@ export function useApproveCarrier() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiClient.post<{
+      const response = await apiClient.patch<{
         success: boolean;
         data: Carrier;
       }>(`/carriers/${id}/approve`);
@@ -184,7 +186,7 @@ export function useApproveCarrier() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["carriers"] });
       queryClient.invalidateQueries({ queryKey: ["carriers", data.id] });
-      toast.success("Carrier approved successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -274,17 +276,21 @@ export function useDeleteCarrierContact() {
 }
 
 // Carrier loads
-export function useCarrierLoads(carrierId: string) {
+export function useCarrierLoads(
+  carrierId: string,
+  page: number = 1,
+  limit: number = 20
+) {
   return useQuery({
-    queryKey: ["carrier-loads", carrierId],
+    queryKey: ["carrier-loads", carrierId, page, limit],
     queryFn: async () => {
       const response = await apiClient.get<GetCarrierLoadsResponse>(
-        `/carriers/${carrierId}/loads`
+        `/carriers/${carrierId}/loads?page=${page}&limit=${limit}`
       );
       return response;
     },
     enabled: !!carrierId,
-    staleTime: 60 * 1000,
+    staleTime: 2 * 60 * 1000,
   });
 }
 
@@ -300,6 +306,174 @@ export function useCarrierPerformance(carrierId: string) {
       return response.data;
     },
     enabled: !!carrierId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// Carrier statistics
+export function useCarrierStatistics() {
+  return useQuery({
+    queryKey: ["carrier-statistics"],
+    queryFn: async () => {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: {
+          total: number;
+          approved: number;
+          pending: number;
+          active: number;
+          inactive: number;
+          expiringInsurance: number;
+          avgRating: number;
+          avgOnTimeDelivery: number;
+        };
+      }>("/carriers/statistics");
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// Export carriers
+export function useExportCarriers() {
+  return useMutation({
+    mutationFn: async (
+      filters: Record<string, unknown> & { format: string }
+    ) => {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, String(value));
+        }
+      });
+
+      const response = await apiClient.get(
+        `/carriers/export?${params.toString()}`,
+        {
+          responseType: "blob",
+        }
+      );
+      return response;
+    },
+    onSuccess: (data, variables) => {
+      // Create download link
+      const blob = new Blob([data as BlobPart], {
+        type:
+          variables.format === "csv"
+            ? "text/csv"
+            : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `carriers-${Date.now()}.${variables.format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Carriers exported successfully");
+    },
+    onError: (error) => {
+      const apiError = error as ApiErrorException;
+      toast.error(
+        apiError.response?.data?.error?.message || "Failed to export carriers"
+      );
+    },
+  });
+}
+
+// Bulk approve carriers
+export function useBulkApproveCarriers() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (carrierIds: string[]) => {
+      const response = await apiClient.post<{
+        success: boolean;
+        data: {
+          successful: string[];
+          failed: { id: string; error: string }[];
+        };
+      }>("/carriers/bulk-approve", { carrierIds });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["carriers"] });
+      if (data.failed.length > 0) {
+        toast.warning(
+          `${data.successful.length} carriers approved, ${data.failed.length} failed`
+        );
+      } else {
+        toast.success(
+          `${data.successful.length} carriers approved successfully`
+        );
+      }
+    },
+    onError: (error) => {
+      const apiError = error as ApiErrorException;
+      toast.error(
+        apiError.response?.data?.error?.message || "Failed to approve carriers"
+      );
+    },
+  });
+}
+
+// Bulk delete carriers
+export function useBulkDeleteCarriers() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (carrierIds: string[]) => {
+      const response = await apiClient.post<{
+        success: boolean;
+        data: {
+          successful: string[];
+          failed: { id: string; error: string }[];
+        };
+      }>("/carriers/bulk-delete", { carrierIds });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["carriers"] });
+      if (data.failed.length > 0) {
+        toast.warning(
+          `${data.successful.length} carriers deleted, ${data.failed.length} failed`
+        );
+      } else {
+        toast.success(
+          `${data.successful.length} carriers deleted successfully`
+        );
+      }
+    },
+    onError: (error) => {
+      const apiError = error as ApiErrorException;
+      toast.error(
+        apiError.response?.data?.error?.message || "Failed to delete carriers"
+      );
+    },
+  });
+}
+
+// Insurance alerts
+export function useInsuranceAlerts(days: number = 30) {
+  return useQuery({
+    queryKey: ["insurance-alerts", days],
+    queryFn: async () => {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: Array<{
+          carrierId: string;
+          carrierName: string;
+          mcNumber: string;
+          insuranceExpiry: string;
+          daysUntilExpiry: number;
+          insuranceAmount: number;
+          alertLevel: "GREEN" | "YELLOW" | "RED" | "EXPIRED";
+        }>;
+      }>(`/carriers/insurance-alerts?days=${days}`);
+      return response.data;
+    },
     staleTime: 5 * 60 * 1000,
   });
 }

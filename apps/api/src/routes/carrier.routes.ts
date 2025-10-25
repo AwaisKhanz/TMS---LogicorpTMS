@@ -8,7 +8,7 @@ import { requireEmailVerification } from "../middleware/email-verification.middl
 import { authorize } from "../middleware/authorization.middleware.js";
 import { PERMISSIONS } from "@tms/shared-types";
 
-const router = Router();
+const router: Router = Router();
 const carrierController = new CarrierController();
 
 // Apply authentication, tenant validation, and email verification to all routes
@@ -99,12 +99,6 @@ const contactSchema = z.object({
 
 const updateContactSchema = contactSchema.partial();
 
-const ratingSchema = z.object({
-  rating: z.number().min(1).max(5),
-  comment: z.string().optional(),
-  loadId: z.string().optional(),
-});
-
 // Routes
 router.get(
   "/",
@@ -182,12 +176,6 @@ router.post(
   authorize(PERMISSIONS.CARRIER_EDIT),
   validateRequest({ body: contactSchema }),
   carrierController.addCarrierContact
-);
-router.post(
-  "/:id/rating",
-  authorize(PERMISSIONS.CARRIER_EDIT),
-  validateRequest({ body: ratingSchema }),
-  carrierController.submitRating
 );
 router.put(
   "/:id",

@@ -21,7 +21,6 @@ export type {
   DeleteCarrierContactResponse,
   CarrierStatistics as CarrierStatisticsDto,
   CarrierPerformance as CarrierPerformanceDto,
-  CarrierRating,
   CarrierOnboarding as CarrierOnboardingDto,
   InsuranceAlert as InsuranceAlertDto,
   GetInsuranceAlertsResponse,

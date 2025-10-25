@@ -12,7 +12,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
-import { cn } from "@/lib/utils";
 
 interface CarrierComplianceProps {
   carrierId: string;
@@ -39,7 +38,16 @@ export function CarrierCompliance({ carrierId }: CarrierComplianceProps) {
     if (!carrier.insuranceExpiry) return { status: "unknown", days: 0 };
 
     const expiry = new Date(carrier.insuranceExpiry);
-    const days = differenceInDays(expiry, new Date());
+    const now = new Date();
+    const days = differenceInDays(expiry, now);
+
+    // Debug logging (remove in production)
+    console.log("Insurance Debug:", {
+      expiry: expiry.toISOString(),
+      now: now.toISOString(),
+      days,
+      expiryDate: format(expiry, "MMM dd, yyyy"),
+    });
 
     if (days < 0) return { status: "expired", days };
     if (days <= 7) return { status: "critical", days };
@@ -73,12 +81,8 @@ export function CarrierCompliance({ carrierId }: CarrierComplianceProps) {
           </span>
           <Badge
             variant={
-              carrier.authorityStatus === "ACTIVE" ? "default" : "secondary"
+              carrier.authorityStatus === "ACTIVE" ? "success" : "secondary"
             }
-            className={cn(
-              carrier.authorityStatus === "ACTIVE" &&
-                "bg-green-500 hover:bg-green-600"
-            )}
           >
             {carrier.authorityStatus}
           </Badge>
@@ -94,24 +98,28 @@ export function CarrierCompliance({ carrierId }: CarrierComplianceProps) {
             </span>
             <div className="flex items-center gap-2">
               {insuranceStatus.status === "valid" && (
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <CheckCircle2 className="h-4 w-4 text-success" />
               )}
               {insuranceStatus.status === "warning" && (
-                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                <AlertTriangle className="h-4 w-4 text-warning" />
               )}
               {insuranceStatus.status === "critical" && (
-                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <AlertTriangle className="h-4 w-4 text-destructive" />
               )}
               {insuranceStatus.status === "expired" && (
-                <XCircle className="h-4 w-4 text-red-500" />
+                <XCircle className="h-4 w-4 text-destructive" />
               )}
               <Badge
                 variant={
                   insuranceStatus.status === "valid"
-                    ? "default"
+                    ? "success"
                     : insuranceStatus.status === "expired"
                       ? "destructive"
-                      : "secondary"
+                      : insuranceStatus.status === "critical"
+                        ? "destructive"
+                        : insuranceStatus.status === "warning"
+                          ? "warning"
+                          : "secondary"
                 }
               >
                 {insuranceStatus.status === "expired"
@@ -203,7 +211,7 @@ export function CarrierCompliance({ carrierId }: CarrierComplianceProps) {
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">W-9 on File</span>
           {carrier.w9OnFile ? (
-            <Badge variant="default" className="bg-green-500 gap-1">
+            <Badge variant="success" className="gap-1">
               <CheckCircle2 className="h-3 w-3" />
               Yes
             </Badge>

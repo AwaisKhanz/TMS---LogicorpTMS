@@ -1,7 +1,6 @@
 // Re-export customer types from shared types package
 export type {
   Customer,
-  PreferredCarrier,
   CustomerContact,
   CustomerContactData,
   CreateCustomerRequest as CreateCustomerDto,
@@ -20,7 +19,6 @@ export type {
   CustomerStatistics,
   CustomerPerformance,
   CustomerLoadData,
-  GetCustomerLoadsResponse,
   CustomerExportData,
   Address,
 } from "@tms/shared-types";

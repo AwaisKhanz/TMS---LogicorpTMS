@@ -246,12 +246,12 @@ export function RegisterForm() {
       });
 
       toast.success("Account created successfully!", {
-        description: "Welcome to TMS!",
+        description: "Please check your email to verify your account.",
       });
 
-      // Redirect to dashboard
+      // Redirect to verify-email page
       setTimeout(() => {
-        router.push("/");
+        router.push("/verify-email");
         router.refresh();
       }, 1000);
     } catch (err) {

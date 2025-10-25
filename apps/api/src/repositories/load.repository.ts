@@ -1,7 +1,8 @@
-import type { Load, Prisma, LoadStatus } from "@prisma/client";
+import type { Load, Prisma } from "@prisma/client";
+import { LoadStatus, LoadFilters } from "@tms/shared-types";
 import { BaseRepository } from "./base.repository.js";
 import type { OrganizationDocumentNumbering } from "../types/common.types.js";
-import type { LoadEventData } from "../types/load.types.js";
+import type { LoadEventData } from "@tms/shared-types";
 
 // Type for Load with included relations
 export type LoadWithRelations = Prisma.LoadGetPayload<{
@@ -17,6 +18,34 @@ export type LoadWithRelations = Prisma.LoadGetPayload<{
         id: true;
         companyName: true;
         mcNumber: true;
+      };
+    };
+    shipper: {
+      select: {
+        id: true;
+        companyName: true;
+        phone: true;
+        email: true;
+        streetAddress: true;
+        city: true;
+        state: true;
+        zipCode: true;
+        country: true;
+        contactPerson: true;
+      };
+    };
+    consignee: {
+      select: {
+        id: true;
+        companyName: true;
+        phone: true;
+        email: true;
+        streetAddress: true;
+        city: true;
+        state: true;
+        zipCode: true;
+        country: true;
+        contactPerson: true;
       };
     };
     creator: {
@@ -52,6 +81,34 @@ export type LoadWithMinimalRelations = Prisma.LoadGetPayload<{
         mcNumber: true;
       };
     };
+    shipper: {
+      select: {
+        id: true;
+        companyName: true;
+        phone: true;
+        email: true;
+        streetAddress: true;
+        city: true;
+        state: true;
+        zipCode: true;
+        country: true;
+        contactPerson: true;
+      };
+    };
+    consignee: {
+      select: {
+        id: true;
+        companyName: true;
+        phone: true;
+        email: true;
+        streetAddress: true;
+        city: true;
+        state: true;
+        zipCode: true;
+        country: true;
+        contactPerson: true;
+      };
+    };
     creator: {
       select: {
         id: true;
@@ -62,15 +119,6 @@ export type LoadWithMinimalRelations = Prisma.LoadGetPayload<{
   };
 }>;
 
-export interface LoadFilters {
-  status?: string;
-  customerId?: string;
-  carrierId?: string;
-  pickupDateFrom?: Date;
-  pickupDateTo?: Date;
-  search?: string;
-}
-
 export class LoadRepository extends BaseRepository<Load> {
   protected modelName = "load";
 
@@ -78,14 +126,60 @@ export class LoadRepository extends BaseRepository<Load> {
     filters: LoadFilters,
     organizationId: string,
     page: number = 1,
-    limit: number = 50
+    limit: number = 50,
+    userId?: string
   ): Promise<{ data: LoadWithMinimalRelations[]; total: number }> {
     const skip = (page - 1) * limit;
 
     const where: Prisma.LoadWhereInput = {
       organizationId,
       deletedAt: null,
+      // Exclude completed loads from regular load queries
+      status: {
+        not: LoadStatus.COMPLETED,
+      },
     };
+
+    // If userId is provided, filter by assigned customers
+    if (userId) {
+      // Check if user is administrator
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          roles: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Check if user has administrator role
+      const isAdmin = user.roles.some(
+        (userRole) => userRole.role.name === "ADMINISTRATOR"
+      );
+
+      // If not admin, filter by assigned customers
+      if (!isAdmin) {
+        const userCustomers = await this.prisma.userCustomer.findMany({
+          where: { userId },
+          select: { customerId: true },
+        });
+
+        const customerIds = userCustomers.map((uc) => uc.customerId);
+
+        if (customerIds.length === 0) {
+          // User has no assigned customers, return empty result
+          return { data: [], total: 0 };
+        }
+
+        where.customerId = { in: customerIds };
+      }
+    }
 
     if (filters.status) {
       where.status = filters.status as LoadStatus;
@@ -114,8 +208,16 @@ export class LoadRepository extends BaseRepository<Load> {
         { loadNumber: { contains: filters.search, mode: "insensitive" } },
         { referenceNumber: { contains: filters.search, mode: "insensitive" } },
         { commodity: { contains: filters.search, mode: "insensitive" } },
-        { shipperName: { contains: filters.search, mode: "insensitive" } },
-        { consigneeName: { contains: filters.search, mode: "insensitive" } },
+        {
+          shipper: {
+            companyName: { contains: filters.search, mode: "insensitive" },
+          },
+        },
+        {
+          consignee: {
+            companyName: { contains: filters.search, mode: "insensitive" },
+          },
+        },
       ];
     }
 
@@ -134,6 +236,154 @@ export class LoadRepository extends BaseRepository<Load> {
               id: true,
               companyName: true,
               mcNumber: true,
+            },
+          },
+          shipper: {
+            select: {
+              id: true,
+              companyName: true,
+              phone: true,
+              email: true,
+              streetAddress: true,
+              city: true,
+              state: true,
+              zipCode: true,
+              country: true,
+              contactPerson: true,
+            },
+          },
+          consignee: {
+            select: {
+              id: true,
+              companyName: true,
+              phone: true,
+              email: true,
+              streetAddress: true,
+              city: true,
+              state: true,
+              zipCode: true,
+              country: true,
+              contactPerson: true,
+            },
+          },
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      this.prisma.load.count({ where }),
+    ]);
+
+    return { data: loads, total };
+  }
+
+  async findCompletedLoads(
+    organizationId: string,
+    page: number = 1,
+    limit: number = 50,
+    userId?: string
+  ): Promise<{ data: LoadWithMinimalRelations[]; total: number }> {
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.LoadWhereInput = {
+      organizationId,
+      deletedAt: null,
+      status: LoadStatus.COMPLETED,
+    };
+
+    // If userId is provided, filter by assigned customers
+    if (userId) {
+      // Check if user is administrator
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          roles: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Check if user has administrator role
+      const isAdmin = user.roles.some(
+        (userRole) => userRole.role.name === "ADMINISTRATOR"
+      );
+
+      // If not admin, filter by assigned customers
+      if (!isAdmin) {
+        const userCustomers = await this.prisma.userCustomer.findMany({
+          where: { userId },
+          select: { customerId: true },
+        });
+
+        const customerIds = userCustomers.map((uc) => uc.customerId);
+
+        if (customerIds.length === 0) {
+          // User has no assigned customers, return empty result
+          return { data: [], total: 0 };
+        }
+
+        where.customerId = { in: customerIds };
+      }
+    }
+
+    const [loads, total] = await Promise.all([
+      this.prisma.load.findMany({
+        where,
+        include: {
+          customer: {
+            select: {
+              id: true,
+              companyName: true,
+            },
+          },
+          carrier: {
+            select: {
+              id: true,
+              companyName: true,
+              mcNumber: true,
+            },
+          },
+          shipper: {
+            select: {
+              id: true,
+              companyName: true,
+              phone: true,
+              email: true,
+              streetAddress: true,
+              city: true,
+              state: true,
+              zipCode: true,
+              country: true,
+              contactPerson: true,
+            },
+          },
+          consignee: {
+            select: {
+              id: true,
+              companyName: true,
+              phone: true,
+              email: true,
+              streetAddress: true,
+              city: true,
+              state: true,
+              zipCode: true,
+              country: true,
+              contactPerson: true,
             },
           },
           creator: {
@@ -158,17 +408,63 @@ export class LoadRepository extends BaseRepository<Load> {
 
   async findByIdWithRelations(
     id: string,
-    organizationId: string
+    organizationId: string,
+    userId?: string
   ): Promise<LoadWithRelations | null> {
+    const where: Prisma.LoadWhereInput = {
+      id,
+      organizationId,
+      deletedAt: null,
+    };
+
+    // If userId is provided, filter by assigned customers
+    if (userId) {
+      // Check if user is administrator
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          roles: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Check if user has administrator role
+      const isAdmin = user.roles.some(
+        (userRole) => userRole.role.name === "ADMINISTRATOR"
+      );
+
+      // If not admin, filter by assigned customers
+      if (!isAdmin) {
+        const userCustomers = await this.prisma.userCustomer.findMany({
+          where: { userId },
+          select: { customerId: true },
+        });
+
+        const customerIds = userCustomers.map((uc) => uc.customerId);
+
+        if (customerIds.length === 0) {
+          // User has no assigned customers, return null
+          return null;
+        }
+
+        where.customerId = { in: customerIds };
+      }
+    }
+
     return this.prisma.load.findFirst({
-      where: {
-        id,
-        organizationId,
-        deletedAt: null,
-      },
+      where,
       include: {
         customer: true,
         carrier: true,
+        shipper: true,
+        consignee: true,
         creator: {
           select: {
             id: true,
@@ -205,6 +501,8 @@ export class LoadRepository extends BaseRepository<Load> {
       include: {
         customer: true,
         carrier: true,
+        shipper: true,
+        consignee: true,
         creator: {
           select: {
             id: true,
@@ -234,6 +532,8 @@ export class LoadRepository extends BaseRepository<Load> {
       include: {
         customer: true,
         carrier: true,
+        shipper: true,
+        consignee: true,
         creator: {
           select: {
             id: true,
@@ -459,6 +759,22 @@ export class LoadRepository extends BaseRepository<Load> {
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
 
+    // Create proper date ranges without mutating the original date
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    );
+    const endOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
+
     const [
       totalLoads,
       activeLoads,
@@ -490,8 +806,8 @@ export class LoadRepository extends BaseRepository<Load> {
         where: {
           organizationId,
           pickupDate: {
-            gte: new Date(now.setHours(0, 0, 0, 0)),
-            lt: new Date(now.setHours(23, 59, 59, 999)),
+            gte: startOfToday,
+            lt: endOfToday,
           },
           deletedAt: null,
         },
@@ -502,18 +818,18 @@ export class LoadRepository extends BaseRepository<Load> {
         where: {
           organizationId,
           deliveryDate: {
-            gte: new Date(now.setHours(0, 0, 0, 0)),
-            lt: new Date(now.setHours(23, 59, 59, 999)),
+            gte: startOfToday,
+            lt: endOfToday,
           },
           deletedAt: null,
         },
       }),
 
-      // This week's revenue
+      // This week's revenue (from loads created this week)
       this.prisma.load.aggregate({
         where: {
           organizationId,
-          deliveredAt: {
+          createdAt: {
             gte: startOfWeek,
           },
           deletedAt: null,
@@ -524,11 +840,11 @@ export class LoadRepository extends BaseRepository<Load> {
         },
       }),
 
-      // This month's revenue
+      // This month's revenue (from loads created this month)
       this.prisma.load.aggregate({
         where: {
           organizationId,
-          deliveredAt: {
+          createdAt: {
             gte: startOfMonth,
           },
           deletedAt: null,

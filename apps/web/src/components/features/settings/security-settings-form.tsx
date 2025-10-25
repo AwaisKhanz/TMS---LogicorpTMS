@@ -405,7 +405,7 @@ export function SecuritySettingsForm() {
                 ) : (
                   sessions.map((session) => (
                     <TableRow key={session.id}>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <Monitor className="h-4 w-4 text-muted-foreground" />
                           <div>
@@ -421,13 +421,13 @@ export function SecuritySettingsForm() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <div className="flex items-center gap-1">
                           <MapPin className="h-3 w-3 text-muted-foreground" />
                           {session.location}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3 text-muted-foreground" />
                           {format(
@@ -436,7 +436,7 @@ export function SecuritySettingsForm() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {!session.isCurrent && (
                           <Button
                             variant="ghost"
@@ -596,7 +596,7 @@ export function SecuritySettingsForm() {
               onClick={() =>
                 sessionToTerminate && handleTerminateSession(sessionToTerminate)
               }
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
             >
               Terminate
             </AlertDialogAction>
@@ -621,7 +621,7 @@ export function SecuritySettingsForm() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleTerminateAllSessions}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
             >
               Terminate All
             </AlertDialogAction>

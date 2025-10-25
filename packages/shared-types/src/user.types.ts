@@ -13,7 +13,11 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   lastLogin?: string | null;
+  assignedCustomers?: Customer[];
 }
+
+// Import Customer type
+import { Customer } from "./customer.types";
 
 // User Request Types (DTOs)
 export interface CreateUserRequest {
@@ -23,6 +27,7 @@ export interface CreateUserRequest {
   lastName: string;
   phone?: string;
   roleIds?: string[];
+  customerIds?: string[];
 }
 
 export interface UpdateUserRequest {
@@ -30,6 +35,7 @@ export interface UpdateUserRequest {
   lastName?: string;
   phone?: string;
   isActive?: boolean;
+  customerIds?: string[];
 }
 
 export interface UserFilters {
@@ -57,4 +63,25 @@ export interface GetUsersResponse {
 
 export interface DeleteUserResponse {
   message: string;
+}
+
+// Customer Assignment Types
+export interface AssignCustomersRequest {
+  userId: string;
+  customerIds: string[];
+}
+
+export interface AssignCustomersResponse {
+  message: string;
+  assignedCustomers: Customer[];
+}
+
+export interface GetUserCustomersResponse {
+  customers: Customer[];
+}
+
+export interface UserCustomerAssignment {
+  userId: string;
+  customerId: string;
+  customer: Customer;
 }

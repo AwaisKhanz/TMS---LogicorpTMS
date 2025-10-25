@@ -1,0 +1,42 @@
+Document Delivery - LogicorpTMS
+=================================
+
+Hi {{userName}},
+
+Your {{documentType}} for load {{loadNumber}} has been generated and is ready for download.
+
+{{#if message}}
+Note: {{message}}
+{{/if}}
+
+Document Information:
+--------------------
+Load Number: {{loadNumber}}
+Document Type: {{documentType}}
+Generated On: {{generatedDate}}
+Expires On: {{expiryDate}}
+{{#if referenceNumber}}
+Reference Number: {{referenceNumber}}
+{{/if}}
+
+{{#if attachments}}
+Attached Documents:
+------------------
+{{#each attachments}}
+- {{name}} ({{size}})
+{{/each}}
+{{/if}}
+
+Download Document: {{downloadUrl}}
+
+Security Notice: This document contains sensitive information. Please ensure it's stored securely and only shared with authorized personnel.
+
+Need to regenerate? You can create a new version of this document from your load details page if needed.
+
+---
+This email was sent by LogicorpTMS
+View Load: {{loadUrl}}
+Dashboard: {{dashboardUrl}}
+Support: {{supportUrl}}
+
+© 2024 LogicorpTMS. All rights reserved.

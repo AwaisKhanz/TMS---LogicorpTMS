@@ -5,7 +5,7 @@ import type {
 } from "@tms/shared-types";
 import { PrismaClient } from "@prisma/client";
 import { webSocketService } from "./websocket.service.js";
-import { awsSESService } from "./aws-ses.service.js";
+import { smtpService } from "./smtp.service.js";
 import { logger } from "../config/logger.js";
 
 const prisma = new PrismaClient();
@@ -32,6 +32,11 @@ export class NotificationService {
    */
   async create(input: CreateNotificationInput): Promise<Notification> {
     try {
+      // Handle "all" recipientId by sending to all users in organization
+      if (input.recipientId === "all") {
+        return await this.createForAllUsers(input);
+      }
+
       // 1. Create in-app notification
       const notification = await prisma.notification.create({
         data: {
@@ -58,7 +63,7 @@ export class NotificationService {
           });
 
           if (user?.email) {
-            await awsSESService.sendEmail(
+            await smtpService.sendEmail(
               user.email,
               input.title,
               input.message,
@@ -79,6 +84,77 @@ export class NotificationService {
       return notification;
     } catch (error) {
       logger.error("Error creating notification:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create notification for all users in an organization
+   */
+  private async createForAllUsers(
+    input: CreateNotificationInput
+  ): Promise<Notification> {
+    try {
+      // Get all users in the organization
+      const users = await prisma.user.findMany({
+        where: { organizationId: input.organizationId },
+        select: { id: true, email: true, firstName: true, lastName: true },
+      });
+
+      if (users.length === 0) {
+        throw new Error("No users found in organization");
+      }
+
+      // Create notifications for all users
+      const notifications = await Promise.all(
+        users.map((user) =>
+          prisma.notification.create({
+            data: {
+              organizationId: input.organizationId,
+              recipientId: user.id,
+              type: input.type,
+              title: input.title,
+              message: input.message,
+              entityType: input.entityType,
+              entityId: input.entityId,
+            },
+          })
+        )
+      );
+
+      // Send WebSocket notification to organization
+      webSocketService.sendNotificationToOrganization(
+        input.organizationId,
+        notifications[0] // Use first notification as template
+      );
+
+      // Optionally send emails to all users
+      if (input.sendEmail) {
+        await Promise.all(
+          users.map(async (user) => {
+            if (user.email) {
+              try {
+                await smtpService.sendEmail(
+                  user.email,
+                  input.title,
+                  input.message,
+                  input.message
+                );
+                logger.info(`Email sent to ${user.email} for notification`);
+              } catch (error) {
+                logger.error(`Failed to send email to ${user.email}:`, error);
+              }
+            }
+          })
+        );
+      }
+
+      logger.info(
+        `Notifications created for ${users.length} users in organization ${input.organizationId}`
+      );
+      return notifications[0]; // Return first notification as representative
+    } catch (error) {
+      logger.error("Error creating notifications for all users:", error);
       throw error;
     }
   }

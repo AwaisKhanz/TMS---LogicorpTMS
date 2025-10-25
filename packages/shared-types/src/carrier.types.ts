@@ -93,8 +93,6 @@ export interface Carrier {
 
   // Performance
   totalLoads: number;
-  onTimeDelivery: number;
-  rating: number;
 
   // Preferences
   preferredLanes?: PreferredLane[];
@@ -187,36 +185,48 @@ export interface CarrierFilters {
 
 // Response Types
 export interface CreateCarrierResponse {
-  carrier: Carrier;
+  success: boolean;
+  data: Carrier;
 }
 
 export interface UpdateCarrierResponse {
-  carrier: Carrier;
+  success: boolean;
+  data: Carrier;
 }
 
 export interface GetCarrierResponse {
-  carrier: Carrier;
+  success: boolean;
+  data: Carrier;
 }
 
 export interface GetCarriersResponse {
+  success: boolean;
   data: Carrier[];
   pagination?: PaginationMeta;
 }
 
 export interface DeleteCarrierResponse {
-  message: string;
+  success: boolean;
+  data: {
+    message: string;
+  };
 }
 
 export interface CreateCarrierContactResponse {
-  contact: CarrierContact;
+  success: boolean;
+  data: CarrierContact;
 }
 
 export interface UpdateCarrierContactResponse {
-  contact: CarrierContact;
+  success: boolean;
+  data: CarrierContact;
 }
 
 export interface DeleteCarrierContactResponse {
-  message: string;
+  success: boolean;
+  data: {
+    message: string;
+  };
 }
 
 // Statistics and Performance Types
@@ -227,27 +237,14 @@ export interface CarrierStatistics {
   active: number;
   inactive: number;
   expiringInsurance: number;
-  avgRating: number;
-  avgOnTimeDelivery: number;
 }
 
 export interface CarrierPerformance {
   totalLoads: number;
   activeLoads: number;
   completedLoads: number;
-  onTimeDeliveryRate: number;
-  averageRating: number;
   totalRevenue: number;
   averageMargin: number;
-}
-
-export interface CarrierRating {
-  carrierId: string;
-  rating: number;
-  comment?: string;
-  userId: string;
-  loadId?: string;
-  createdAt: string;
 }
 
 // Onboarding Types
@@ -273,7 +270,8 @@ export interface InsuranceAlert {
 }
 
 export interface GetInsuranceAlertsResponse {
-  alerts: InsuranceAlert[];
+  success: boolean;
+  data: InsuranceAlert[];
 }
 
 // FMCSA Verification Types
@@ -295,7 +293,8 @@ export interface VerifyFMCSARequest {
 }
 
 export interface VerifyFMCSAResponse {
-  verification: FMCSAVerification;
+  success: boolean;
+  data: FMCSAVerification;
 }
 
 // Carrier Load Data for display
@@ -312,8 +311,18 @@ export interface CarrierLoadData {
   carrierRate?: number;
 }
 
-export interface GetCarrierLoadsResponse {
+// Carrier with loads included
+export interface CarrierWithLoads extends Carrier {
   loads: CarrierLoadData[];
+  contacts: CarrierContact[];
+  _count: {
+    loads: number;
+  };
+}
+
+export interface GetCarrierLoadsResponse {
+  success: boolean;
+  data: CarrierLoadData[];
   pagination?: PaginationMeta;
 }
 

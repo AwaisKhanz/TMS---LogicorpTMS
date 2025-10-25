@@ -1,18 +1,18 @@
-import { LoadStatus, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import {
-  CreateLoadDto,
-  UpdateLoadDto,
-  LoadFiltersDto,
+  LoadStatus,
+  CreateLoadRequest as CreateLoadDto,
+  UpdateLoadRequest as UpdateLoadDto,
+  LoadFilters as LoadFiltersDto,
   LoadStatisticsByStatus,
   LoadCreatedEventData,
   LoadUpdatedEventData,
   StatusChangeEventData,
   LoadExportData,
-} from "../types/load.types.js";
-import type { Address } from "../types/common.types.js";
+} from "@tms/shared-types";
+import type { Address } from "@tms/shared-types";
 import {
   LoadRepository,
-  LoadFilters,
   LoadWithRelations,
   LoadWithMinimalRelations,
 } from "../repositories/load.repository.js";
@@ -32,7 +32,11 @@ export class LoadService {
     this.notificationService = new NotificationService();
   }
 
-  async getLoads(organizationId: string, filters: LoadFiltersDto) {
+  async getLoads(
+    organizationId: string,
+    filters: LoadFiltersDto,
+    userId?: string
+  ) {
     const {
       page = 1,
       limit = 50,
@@ -44,7 +48,7 @@ export class LoadService {
       search,
     } = filters;
 
-    const loadFilters: LoadFilters = {
+    const loadFilters: LoadFiltersDto = {
       status,
       customerId,
       carrierId,
@@ -65,7 +69,8 @@ export class LoadService {
       loadFilters,
       organizationId,
       page,
-      limit
+      limit,
+      userId
     );
 
     return {
@@ -79,8 +84,12 @@ export class LoadService {
     };
   }
 
-  async getLoadById(id: string, organizationId: string) {
-    const load = await this.loadRepo.findByIdWithRelations(id, organizationId);
+  async getLoadById(id: string, organizationId: string, userId?: string) {
+    const load = await this.loadRepo.findByIdWithRelations(
+      id,
+      organizationId,
+      userId
+    );
 
     if (!load) {
       throw new NotFoundError("Load");
@@ -104,8 +113,20 @@ export class LoadService {
       deliveredAt: load.deliveredAt?.toISOString(),
       invoicedAt: load.invoicedAt?.toISOString(),
       paidAt: load.paidAt?.toISOString(),
-      shipperAddress: load.shipperAddress as Address,
-      consigneeAddress: load.consigneeAddress as Address,
+      shipperAddress: {
+        street: load.shipper.streetAddress,
+        city: load.shipper.city,
+        state: load.shipper.state,
+        zip: load.shipper.zipCode,
+        country: load.shipper.country,
+      } as Address,
+      consigneeAddress: {
+        street: load.consignee.streetAddress,
+        city: load.consignee.city,
+        state: load.consignee.state,
+        zip: load.consignee.zipCode,
+        country: load.consignee.country,
+      } as Address,
       customer: {
         id: load.customer.id,
         companyName: load.customer.companyName,
@@ -157,10 +178,16 @@ export class LoadService {
 
     const loadNumber = await this.generateLoadNumber(organizationId);
 
+    // Determine initial status based on carrier assignment
+    let initialStatus = LoadStatus.QUOTE;
+    if (data.carrierId) {
+      initialStatus = LoadStatus.BOOKED;
+    }
+
     const loadData = {
       loadNumber,
       createdBy: userId,
-      status: LoadStatus.QUOTE,
+      status: initialStatus,
       ...data,
       margin:
         data.customerRate && data.carrierRate
@@ -186,6 +213,103 @@ export class LoadService {
     );
 
     return this.transformLoadForApi(load);
+  }
+
+  async updateLoadStatus(
+    id: string,
+    newStatus: LoadStatus,
+    userId: string,
+    organizationId: string,
+    reason?: string
+  ) {
+    const load = await this.loadRepo.findByIdWithRelations(id, organizationId);
+    if (!load) {
+      throw new NotFoundError("Load");
+    }
+
+    // Validate status transition
+    this.validateStatusTransition(load.status, newStatus);
+
+    const updatedLoad = await this.loadRepo.updateWithRelations(
+      id,
+      { status: newStatus },
+      organizationId
+    );
+
+    // Create status change event
+    const eventData: StatusChangeEventData = {
+      fromStatus: load.status,
+      toStatus: newStatus,
+      changedBy: userId,
+      reason,
+    };
+    await this.loadRepo.createLoadEvent(
+      id,
+      "STATUS_CHANGED",
+      eventData,
+      userId
+    );
+
+    // Handle special status transitions
+    if (newStatus === LoadStatus.DISPATCHED) {
+      // Generate Rate Confirmation Document when status changes to DISPATCHED
+      await this.documentGenService.generateRateConfirmation(
+        id,
+        organizationId,
+        userId
+      );
+    }
+
+    if (newStatus === LoadStatus.COMPLETED) {
+      // Move load to invoice page (completed loads are handled separately)
+      // This will be filtered out from regular load queries
+    }
+
+    return this.transformLoadForApi(updatedLoad!);
+  }
+
+  async getCompletedLoads(
+    organizationId: string,
+    page: number = 1,
+    limit: number = 50,
+    userId?: string
+  ) {
+    const { data: loads, total } = await this.loadRepo.findCompletedLoads(
+      organizationId,
+      page,
+      limit,
+      userId
+    );
+
+    return {
+      data: loads.map((load) => this.transformLoadForApi(load)),
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  private validateStatusTransition(currentStatus: string, newStatus: string) {
+    const validTransitions: Record<string, string[]> = {
+      QUOTE: ["BOOKED", "CANCELLED"],
+      BOOKED: ["DISPATCHED", "CANCELLED"],
+      DISPATCHED: ["IN_TRANSIT", "CANCELLED"],
+      IN_TRANSIT: ["DELIVERED", "CANCELLED"],
+      DELIVERED: ["POD_RECEIVED", "CANCELLED"],
+      POD_RECEIVED: ["COMPLETED", "CANCELLED"],
+      COMPLETED: ["PAID"],
+      PAID: [],
+      CANCELLED: [],
+    };
+
+    if (!validTransitions[currentStatus]?.includes(newStatus)) {
+      throw new Error(
+        `Invalid status transition from ${currentStatus} to ${newStatus}`
+      );
+    }
   }
 
   async updateLoad(
@@ -238,170 +362,6 @@ export class LoadService {
     );
 
     return this.transformLoadForApi(load);
-  }
-
-  async updateLoadStatus(
-    id: string,
-    status: LoadStatus,
-    userId: string,
-    organizationId: string
-  ) {
-    const load = await this.loadRepo.findById(id, organizationId);
-
-    if (!load) {
-      throw new NotFoundError("Load");
-    }
-
-    // Validate status transition
-    this.validateStatusTransition(load.status, status);
-
-    const updateData: Record<string, unknown> = { status };
-    const now = new Date();
-
-    // Set status timestamps
-    switch (status) {
-      case LoadStatus.BOOKED:
-        updateData.bookedAt = now;
-        break;
-      case LoadStatus.DISPATCHED:
-        updateData.dispatchedAt = now;
-        break;
-      case LoadStatus.IN_TRANSIT:
-        updateData.pickedUpAt = now;
-        break;
-      case LoadStatus.DELIVERED:
-        updateData.deliveredAt = now;
-        break;
-      case LoadStatus.INVOICED:
-        updateData.invoicedAt = now;
-        break;
-      case LoadStatus.PAID:
-        updateData.paidAt = now;
-        break;
-    }
-
-    const updatedLoad = await this.loadRepo.updateWithRelations(
-      id,
-      updateData,
-      organizationId
-    );
-
-    if (!updatedLoad) {
-      throw new NotFoundError("Load");
-    }
-
-    // Create load event
-    const eventData: StatusChangeEventData = {
-      oldStatus: load.status,
-      newStatus: status,
-      updatedBy: userId,
-    };
-    await this.loadRepo.createLoadEvent(id, "STATUS_CHANGE", eventData, userId);
-
-    // Send notification for status change
-    if (updatedLoad.assignedTo) {
-      try {
-        await this.notificationService.create({
-          recipientId: updatedLoad.assignedTo,
-          type: "LOAD_STATUS_CHANGE",
-          title: "Load Status Updated",
-          message: `Load #${load.loadNumber} status changed from ${load.status} to ${status}`,
-          entityType: "LOAD",
-          entityId: id,
-          sendEmail: status === "DELIVERED", // Email for important events
-          organizationId,
-        });
-      } catch (error) {
-        console.error("Failed to send load status change notification:", error);
-      }
-    }
-
-    // Auto-generate documents based on status change
-    await this.autoGenerateDocuments(
-      updatedLoad,
-      status,
-      organizationId,
-      userId
-    );
-
-    return this.transformLoadForApi(updatedLoad);
-  }
-
-  private async autoGenerateDocuments(
-    load: { id: string; carrierId: string | null },
-    newStatus: LoadStatus,
-    organizationId: string,
-    userId: string
-  ) {
-    try {
-      // Generate Rate Confirmation when BOOKED
-      if (newStatus === LoadStatus.BOOKED && load.carrierId) {
-        const document = await this.documentGenService.generateRateConfirmation(
-          load.id,
-          organizationId,
-          userId
-        );
-
-        if (document) {
-          // Document is already saved by the generation service
-          console.log(`Rate Confirmation generated: ${document.name}`);
-
-          // Send notification for document generation
-          try {
-            await this.notificationService.create({
-              recipientId: userId,
-              type: "DOCUMENT_GENERATED",
-              title: "Document Generated",
-              message: `${document.name} has been generated for Load #${load.id}`,
-
-              entityType: "LOAD",
-              entityId: load.id,
-              organizationId,
-            });
-          } catch (error) {
-            console.error(
-              "Failed to send document generation notification:",
-              error
-            );
-          }
-        }
-      }
-
-      // Generate BOL when DISPATCHED
-      if (newStatus === LoadStatus.DISPATCHED && load.carrierId) {
-        const document = await this.documentGenService.generateBOL(
-          load.id,
-          organizationId,
-          userId
-        );
-
-        if (document) {
-          // Document is already saved by the generation service
-          console.log(`BOL generated: ${document.name}`);
-
-          // Send notification for document generation
-          try {
-            await this.notificationService.create({
-              recipientId: userId,
-              type: "DOCUMENT_GENERATED",
-              title: "Document Generated",
-              message: `${document.name} has been generated for Load #${load.id}`,
-              entityType: "LOAD",
-              entityId: load.id,
-              organizationId,
-            });
-          } catch (error) {
-            console.error(
-              "Failed to send document generation notification:",
-              error
-            );
-          }
-        }
-      }
-    } catch (error) {
-      // Log error but don't fail the status update
-      console.error("Failed to auto-generate document:", error);
-    }
   }
 
   async deleteLoad(id: string, organizationId: string) {
@@ -563,17 +523,11 @@ export class LoadService {
       createdBy: userId,
       status: LoadStatus.QUOTE,
       customerId: load.customerId,
-      shipperName: load.shipperName,
-      shipperAddress: load.shipperAddress,
-      shipperPhone: load.shipperPhone,
-      shipperEmail: load.shipperEmail,
+      shipperId: load.shipperId,
+      consigneeId: load.consigneeId,
       pickupDate: load.pickupDate,
       pickupStart: load.pickupStart,
       pickupEnd: load.pickupEnd,
-      consigneeName: load.consigneeName,
-      consigneeAddress: load.consigneeAddress,
-      consigneePhone: load.consigneePhone,
-      consigneeEmail: load.consigneeEmail,
       deliveryDate: load.deliveryDate,
       deliveryStart: load.deliveryStart,
       deliveryEnd: load.deliveryEnd,
@@ -781,38 +735,6 @@ export class LoadService {
       if (data.carrierRate < 0) {
         throw new Error("Carrier rate must be positive");
       }
-    }
-  }
-
-  private validateStatusTransition(
-    currentStatus: LoadStatus,
-    newStatus: LoadStatus
-  ) {
-    const validTransitions: Record<LoadStatus, LoadStatus[]> = {
-      [LoadStatus.QUOTE]: [LoadStatus.BOOKED, LoadStatus.CANCELLED],
-      [LoadStatus.BOOKED]: [
-        LoadStatus.DISPATCHED,
-        LoadStatus.CANCELLED,
-        LoadStatus.QUOTE,
-      ],
-      [LoadStatus.DISPATCHED]: [
-        LoadStatus.IN_TRANSIT,
-        LoadStatus.CANCELLED,
-        LoadStatus.BOOKED,
-      ],
-      [LoadStatus.IN_TRANSIT]: [LoadStatus.DELIVERED, LoadStatus.CANCELLED],
-      [LoadStatus.DELIVERED]: [LoadStatus.POD_RECEIVED],
-      [LoadStatus.POD_RECEIVED]: [LoadStatus.INVOICED],
-      [LoadStatus.INVOICED]: [LoadStatus.PAID],
-      [LoadStatus.PAID]: [],
-      [LoadStatus.CANCELLED]: [],
-    };
-
-    const allowed = validTransitions[currentStatus] || [];
-    if (!allowed.includes(newStatus)) {
-      throw new Error(
-        `Cannot transition from ${currentStatus} to ${newStatus}`
-      );
     }
   }
 

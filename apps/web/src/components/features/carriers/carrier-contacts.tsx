@@ -230,14 +230,14 @@ export function CarrierContacts({ carrierId }: CarrierContactsProps) {
                     <div className="flex flex-col gap-1 text-sm">
                       <a
                         href={`mailto:${contact.email}`}
-                        className="flex items-center gap-1 text-blue-600 hover:underline"
+                        className="flex items-center gap-1 text-primary hover:underline"
                       >
                         <Mail className="h-3 w-3" />
                         {contact.email}
                       </a>
                       <a
                         href={`tel:${contact.phone}`}
-                        className="flex items-center gap-1 text-blue-600 hover:underline"
+                        className="flex items-center gap-1 text-primary hover:underline"
                       >
                         <Phone className="h-3 w-3" />
                         {contact.phone}
@@ -274,10 +274,7 @@ export function CarrierContacts({ carrierId }: CarrierContactsProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDelete} variant="destructive">
               {deleteContact.isPending ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>

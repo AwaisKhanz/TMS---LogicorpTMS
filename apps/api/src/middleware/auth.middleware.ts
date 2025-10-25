@@ -20,6 +20,19 @@ export const authenticate = async (
     // Verify token
     const payload = verifyAccessToken(tokenData.token);
 
+    // Check if session exists in database (for permission invalidation)
+    const session = await prisma.session.findFirst({
+      where: {
+        token: tokenData.token,
+        userId: payload.sub,
+        expiresAt: { gt: new Date() }, // Session not expired
+      },
+    });
+
+    if (!session) {
+      throw new AuthenticationError("Session expired or invalid");
+    }
+
     // Get user from database to check email verification status
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },

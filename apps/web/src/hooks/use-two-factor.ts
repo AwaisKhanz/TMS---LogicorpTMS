@@ -1,12 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { authService } from "@/services/auth.service";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/auth-context";
+import { settingsKeys } from "./use-settings";
 
 export function useTwoFactor() {
   const [isSetupDialogOpen, setIsSetupDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { refreshUser } = useAuth();
 
   // Setup 2FA - Generate QR code
   const setupMutation = useMutation({
@@ -28,7 +32,12 @@ export function useTwoFactor() {
   // Enable 2FA after verification
   const enableMutation = useMutation({
     mutationFn: (token: string) => authService.enable2FA(token),
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Invalidate security settings cache
+      queryClient.invalidateQueries({ queryKey: settingsKeys.security() });
+      // Refresh user context to get updated 2FA status
+      await refreshUser();
+
       toast.success("Two-Factor Authentication Enabled", {
         description: "Your account is now more secure!",
       });
@@ -49,7 +58,12 @@ export function useTwoFactor() {
   // Disable 2FA
   const disableMutation = useMutation({
     mutationFn: (token: string) => authService.disable2FA(token),
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Invalidate security settings cache
+      queryClient.invalidateQueries({ queryKey: settingsKeys.security() });
+      // Refresh user context to get updated 2FA status
+      await refreshUser();
+
       toast.success("Two-Factor Authentication Disabled", {
         description: "2FA has been removed from your account",
       });

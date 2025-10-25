@@ -11,7 +11,7 @@ import { requireEmailVerification } from "../middleware/email-verification.middl
 import { authorize } from "../middleware/authorization.middleware.js";
 import { PERMISSIONS } from "@tms/shared-types";
 
-const router = Router();
+const router: Router = Router();
 const userController = new UserController();
 
 // All user routes require authentication, tenant validation, and email verification

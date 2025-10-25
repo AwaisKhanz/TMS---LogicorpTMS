@@ -21,16 +21,31 @@ export const PERMISSIONS = {
   CUSTOMER_EDIT: "customer:edit",
   CUSTOMER_DELETE: "customer:delete",
 
+  // Consignee permissions
+  CONSIGNEE_VIEW: "consignee:view",
+  CONSIGNEE_CREATE: "consignee:create",
+  CONSIGNEE_EDIT: "consignee:edit",
+  CONSIGNEE_DELETE: "consignee:delete",
+
+  // Shipper permissions
+  SHIPPER_VIEW: "shipper:view",
+  SHIPPER_CREATE: "shipper:create",
+  SHIPPER_EDIT: "shipper:edit",
+  SHIPPER_DELETE: "shipper:delete",
+
   // Invoice permissions
   INVOICE_VIEW: "invoice:view",
   INVOICE_CREATE: "invoice:create",
   INVOICE_SEND: "invoice:send",
   INVOICE_VOID: "invoice:void",
-
+  INVOICE_EDIT: "invoice:edit",
+  INVOICE_DELETE: "invoice:delete",
   // Report permissions
   REPORT_VIEW: "report:view",
   REPORT_EXPORT: "report:export",
-
+  REPORT_CREATE: "report:create",
+  REPORT_EDIT: "report:edit",
+  REPORT_DELETE: "report:delete",
   // User permissions
   USER_VIEW: "user:view",
   USER_CREATE: "user:create",
@@ -40,25 +55,15 @@ export const PERMISSIONS = {
   // Settings permissions
   SETTINGS_VIEW: "settings:view",
   SETTINGS_EDIT: "settings:edit",
-
-  // Notification permissions
-  NOTIFICATIONS_READ: "notifications:read",
-  NOTIFICATIONS_CREATE: "notifications:create",
-  NOTIFICATIONS_UPDATE: "notifications:update",
-  NOTIFICATIONS_DELETE: "notifications:delete",
-  NOTIFICATIONS_ADMIN: "notifications:admin",
-  NOTIFICATIONS_TEMPLATES_READ: "notifications:templates:read",
-  NOTIFICATIONS_TEMPLATES_CREATE: "notifications:templates:create",
-  NOTIFICATIONS_TEMPLATES_UPDATE: "notifications:templates:update",
-  NOTIFICATIONS_TEMPLATES_DELETE: "notifications:templates:delete",
 } as const;
 
 // ==================== ROLE CONSTANTS ====================
 export const ROLES = {
-  ADMIN: "ADMIN",
+  ADMINISTRATOR: "ADMINISTRATOR",
   MANAGER: "MANAGER",
   DISPATCHER: "DISPATCHER",
-  USER: "USER",
+  VIEWER: "VIEWER",
+  INVOICES: "INVOICES",
 } as const;
 
 // ==================== PERMISSION GROUPS ====================
@@ -84,16 +89,35 @@ export const CUSTOMER_PERMISSIONS = [
   PERMISSIONS.CUSTOMER_DELETE,
 ] as const;
 
+export const CONSIGNEE_PERMISSIONS = [
+  PERMISSIONS.CONSIGNEE_VIEW,
+  PERMISSIONS.CONSIGNEE_CREATE,
+  PERMISSIONS.CONSIGNEE_EDIT,
+  PERMISSIONS.CONSIGNEE_DELETE,
+] as const;
+
+export const SHIPPER_PERMISSIONS = [
+  PERMISSIONS.SHIPPER_VIEW,
+  PERMISSIONS.SHIPPER_CREATE,
+  PERMISSIONS.SHIPPER_EDIT,
+  PERMISSIONS.SHIPPER_DELETE,
+] as const;
+
 export const INVOICE_PERMISSIONS = [
   PERMISSIONS.INVOICE_VIEW,
   PERMISSIONS.INVOICE_CREATE,
   PERMISSIONS.INVOICE_SEND,
   PERMISSIONS.INVOICE_VOID,
+  PERMISSIONS.INVOICE_EDIT,
+  PERMISSIONS.INVOICE_DELETE,
 ] as const;
 
 export const REPORT_PERMISSIONS = [
   PERMISSIONS.REPORT_VIEW,
   PERMISSIONS.REPORT_EXPORT,
+  PERMISSIONS.REPORT_CREATE,
+  PERMISSIONS.REPORT_EDIT,
+  PERMISSIONS.REPORT_DELETE,
 ] as const;
 
 export const USER_PERMISSIONS = [
@@ -108,27 +132,15 @@ export const SETTINGS_PERMISSIONS = [
   PERMISSIONS.SETTINGS_EDIT,
 ] as const;
 
-export const NOTIFICATION_PERMISSIONS = [
-  PERMISSIONS.NOTIFICATIONS_READ,
-  PERMISSIONS.NOTIFICATIONS_CREATE,
-  PERMISSIONS.NOTIFICATIONS_UPDATE,
-  PERMISSIONS.NOTIFICATIONS_DELETE,
-  PERMISSIONS.NOTIFICATIONS_ADMIN,
-  PERMISSIONS.NOTIFICATIONS_TEMPLATES_READ,
-  PERMISSIONS.NOTIFICATIONS_TEMPLATES_CREATE,
-  PERMISSIONS.NOTIFICATIONS_TEMPLATES_UPDATE,
-  PERMISSIONS.NOTIFICATIONS_TEMPLATES_DELETE,
-] as const;
-
 // ==================== TYPE DEFINITIONS ====================
 // Flatten the PERMISSIONS object to get all permission values
 type FlattenPermissions<T> = T extends string
   ? T
   : T extends Record<string, any>
-  ? {
-      [K in keyof T]: FlattenPermissions<T[K]>
-    }[keyof T]
-  : never;
+    ? {
+        [K in keyof T]: FlattenPermissions<T[K]>;
+      }[keyof T]
+    : never;
 
 export type Permission = FlattenPermissions<typeof PERMISSIONS>;
 export type Role = (typeof ROLES)[keyof typeof ROLES];
@@ -194,9 +206,9 @@ export const hasAllRoles = (
 const flattenPermissions = (obj: any): string[] => {
   const result: string[] = [];
   for (const value of Object.values(obj)) {
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       result.push(value);
-    } else if (typeof value === 'object') {
+    } else if (typeof value === "object") {
       result.push(...flattenPermissions(value));
     }
   }
@@ -208,37 +220,48 @@ const ALL_PERMISSIONS = flattenPermissions(PERMISSIONS);
 
 // ==================== ROLE PERMISSION MAPPING ====================
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
-  [ROLES.ADMIN]: ALL_PERMISSIONS as Permission[],
+  [ROLES.ADMINISTRATOR]: ALL_PERMISSIONS as Permission[],
   [ROLES.MANAGER]: [
     ...LOAD_PERMISSIONS,
     ...CARRIER_PERMISSIONS,
-    ...CUSTOMER_PERMISSIONS,
-    ...INVOICE_PERMISSIONS,
+    PERMISSIONS.CUSTOMER_VIEW,
+    ...CONSIGNEE_PERMISSIONS,
+    ...SHIPPER_PERMISSIONS,
     ...REPORT_PERMISSIONS,
     PERMISSIONS.USER_VIEW,
-    PERMISSIONS.NOTIFICATIONS_READ,
-    PERMISSIONS.NOTIFICATIONS_CREATE,
-    PERMISSIONS.NOTIFICATIONS_UPDATE,
-    PERMISSIONS.NOTIFICATIONS_TEMPLATES_READ,
-    PERMISSIONS.NOTIFICATIONS_TEMPLATES_CREATE,
-    PERMISSIONS.NOTIFICATIONS_TEMPLATES_UPDATE,
+    PERMISSIONS.SETTINGS_VIEW,
   ] as Permission[],
   [ROLES.DISPATCHER]: [
     PERMISSIONS.LOAD_VIEW_ALL,
     PERMISSIONS.LOAD_VIEW_OWN,
     PERMISSIONS.LOAD_CREATE,
     PERMISSIONS.LOAD_EDIT,
-    PERMISSIONS.CARRIER_VIEW,
     PERMISSIONS.CUSTOMER_VIEW,
+    ...CONSIGNEE_PERMISSIONS,
+    ...SHIPPER_PERMISSIONS,
     PERMISSIONS.REPORT_VIEW,
-    PERMISSIONS.NOTIFICATIONS_READ,
-    PERMISSIONS.NOTIFICATIONS_UPDATE,
+    PERMISSIONS.SETTINGS_VIEW,
   ] as Permission[],
-  [ROLES.USER]: [
+  [ROLES.VIEWER]: [
+    PERMISSIONS.LOAD_VIEW_ALL,
     PERMISSIONS.LOAD_VIEW_OWN,
     PERMISSIONS.CARRIER_VIEW,
     PERMISSIONS.CUSTOMER_VIEW,
-    PERMISSIONS.NOTIFICATIONS_READ,
+    PERMISSIONS.CONSIGNEE_VIEW,
+    PERMISSIONS.SHIPPER_VIEW,
+    PERMISSIONS.REPORT_VIEW,
+    PERMISSIONS.REPORT_EXPORT,
+    PERMISSIONS.SETTINGS_VIEW,
+  ] as Permission[],
+  [ROLES.INVOICES]: [
+    ...INVOICE_PERMISSIONS,
+    PERMISSIONS.CUSTOMER_VIEW,
+    PERMISSIONS.CARRIER_VIEW,
+    PERMISSIONS.CONSIGNEE_VIEW,
+    PERMISSIONS.SHIPPER_VIEW,
+    PERMISSIONS.REPORT_VIEW,
+    PERMISSIONS.REPORT_EXPORT,
+    PERMISSIONS.SETTINGS_VIEW,
   ] as Permission[],
 };
 

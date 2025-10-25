@@ -15,8 +15,9 @@ import {
   storageHealthCheck,
 } from "./middleware/static-files.middleware.js";
 import { webSocketService } from "./services/websocket.service.js";
+import { sessionCleanupService } from "./services/session-cleanup.service.js";
 
-const app = express();
+const app: express.Application = express();
 const httpServer = createServer(app);
 
 // Security middleware
@@ -68,6 +69,9 @@ app.use(errorHandler);
 // Initialize WebSocket service
 webSocketService.initialize(httpServer);
 
+// Start session cleanup service
+sessionCleanupService.start();
+
 // Start server
 const PORT = config.port;
 
@@ -90,12 +94,14 @@ httpServer.listen(PORT, () => {
 process.on("SIGTERM", () => {
   console.log("SIGTERM signal received: closing HTTP server");
   webSocketService.shutdown();
+  sessionCleanupService.stop();
   process.exit(0);
 });
 
 process.on("SIGINT", () => {
   console.log("SIGINT signal received: closing HTTP server");
   webSocketService.shutdown();
+  sessionCleanupService.stop();
   process.exit(0);
 });
 

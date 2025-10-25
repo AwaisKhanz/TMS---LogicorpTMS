@@ -1,41 +1,41 @@
 import { Suspense } from "react";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import Link from "next/link";
 import { CustomersDataTable } from "@/components/features/customers/customers-data-table";
-import { CustomerStats } from "@/components/features/customers/customer-stats";
-import { CanCreate } from "@/components/auth/can";
+import { CustomersHeader } from "@/components/features/customers/customers-header";
+import { PermissionGuard } from "@/components/auth/permission-guard";
+import { PERMISSIONS } from "@tms/shared-types";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Lock } from "lucide-react";
 
 export default function CustomersPage() {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
-          <p className="text-muted-foreground">
-            Manage your customer relationships and accounts
-          </p>
+    <PermissionGuard
+      permission={PERMISSIONS.CUSTOMER_VIEW}
+      fallback={
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Customers</h1>
+              <p className="text-muted-foreground">
+                Manage your customer relationships and accounts
+              </p>
+            </div>
+          </div>
+          <Alert>
+            <Lock className="h-4 w-4" />
+            <AlertDescription>
+              You don't have permission to view customers. Please contact your
+              administrator.
+            </AlertDescription>
+          </Alert>
         </div>
-        <CanCreate resource="customer">
-          <Button asChild>
-            <Link href="/customers/new">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Customer
-            </Link>
-          </Button>
-        </CanCreate>
+      }
+    >
+      <div className="space-y-6">
+        <CustomersHeader />
+        <Suspense fallback={<div>Loading customers...</div>}>
+          <CustomersDataTable />
+        </Suspense>
       </div>
-
-      {/* Statistics */}
-      <Suspense fallback={<div>Loading statistics...</div>}>
-        <CustomerStats />
-      </Suspense>
-
-      {/* Customers Table */}
-      <Suspense fallback={<div>Loading customers...</div>}>
-        <CustomersDataTable />
-      </Suspense>
-    </div>
+    </PermissionGuard>
   );
 }

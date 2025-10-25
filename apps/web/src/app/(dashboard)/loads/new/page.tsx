@@ -6,7 +6,7 @@ import { LoadForm } from "@/components/features/loads/load-form";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import type { CreateLoadInput } from "@/types/load.types";
+import type { CreateLoadRequest as CreateLoadInput } from "@tms/shared-types";
 
 export default function NewLoadPage() {
   const router = useRouter();
@@ -21,7 +21,7 @@ export default function NewLoadPage() {
 
   return (
     <div className="h-full bg-background">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full ">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col gap-4 mb-6">

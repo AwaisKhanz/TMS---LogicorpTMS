@@ -8,7 +8,7 @@ import { authorize } from "../middleware/authorization.middleware.js";
 import { PERMISSIONS } from "@tms/shared-types";
 import { z } from "zod";
 
-const router = Router();
+const router: Router = Router();
 const settingsController = new SettingsController();
 
 // Apply authentication, tenant validation, and email verification to all settings routes
@@ -20,7 +20,14 @@ router.use(requireEmailVerification);
 const updateProfileSchema = z.object({
   firstName: z.string().min(1).max(50).optional(),
   lastName: z.string().min(1).max(50).optional(),
-  phone: z.string().min(10).max(20).nullable().optional(),
+  phone: z
+    .string()
+    .nullable()
+    .optional()
+    .refine(
+      (val) => !val || val === "" || (val.length >= 10 && val.length <= 20),
+      { message: "Phone must be between 10 and 20 characters" }
+    ),
   avatar: z.string().url().nullable().optional(),
   timezone: z.string().optional(),
   language: z.string().optional(),
@@ -89,6 +96,7 @@ const inviteTeamMemberSchema = z.object({
   firstName: z.string().min(1).max(50),
   lastName: z.string().min(1).max(50),
   roleIds: z.array(z.string()).min(1),
+  customerIds: z.array(z.string()).optional(),
 });
 
 const updateTeamMemberSchema = z.object({
@@ -105,6 +113,12 @@ router.get(
   settingsController.getProfile
 );
 router.put(
+  "/profile",
+  authorize(PERMISSIONS.SETTINGS_EDIT),
+  validateRequest(updateProfileSchema),
+  settingsController.updateProfile
+);
+router.patch(
   "/profile",
   authorize(PERMISSIONS.SETTINGS_EDIT),
   validateRequest(updateProfileSchema),
@@ -171,18 +185,45 @@ router.put(
 );
 
 // ==================== TEAM MANAGEMENT ====================
-router.get("/team", settingsController.getTeamMembers);
+router.get(
+  "/team",
+  authorize(PERMISSIONS.USER_VIEW),
+  settingsController.getTeamMembers
+);
 router.post(
   "/team/invite",
+  authorize(PERMISSIONS.USER_CREATE),
   validateRequest(inviteTeamMemberSchema),
   settingsController.inviteTeamMember
 );
 router.put(
   "/team/:memberId",
+  authorize(PERMISSIONS.USER_EDIT),
   validateRequest(updateTeamMemberSchema),
   settingsController.updateTeamMember
 );
-router.delete("/team/:memberId", settingsController.removeTeamMember);
+router.delete(
+  "/team/:memberId",
+  authorize(PERMISSIONS.USER_DELETE),
+  settingsController.removeTeamMember
+);
+
+// Customer assignment routes
+router.get(
+  "/team/:memberId/customers",
+  authorize(PERMISSIONS.USER_VIEW),
+  settingsController.getMemberCustomers
+);
+router.post(
+  "/team/:memberId/customers",
+  authorize(PERMISSIONS.USER_EDIT),
+  settingsController.assignCustomers
+);
+router.delete(
+  "/team/:memberId/customers/:customerId",
+  authorize(PERMISSIONS.USER_EDIT),
+  settingsController.removeCustomerAssignment
+);
 
 // ==================== BILLING SETTINGS ====================
 router.get("/billing", settingsController.getBillingSettings);

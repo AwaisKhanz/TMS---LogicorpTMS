@@ -166,13 +166,9 @@ export function ThemeShowcase() {
             <Badge variant="secondary">Secondary</Badge>
             <Badge variant="destructive">Destructive</Badge>
             <Badge variant="outline">Outline</Badge>
-            <Badge className="bg-success text-success-foreground">
-              Success
-            </Badge>
-            <Badge className="bg-warning text-warning-foreground">
-              Warning
-            </Badge>
-            <Badge className="bg-info text-info-foreground">Info</Badge>
+            <Badge variant="success">Success</Badge>
+            <Badge variant="warning">Warning</Badge>
+            <Badge variant="info">Info</Badge>
           </div>
         </CardContent>
       </Card>

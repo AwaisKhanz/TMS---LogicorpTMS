@@ -13,6 +13,7 @@ import { cookieUtils } from "@/lib/cookies";
 import type {
   AuthUser,
   AuthOrganization,
+  AuthTokens,
   LoginResponse,
   RegisterRequest,
   RegisterResponse,
@@ -37,9 +38,15 @@ interface AuthContextType {
     password: string,
     twoFactorToken?: string
   ) => Promise<LoginResponse>;
+  loginWithTokens: (
+    userData: AuthUser,
+    orgData: AuthOrganization,
+    tokens: AuthTokens
+  ) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  refreshAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -172,18 +179,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }>("/auth/register", data);
 
     if (response.success && response.data) {
-      const { user: userData, organization: orgData, tokens } = response.data;
-
-      // Store token in cookies for API client to use
-      cookieUtils.setToken(tokens.accessToken);
-      setToken(tokens.accessToken);
-
-      // Set user and organization state with roles and permissions
-      setUser(userData);
-      setOrganization(orgData);
-      setRoles(userData.roles || []);
-      setPermissions(userData.permissions || []);
+      // Don't auto-login user after registration
+      // User will be logged in after email verification
+      // Just return success - the user will be redirected to verify-email page
     }
+  };
+
+  const loginWithTokens = async (
+    userData: AuthUser,
+    orgData: AuthOrganization,
+    tokens: AuthTokens
+  ): Promise<void> => {
+    // Store token in cookies for API client to use
+    cookieUtils.setToken(tokens.accessToken);
+    setToken(tokens.accessToken);
+
+    // Set user and organization state with roles and permissions
+    setUser(userData);
+    setOrganization(orgData);
+    setRoles(userData.roles || []);
+    setPermissions(userData.permissions || []);
   };
 
   const logout = async (): Promise<void> => {
@@ -217,6 +232,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }>("/auth/me");
       if (response.success && response.data) {
         const { organization, roles, permissions, ...userData } = response.data;
+        console.log("Refreshing user data:", userData);
         setUser({
           ...userData,
           roles: roles as Role[],
@@ -229,6 +245,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       // If refresh fails, logout
       await logout();
+    }
+  };
+
+  const refreshAuth = async (): Promise<void> => {
+    try {
+      // Get fresh user data with updated permissions
+      const response = await apiClient.get<{
+        success: boolean;
+        data: AuthUser & {
+          organization: AuthOrganization;
+          roles: Role[];
+          permissions: Permission[];
+        };
+      }>("/auth/me");
+
+      if (response.success && response.data) {
+        const { organization, roles, permissions, ...userData } = response.data;
+
+        // Update auth state with fresh data
+        setUser({
+          ...userData,
+          roles: roles as Role[],
+          permissions: permissions as Permission[],
+        });
+        setOrganization(organization);
+        setRoles((roles as Role[]) || []);
+        setPermissions(permissions || []);
+      }
+    } catch (error) {
+      console.error("Failed to refresh auth:", error);
     }
   };
 
@@ -248,9 +294,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hasAllPermissions,
         hasRole,
         login,
+        loginWithTokens,
         register,
         logout,
         refreshUser,
+        refreshAuth,
       }}
     >
       {children}

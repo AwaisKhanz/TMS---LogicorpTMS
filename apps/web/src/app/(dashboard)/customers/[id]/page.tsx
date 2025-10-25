@@ -35,6 +35,7 @@ export default function CustomerDetailsPage() {
   const id = params.id as string;
 
   const { data: customer, isLoading, error } = useCustomer(id);
+  console.log(customer);
   const deleteCustomer = useDeleteCustomer();
 
   const handleDelete = async () => {
@@ -54,7 +55,7 @@ export default function CustomerDetailsPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex items-center gap-2">
           <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading customer...</span>
+          <span>Loading customer.customer...</span>
         </div>
       </div>
     );
@@ -77,61 +78,72 @@ export default function CustomerDetailsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/customers">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Link>
-          </Button>
+      <div className="flex w-full gap-4">
+        <div className="flex flex-col w-full gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold tracking-tight">
-                {customer.companyName}
-              </h1>
-              <Badge variant={customer.isActive ? "default" : "secondary"}>
-                {customer.isActive ? "Active" : "Inactive"}
-              </Badge>
-            </div>
-            {customer.dba && (
-              <p className="text-muted-foreground">DBA: {customer.dba}</p>
-            )}
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/customers">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Link>
+            </Button>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild>
-            <Link href={`/customers/${id}/edit`}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Link>
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the
-                  customer and all associated data.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  {customer.data.companyName}
+                </h1>
+                <Badge
+                  variant={customer.data.isActive ? "default" : "secondary"}
                 >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  {customer.data.isActive ? "Active" : "Inactive"}
+                </Badge>
+              </div>
+              {customer.data.dba && (
+                <p className="text-muted-foreground mt-1">
+                  DBA: {customer.data.dba}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Button asChild>
+                <Link href={`/customers/${id}/edit`}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Link>
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete
+                      the customer and all associated data.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      variant="destructive"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -144,37 +156,37 @@ export default function CustomerDetailsPage() {
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground">Company Name</p>
-              <p className="font-medium">{customer.companyName}</p>
+              <p className="font-medium">{customer.data.companyName}</p>
             </div>
-            {customer.dba && (
+            {customer.data.dba && (
               <div>
                 <p className="text-sm text-muted-foreground">DBA</p>
-                <p className="font-medium">{customer.dba}</p>
+                <p className="font-medium">{customer.data.dba}</p>
               </div>
             )}
-            {customer.industry && (
+            {customer.data.industry && (
               <div>
                 <p className="text-sm text-muted-foreground">Industry</p>
-                <p className="font-medium">{customer.industry}</p>
+                <p className="font-medium">{customer.data.industry}</p>
               </div>
             )}
-            {customer.website && (
+            {customer.data.website && (
               <div>
                 <p className="text-sm text-muted-foreground">Website</p>
                 <a
-                  href={customer.website}
+                  href={customer.data.website}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
-                  {customer.website}
+                  {customer.data.website}
                 </a>
               </div>
             )}
-            {customer.ein && (
+            {customer.data.ein && (
               <div>
                 <p className="text-sm text-muted-foreground">EIN</p>
-                <p className="font-medium">{customer.ein}</p>
+                <p className="font-medium">{customer.data.ein}</p>
               </div>
             )}
           </CardContent>
@@ -190,14 +202,17 @@ export default function CustomerDetailsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="font-medium">{customer.billingAddress.street}</p>
-              <p className="text-sm text-muted-foreground">
-                {customer.billingAddress.city}, {customer.billingAddress.state}{" "}
-                {customer.billingAddress.zip}
+              <p className="font-medium">
+                {customer.data.billingAddress.street}
               </p>
-              {customer.billingAddress.country && (
+              <p className="text-sm text-muted-foreground">
+                {customer.data.billingAddress.city},{" "}
+                {customer.data.billingAddress.state}{" "}
+                {customer.data.billingAddress.zip}
+              </p>
+              {customer.data.billingAddress.country && (
                 <p className="text-sm text-muted-foreground">
-                  {customer.billingAddress.country}
+                  {customer.data.billingAddress.country}
                 </p>
               )}
             </div>
@@ -206,19 +221,19 @@ export default function CustomerDetailsPage() {
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <a
-                  href={`mailto:${customer.billingEmail}`}
+                  href={`mailto:${customer.data.billingEmail}`}
                   className="text-primary hover:underline"
                 >
-                  {customer.billingEmail}
+                  {customer.data.billingEmail}
                 </a>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-muted-foreground" />
                 <a
-                  href={`tel:${customer.billingPhone}`}
+                  href={`tel:${customer.data.billingPhone}`}
                   className="text-primary hover:underline"
                 >
-                  {customer.billingPhone}
+                  {customer.data.billingPhone}
                 </a>
               </div>
             </div>
@@ -235,25 +250,27 @@ export default function CustomerDetailsPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Credit Limit</p>
                 <p className="text-2xl font-bold">
-                  ${customer.creditLimit?.toLocaleString() || 0}
+                  ${customer.data.creditLimit?.toLocaleString() || 0}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Payment Terms</p>
-                <p className="font-medium">{customer.paymentTerms}</p>
+                <p className="font-medium">{customer.data.paymentTerms}</p>
               </div>
             </div>
             <Separator />
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold text-green-600">
-                  ${customer.totalRevenue?.toLocaleString() || 0}
+                <p className="text-2xl font-bold text-success">
+                  ${customer.data.totalRevenue?.toLocaleString() || 0}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Loads</p>
-                <p className="text-2xl font-bold">{customer.totalLoads || 0}</p>
+                <p className="text-2xl font-bold">
+                  {customer.data.totalLoads || 0}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -265,9 +282,10 @@ export default function CustomerDetailsPage() {
             <CardTitle>Equipment Preferences</CardTitle>
           </CardHeader>
           <CardContent>
-            {customer.equipmentTypes && customer.equipmentTypes.length > 0 ? (
+            {customer.data.equipmentTypes &&
+            customer.data.equipmentTypes.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {customer.equipmentTypes.map((equipment) => (
+                {customer.data.equipmentTypes.map((equipment) => (
                   <Badge key={equipment} variant="secondary">
                     {equipment.replace(/_/g, " ")}
                   </Badge>
@@ -283,13 +301,13 @@ export default function CustomerDetailsPage() {
       </div>
 
       {/* Notes */}
-      {customer.notes && (
+      {customer.data.notes && (
         <Card>
           <CardHeader>
             <CardTitle>Notes</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm whitespace-pre-wrap">{customer.notes}</p>
+            <p className="text-sm whitespace-pre-wrap">{customer.data.notes}</p>
           </CardContent>
         </Card>
       )}
@@ -303,13 +321,13 @@ export default function CustomerDetailsPage() {
           <div>
             <p className="text-sm text-muted-foreground">Created At</p>
             <p className="font-medium">
-              {new Date(customer.createdAt).toLocaleString()}
+              {new Date(customer.data.createdAt).toLocaleString()}
             </p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Last Updated</p>
             <p className="font-medium">
-              {new Date(customer.updatedAt).toLocaleString()}
+              {new Date(customer.data.updatedAt).toLocaleString()}
             </p>
           </div>
         </CardContent>

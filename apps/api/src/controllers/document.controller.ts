@@ -4,9 +4,18 @@ import { DocumentGenerationService } from "../services/document-generation.servi
 import { DocumentDeliveryService } from "../services/document-delivery.service.js";
 import { z } from "zod";
 import type { EntityType, DocumentType, Document } from "@tms/shared-types";
+import { DOCUMENT_TYPES } from "@tms/shared-constants";
+import { ENTITY_TYPES } from "@tms/shared-constants";
 
-interface MulterRequest extends Request {
-  file?: Express.Multer.File;
+interface BusboyRequest extends Request {
+  files?: Array<{
+    fieldname: string;
+    originalname: string;
+    encoding: string;
+    mimetype: string;
+    buffer: Buffer;
+    size: number;
+  }>;
 }
 
 const documentService = new DocumentService();
@@ -32,19 +41,9 @@ function transformDocument(prismaDoc: any): Document {
 }
 
 export const uploadDocumentSchema = z.object({
-  entityType: z.enum(["LOAD", "CARRIER", "CUSTOMER", "INVOICE", "USER"]),
+  entityType: z.enum(Object.values(ENTITY_TYPES) as [string, ...string[]]),
   entityId: z.string().min(1, "Entity ID is required"),
-  type: z.enum([
-    "RATE_CONFIRMATION",
-    "BOL",
-    "POD",
-    "INVOICE",
-    "W9",
-    "INSURANCE",
-    "AUTHORITY",
-    "CONTRACT",
-    "OTHER",
-  ]),
+  type: z.enum(Object.values(DOCUMENT_TYPES) as [string, ...string[]]),
   name: z.string().min(1, "Document name is required"),
 });
 
@@ -71,7 +70,7 @@ export class DocumentController {
 
       res.status(200).json({
         success: true,
-        documents: result.data,
+        data: result.data,
         pagination: result.pagination,
       });
     } catch (error) {
@@ -79,25 +78,26 @@ export class DocumentController {
     }
   }
 
-  async uploadDocument(req: MulterRequest, res: Response, next: NextFunction) {
+  async uploadDocument(req: BusboyRequest, res: Response, next: NextFunction) {
     try {
       if (!req.auth) {
         throw new Error("Authentication required");
       }
 
-      if (!req.file) {
+      if (!req.files || req.files.length === 0) {
         throw new Error("No file uploaded");
       }
 
+      const file = req.files[0]; // Get first file
       const { entityType, entityId, type, name } = req.body;
 
       const document = await documentService.uploadDocument(
-        req.file,
+        file,
         {
           entityType: entityType as EntityType,
           entityId,
           type: type as DocumentType,
-          name: name || req.file.originalname,
+          name: name || file.originalname,
         },
         req.auth.userId,
         req.auth.organizationId

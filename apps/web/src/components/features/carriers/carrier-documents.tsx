@@ -2,6 +2,8 @@
 
 import { useState, useRef } from "react";
 import { useCarrierDocuments } from "@/hooks/use-carriers";
+import { useDownloadDocument } from "@/hooks/use-documents";
+import { useQueryClient } from "@tanstack/react-query";
 import type { CarrierDocument } from "@/types/carrier.types";
 import type { ApiErrorException } from "@/types/api.types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,11 +55,14 @@ interface CarrierDocumentsProps {
 }
 
 export function CarrierDocuments({ carrierId }: CarrierDocumentsProps) {
+  const queryClient = useQueryClient();
   const {
     data: documents,
     isLoading,
     refetch,
   } = useCarrierDocuments(carrierId);
+  const downloadDocument = useDownloadDocument();
+
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState("");
@@ -93,12 +98,21 @@ export function CarrierDocuments({ carrierId }: CarrierDocumentsProps) {
           "Content-Type": "multipart/form-data",
         },
       });
-
       toast.success("Document uploaded successfully");
       setUploadDialogOpen(false);
       setSelectedFile(null);
       setDocumentType("");
       setDocumentName("");
+
+      // Aggressive cache invalidation
+      queryClient.invalidateQueries({
+        queryKey: ["carrier-documents", carrierId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["carriers", carrierId] });
+      queryClient.invalidateQueries({ queryKey: ["carriers"] });
+      queryClient.refetchQueries({
+        queryKey: ["carrier-documents", carrierId],
+      });
       refetch();
     } catch (error) {
       const apiError = error as ApiErrorException;
@@ -118,6 +132,14 @@ export function CarrierDocuments({ carrierId }: CarrierDocumentsProps) {
 
   const hasRequiredDocument = (type: string) => {
     return documents?.some((doc: CarrierDocument) => doc.type === type);
+  };
+
+  const handleDownload = async (document: CarrierDocument) => {
+    downloadDocument.mutate({
+      id: document.id,
+      name: document.name,
+      mimeType: document.mimeType,
+    });
   };
 
   return (
@@ -229,9 +251,9 @@ export function CarrierDocuments({ carrierId }: CarrierDocumentsProps) {
               >
                 <span>{documentTypeLabels[docType]}</span>
                 {hasRequiredDocument(docType) ? (
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <CheckCircle className="h-4 w-4 text-success" />
                 ) : (
-                  <XCircle className="h-4 w-4 text-red-500" />
+                  <XCircle className="h-4 w-4 text-destructive" />
                 )}
               </div>
             ))}
@@ -275,7 +297,12 @@ export function CarrierDocuments({ carrierId }: CarrierDocumentsProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleDownload(doc)}
+                    >
                       <Download className="h-4 w-4" />
                     </Button>
                   </div>

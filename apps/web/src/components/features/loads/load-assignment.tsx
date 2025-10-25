@@ -38,12 +38,12 @@ export function LoadAssignment({ loadId }: LoadAssignmentProps) {
     isLoading: carriersLoading,
     error: carriersError,
   } = useCarrierOptions();
-
   // Explicit type assertion to ensure we use the correct shared Load type
   const load = loadData as Load;
   const assignCarrier = useAssignCarrier();
   const [open, setOpen] = useState(false);
   const [selectedCarrier, setSelectedCarrier] = useState("");
+  console.log(carriers);
   const [notes, setNotes] = useState("");
 
   const handleAssign = async () => {
@@ -282,15 +282,15 @@ export function LoadAssignment({ loadId }: LoadAssignmentProps) {
                           </div>
                         ) : (
                           (() => {
-                            const availableCarriers = carriers.filter(
+                            const availableCarriers = carriers?.filter(
                               (carrier) => carrier.value !== load.carrierId
                             );
-                            return availableCarriers.length === 0 ? (
+                            return availableCarriers?.length === 0 ? (
                               <div className="p-2 text-sm text-muted-foreground text-center">
                                 No other carriers available for assignment
                               </div>
                             ) : (
-                              availableCarriers.map((carrier) => (
+                              availableCarriers?.map((carrier) => (
                                 <SelectItem
                                   key={carrier.id}
                                   value={carrier.value}
@@ -315,7 +315,7 @@ export function LoadAssignment({ loadId }: LoadAssignmentProps) {
                   {selectedCarrier && (
                     <div className="rounded-lg border p-3 space-y-2 text-sm">
                       {(() => {
-                        const selectedCarrierData = carriers.find(
+                        const selectedCarrierData = carriers?.find(
                           (c) => c.value === selectedCarrier
                         );
                         return selectedCarrierData ? (

@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Permission Changes - {{organizationName}}</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f8fafc;
+      }
+      .container {
+        background: white;
+        border-radius: 8px;
+        padding: 40px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2563eb;
+        margin-bottom: 10px;
+      }
+      .title {
+        font-size: 28px;
+        font-weight: bold;
+        color: #1f2937;
+        margin-bottom: 10px;
+      }
+      .subtitle {
+        color: #6b7280;
+        font-size: 16px;
+      }
+      .content {
+        margin-bottom: 30px;
+      }
+      .greeting {
+        font-size: 18px;
+        margin-bottom: 20px;
+        color: #374151;
+      }
+      .changes-section {
+        background: #f9fafb;
+        border-radius: 6px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      .changes-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #1f2937;
+        margin-bottom: 15px;
+      }
+      .permission-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .permission-item {
+        padding: 8px 0;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+      }
+      .permission-item:last-child {
+        border-bottom: none;
+      }
+      .permission-icon {
+        margin-right: 10px;
+        font-size: 16px;
+      }
+      .added {
+        color: #059669;
+      }
+      .removed {
+        color: #dc2626;
+      }
+      .permission-name {
+        font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+        background: #f3f4f6;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+      }
+      .action-required {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .action-title {
+        font-weight: bold;
+        color: #92400e;
+        margin-bottom: 8px;
+      }
+      .action-text {
+        color: #92400e;
+        font-size: 14px;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e5e7eb;
+        color: #6b7280;
+        font-size: 14px;
+      }
+      .button {
+        display: inline-block;
+        background: #2563eb;
+        color: white;
+        text-decoration: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        font-weight: 500;
+        margin: 10px 0;
+      }
+      .button:hover {
+        background: #1d4ed8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="logo">{{organizationName}}</div>
+        <div class="title">Permission Changes</div>
+        <div class="subtitle">Your account permissions have been updated</div>
+      </div>
+
+      <div class="content">
+        <div class="greeting">Hello {{firstName}},</div>
+
+        <p>
+          Your account permissions have been updated by an administrator. Here
+          are the changes:
+        </p>
+
+        {{#if addedPermissions.length}}
+        <div class="changes-section">
+          <div class="changes-title">✅ New Permissions Added</div>
+          <ul class="permission-list">
+            {{#each addedPermissions}}
+            <li class="permission-item">
+              <span class="permission-icon added">+</span>
+              <span class="permission-name">{{this}}</span>
+            </li>
+            {{/each}}
+          </ul>
+        </div>
+        {{/if}} {{#if removedPermissions.length}}
+        <div class="changes-section">
+          <div class="changes-title">❌ Permissions Removed</div>
+          <ul class="permission-list">
+            {{#each removedPermissions}}
+            <li class="permission-item">
+              <span class="permission-icon removed">-</span>
+              <span class="permission-name">{{this}}</span>
+            </li>
+            {{/each}}
+          </ul>
+        </div>
+        {{/if}} {{#if roleChanges.length}}
+        <div class="changes-section">
+          <div class="changes-title">🔄 Role Changes</div>
+          <p><strong>Previous roles:</strong> {{oldRoles}}</p>
+          <p><strong>New roles:</strong> {{newRoles}}</p>
+        </div>
+        {{/if}}
+
+        <div class="action-required">
+          <div class="action-title">Action Required</div>
+          <div class="action-text">
+            To see your updated permissions, please refresh your browser or log
+            out and log back in. Your new permissions will be active
+            immediately.
+          </div>
+        </div>
+
+        <p>
+          If you have any questions about these changes, please contact your
+          administrator.
+        </p>
+      </div>
+
+      <div class="footer">
+        <p>This is an automated notification from {{organizationName}}.</p>
+        <p>
+          If you didn't expect this change, please contact your administrator
+          immediately.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

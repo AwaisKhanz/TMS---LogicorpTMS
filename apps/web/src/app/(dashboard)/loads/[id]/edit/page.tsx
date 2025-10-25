@@ -8,7 +8,6 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import type { Address } from "@/types/load.types";
 
 interface LoadEditPageProps {
   params: {
@@ -23,7 +22,7 @@ export default function LoadEditPage({ params }: LoadEditPageProps) {
 
   // Check if load can be edited based on status
   const canEdit =
-    load && !["PAID", "CANCELLED", "INVOICED"].includes(load.status);
+    load && !["PAID", "CANCELLED", "COMPLETED"].includes(load.status);
 
   const handleSubmit = async (data: Record<string, unknown>) => {
     try {
@@ -43,14 +42,8 @@ export default function LoadEditPage({ params }: LoadEditPageProps) {
         ...load,
         pickupDate: new Date(load.pickupDate),
         deliveryDate: new Date(load.deliveryDate),
-        shipperStreet: (load.shipperAddress as Address)?.street || "",
-        shipperCity: (load.shipperAddress as Address)?.city || "",
-        shipperState: (load.shipperAddress as Address)?.state || "",
-        shipperZip: (load.shipperAddress as Address)?.zip || "",
-        consigneeStreet: (load.consigneeAddress as Address)?.street || "",
-        consigneeCity: (load.consigneeAddress as Address)?.city || "",
-        consigneeState: (load.consigneeAddress as Address)?.state || "",
-        consigneeZip: (load.consigneeAddress as Address)?.zip || "",
+        shipperId: load.shipperId,
+        consigneeId: load.consigneeId,
       }
     : undefined;
 

@@ -138,6 +138,78 @@ export class CustomerRepository extends BaseRepository<Customer> {
     return { data: customers, total };
   }
 
+  async findWithFiltersForUser(
+    filters: CustomerFilters,
+    organizationId: string,
+    userId: string,
+    page: number = 1,
+    limit: number = 50
+  ): Promise<{ data: CustomerWithMinimalRelations[]; total: number }> {
+    const skip = (page - 1) * limit;
+
+    const where: WhereClause = {
+      organizationId,
+      deletedAt: null,
+      users: {
+        some: {
+          userId,
+        },
+      },
+    };
+
+    if (filters.isActive !== undefined) {
+      where.isActive = filters.isActive;
+    }
+
+    if (filters.industry) {
+      where.industry = filters.industry;
+    }
+
+    if (filters.paymentTerms) {
+      where.paymentTerms = filters.paymentTerms;
+    }
+
+    if (filters.state) {
+      where.billingAddress = {
+        path: ["state"],
+        string_contains: filters.state,
+      };
+    }
+
+    if (filters.search) {
+      where.OR = [
+        { companyName: { contains: filters.search, mode: "insensitive" } },
+        { dba: { contains: filters.search, mode: "insensitive" } },
+        { billingEmail: { contains: filters.search, mode: "insensitive" } },
+        { ein: { contains: filters.search, mode: "insensitive" } },
+      ];
+    }
+
+    const [customers, total] = await Promise.all([
+      this.prisma.customer.findMany({
+        where,
+        include: {
+          contacts: {
+            where: { isPrimary: true },
+            take: 1,
+          },
+          _count: {
+            select: {
+              loads: true,
+              invoices: true,
+            },
+          },
+        },
+        orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
+        skip,
+        take: limit,
+      }),
+      this.prisma.customer.count({ where }),
+    ]);
+
+    return { data: customers, total };
+  }
+
   async findByIdWithRelations(
     id: string,
     organizationId: string
@@ -507,5 +579,333 @@ export class CustomerRepository extends BaseRepository<Customer> {
     await this.prisma.customerContact.delete({
       where: { id: contactId },
     });
+  }
+
+  // Enhanced methods for performance metrics and advanced queries
+  async getPerformanceMetrics(customerId: string, organizationId: string) {
+    const customer = await this.prisma.customer.findFirst({
+      where: {
+        id: customerId,
+        organizationId,
+        deletedAt: null,
+      },
+    });
+
+    if (!customer) {
+      throw new Error("Customer not found");
+    }
+
+    // Get load trends for the last 12 months
+    const loadTrends = await this.prisma.load.groupBy({
+      by: ["pickupDate"],
+      where: {
+        customerId,
+        organizationId,
+        deletedAt: null,
+        status: "DELIVERED",
+        pickupDate: {
+          gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // Last 12 months
+        },
+      },
+      _count: { id: true },
+      _sum: { customerRate: true },
+      orderBy: { pickupDate: "asc" },
+    });
+
+    // Get top lanes
+    const topLanes = await this.prisma.load.groupBy({
+      by: ["shipperId", "consigneeId"],
+      where: {
+        customerId,
+        organizationId,
+        deletedAt: null,
+        status: "DELIVERED",
+      },
+      _count: { id: true },
+      _sum: { customerRate: true },
+      orderBy: { _count: { id: "desc" } },
+      take: 5,
+    });
+
+    // Calculate payment history
+    const paymentHistory = await this.prisma.invoice.aggregate({
+      where: {
+        customerId,
+        organizationId,
+        status: { in: ["PAID", "OVERDUE"] },
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    const overdueCount = await this.prisma.invoice.count({
+      where: {
+        customerId,
+        organizationId,
+        status: "OVERDUE",
+      },
+    });
+
+    const paidCount = await this.prisma.invoice.count({
+      where: {
+        customerId,
+        organizationId,
+        status: "PAID",
+      },
+    });
+
+    return {
+      totalLoads: customer.totalLoads,
+      totalRevenue: Number(customer.totalRevenue),
+      averageLoadValue:
+        customer.totalLoads > 0
+          ? Number(customer.totalRevenue) / customer.totalLoads
+          : 0,
+      averageMargin: Number(customer.averageMargin),
+      recentLoads: loadTrends.length,
+      paymentHistory: {
+        onTime: paidCount,
+        late: overdueCount,
+        outstanding: paymentHistory._count.id - paidCount - overdueCount,
+      },
+      creditUtilization: {
+        used: Number(customer.creditUsed),
+        limit: Number(customer.creditLimit),
+        percentage:
+          customer.creditLimit.toNumber() > 0
+            ? (Number(customer.creditUsed) / Number(customer.creditLimit)) * 100
+            : 0,
+        status:
+          customer.creditLimit.toNumber() > 0 &&
+          Number(customer.creditUsed) / Number(customer.creditLimit) > 0.9
+            ? "critical"
+            : customer.creditLimit.toNumber() > 0 &&
+                Number(customer.creditUsed) / Number(customer.creditLimit) >
+                  0.75
+              ? "warning"
+              : "good",
+      },
+      loadTrends: loadTrends.map((trend) => ({
+        period: trend.pickupDate.toISOString().split("T")[0],
+        loads: trend._count.id,
+        revenue: Number(trend._sum.customerRate || 0),
+      })),
+      topLanes: topLanes.map((lane) => ({
+        lane: `${lane.shipperId} → ${lane.consigneeId}`,
+        loads: lane._count.id,
+        revenue: Number(lane._sum.customerRate || 0),
+      })),
+    };
+  }
+
+  async getCustomerLoads(
+    customerId: string,
+    organizationId: string,
+    page: number = 1,
+    limit: number = 50
+  ) {
+    const skip = (page - 1) * limit;
+
+    const [loads, total] = await Promise.all([
+      this.prisma.load.findMany({
+        where: {
+          customerId,
+          organizationId,
+          deletedAt: null,
+        },
+        include: {
+          carrier: {
+            select: {
+              companyName: true,
+              mcNumber: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      this.prisma.load.count({
+        where: {
+          customerId,
+          organizationId,
+          deletedAt: null,
+        },
+      }),
+    ]);
+
+    return {
+      data: loads,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getCustomerInvoices(
+    customerId: string,
+    organizationId: string,
+    page: number = 1,
+    limit: number = 50
+  ) {
+    const skip = (page - 1) * limit;
+
+    const [invoices, total] = await Promise.all([
+      this.prisma.invoice.findMany({
+        where: {
+          customerId,
+          organizationId,
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      this.prisma.invoice.count({
+        where: {
+          customerId,
+          organizationId,
+        },
+      }),
+    ]);
+
+    // Calculate summary
+    const summary = await this.prisma.invoice.aggregate({
+      where: {
+        customerId,
+        organizationId,
+      },
+      _count: { id: true },
+      _sum: { total: true, paidAmount: true },
+    });
+
+    const overdueAmount = await this.prisma.invoice.aggregate({
+      where: {
+        customerId,
+        organizationId,
+        status: "OVERDUE",
+      },
+      _sum: { total: true },
+    });
+
+    return {
+      data: invoices,
+      summary: {
+        totalInvoices: summary._count.id,
+        totalAmount: Number(summary._sum.total || 0),
+        paidAmount: Number(summary._sum.paidAmount || 0),
+        outstandingAmount:
+          Number(summary._sum.total || 0) -
+          Number(summary._sum.paidAmount || 0),
+        overdueAmount: Number(overdueAmount._sum.total || 0),
+        averagePaymentDays: 0, // TODO: Calculate based on payment history
+        recentInvoices: invoices.slice(0, 5),
+      },
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async updateCreditUsed(
+    customerId: string,
+    amount: number,
+    organizationId: string
+  ) {
+    await this.prisma.customer.update({
+      where: {
+        id: customerId,
+        organizationId,
+      },
+      data: {
+        creditUsed: {
+          increment: amount,
+        },
+      },
+    });
+  }
+
+  async exportCustomers(organizationId: string, filters: CustomerFilters) {
+    const where: WhereClause = {
+      organizationId,
+      deletedAt: null,
+    };
+
+    if (filters.isActive !== undefined) {
+      where.isActive = filters.isActive;
+    }
+
+    if (filters.industry) {
+      where.industry = filters.industry;
+    }
+
+    if (filters.paymentTerms) {
+      where.paymentTerms = filters.paymentTerms;
+    }
+
+    if (filters.state) {
+      where.billingAddress = {
+        path: ["state"],
+        string_contains: filters.state,
+      };
+    }
+
+    if (filters.search) {
+      where.OR = [
+        { companyName: { contains: filters.search, mode: "insensitive" } },
+        { dba: { contains: filters.search, mode: "insensitive" } },
+        { billingEmail: { contains: filters.search, mode: "insensitive" } },
+        { ein: { contains: filters.search, mode: "insensitive" } },
+      ];
+    }
+
+    return this.prisma.customer.findMany({
+      where,
+      select: {
+        id: true,
+        companyName: true,
+        dba: true,
+        industry: true,
+        billingEmail: true,
+        billingPhone: true,
+        billingAddress: true,
+        paymentTerms: true,
+        creditLimit: true,
+        creditUsed: true,
+        totalLoads: true,
+        totalRevenue: true,
+        averageMargin: true,
+        isActive: true,
+        createdAt: true,
+      },
+      orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
+    });
+  }
+
+  async bulkUpdate(
+    customerIds: string[],
+    updates: Record<string, unknown>,
+    organizationId: string
+  ) {
+    const results = await this.prisma.customer.updateMany({
+      where: {
+        id: { in: customerIds },
+        organizationId,
+        deletedAt: null,
+      },
+      data: updates,
+    });
+
+    return {
+      success: results.count,
+      failed: customerIds.length - results.count,
+      errors: [],
+    };
   }
 }

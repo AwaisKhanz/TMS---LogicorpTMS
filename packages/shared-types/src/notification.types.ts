@@ -86,10 +86,11 @@ export const getNotificationIcon = (type: NotificationType): string => {
   return NOTIFICATION_ICONS[type] || "🔔";
 };
 
-export const formatNotificationTime = (date: Date): string => {
+export const formatNotificationTime = (date: Date | string): string => {
+  const dateObj = typeof date === "string" ? new Date(date) : date;
   const now = new Date();
   const diffInMinutes = Math.floor(
-    (now.getTime() - date.getTime()) / (1000 * 60)
+    (now.getTime() - dateObj.getTime()) / (1000 * 60)
   );
 
   if (diffInMinutes < 1) return "Just now";
@@ -101,5 +102,5 @@ export const formatNotificationTime = (date: Date): string => {
   const diffInDays = Math.floor(diffInHours / 24);
   if (diffInDays < 7) return `${diffInDays}d ago`;
 
-  return date.toLocaleDateString();
+  return dateObj.toLocaleDateString();
 };

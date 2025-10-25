@@ -125,7 +125,7 @@ export function useCanAccessResourceActions(
  */
 export function useIsAdmin(): boolean {
   const { hasRole } = useAuth();
-  return hasRole("ADMIN");
+  return hasRole("ADMINISTRATOR");
 }
 
 /**
@@ -134,7 +134,7 @@ export function useIsAdmin(): boolean {
  */
 export function useIsManagerOrAdmin(): boolean {
   const { hasRole } = useAuth();
-  return hasRole("ADMIN") || hasRole("MANAGER");
+  return hasRole("ADMINISTRATOR") || hasRole("MANAGER");
 }
 
 /**
@@ -143,5 +143,7 @@ export function useIsManagerOrAdmin(): boolean {
  */
 export function useIsDispatcherOrHigher(): boolean {
   const { hasRole } = useAuth();
-  return hasRole("ADMIN") || hasRole("MANAGER") || hasRole("DISPATCHER");
+  return (
+    hasRole("ADMINISTRATOR") || hasRole("MANAGER") || hasRole("DISPATCHER")
+  );
 }

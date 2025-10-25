@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/auth-context";
 import type { ApiErrorException } from "@/types/api.types";
 import type {
   ProfileSettings,
@@ -57,6 +58,7 @@ export function useProfile() {
 
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
+  const { refreshUser } = useAuth();
 
   return useMutation({
     mutationFn: async (data: UpdateProfileRequest) => {
@@ -66,8 +68,12 @@ export function useUpdateProfile() {
       );
       return response;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: settingsKeys.profile() });
+      // Refresh auth context to update user data in header
+      console.log("Profile updated, refreshing user context...");
+      await refreshUser();
+      console.log("User context refreshed");
       toast.success("Profile updated successfully");
     },
     onError: (error) => {
@@ -400,6 +406,29 @@ export function useRemoveTeamMember() {
       toast.error(
         apiError.response?.data?.error?.message ||
           "Failed to remove team member"
+      );
+    },
+  });
+}
+
+export function useBulkDeleteTeamMembers() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (memberIds: string[]) => {
+      await apiClient.post("/settings/team/bulk-delete", {
+        memberIds,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: settingsKeys.team() });
+      toast.success("Team members deleted successfully");
+    },
+    onError: (error) => {
+      const apiError = error as ApiErrorException;
+      toast.error(
+        apiError.response?.data?.error?.message ||
+          "Failed to delete team members"
       );
     },
   });

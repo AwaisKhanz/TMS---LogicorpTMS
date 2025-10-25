@@ -50,18 +50,18 @@ export function EmailVerificationBanner() {
   };
 
   return (
-    <Alert className="border-amber-200 bg-amber-50">
-      <Mail className="h-4 w-4 text-amber-600" />
+    <Alert className="border-warning/20 bg-warning/5" variant="warning">
+      <Mail className="h-4 w-4 text-warning" />
       <AlertDescription className="flex items-center justify-between">
         <div className="flex-1">
-          <p className="text-amber-800 font-medium">
+          <p className="text-warning font-medium">
             Please verify your email address to access all features.
           </p>
-          <p className="text-amber-700 text-sm mt-1">
+          <p className="text-warning/80 text-sm mt-1">
             We sent a verification link to <strong>{user.email}</strong>
           </p>
           {resendMessage && (
-            <p className="text-amber-700 text-sm mt-1">{resendMessage}</p>
+            <p className="text-warning/80 text-sm mt-1">{resendMessage}</p>
           )}
         </div>
         <div className="flex items-center gap-2 ml-4">
@@ -70,7 +70,6 @@ export function EmailVerificationBanner() {
             variant="outline"
             onClick={resendVerification}
             disabled={isResending}
-            className="text-amber-700 border-amber-300 hover:bg-amber-100"
           >
             {isResending ? (
               <>
@@ -81,18 +80,13 @@ export function EmailVerificationBanner() {
               "Resend"
             )}
           </Button>
-          <Button
-            size="sm"
-            onClick={handleVerifyClick}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
-          >
+          <Button size="sm" onClick={handleVerifyClick} variant="warning">
             Verify Email
           </Button>
           <Button
             size="sm"
             variant="ghost"
             onClick={() => setIsDismissed(true)}
-            className="text-amber-600 hover:bg-amber-100 p-1"
           >
             <X className="h-4 w-4" />
           </Button>

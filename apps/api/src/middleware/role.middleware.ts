@@ -63,7 +63,7 @@ export const requireAllRoles = (...roles: string[]) => {
  * @returns Express middleware function
  */
 export const requireAdmin = () => {
-  return requireRole("ADMIN");
+  return requireRole("ADMINISTRATOR");
 };
 
 /**
@@ -71,7 +71,7 @@ export const requireAdmin = () => {
  * @returns Express middleware function
  */
 export const requireManagerOrAdmin = () => {
-  return requireRole("ADMIN", "MANAGER");
+  return requireRole("ADMINISTRATOR", "MANAGER");
 };
 
 /**
@@ -79,7 +79,7 @@ export const requireManagerOrAdmin = () => {
  * @returns Express middleware function
  */
 export const requireDispatcherOrHigher = () => {
-  return requireRole("ADMIN", "MANAGER", "DISPATCHER");
+  return requireRole("ADMINISTRATOR", "MANAGER", "DISPATCHER");
 };
 
 /**
@@ -87,7 +87,13 @@ export const requireDispatcherOrHigher = () => {
  * @returns Express middleware function
  */
 export const requireUserOrHigher = () => {
-  return requireRole("ADMIN", "MANAGER", "DISPATCHER", "USER");
+  return requireRole(
+    "ADMINISTRATOR",
+    "MANAGER",
+    "DISPATCHER",
+    "VIEWER",
+    "INVOICES"
+  );
 };
 
 /**
@@ -98,10 +104,11 @@ export const requireUserOrHigher = () => {
  */
 export const requireRoleLevel = (requiredLevel: string) => {
   const roleHierarchy = {
-    USER: 1,
-    DISPATCHER: 2,
-    MANAGER: 3,
-    ADMIN: 4,
+    VIEWER: 1,
+    INVOICES: 2,
+    DISPATCHER: 3,
+    MANAGER: 4,
+    ADMINISTRATOR: 5,
   };
 
   return (req: Request, _res: Response, next: NextFunction) => {

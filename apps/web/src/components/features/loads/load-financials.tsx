@@ -172,9 +172,7 @@ export function LoadFinancials({ loadId }: LoadFinancialsProps) {
                   <div
                     className={cn(
                       "text-xl font-bold",
-                      load.margin > 0
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-red-600 dark:text-red-400"
+                      load.margin > 0 ? "text-success" : "text-destructive"
                     )}
                   >
                     {formatCurrency(load.margin)}

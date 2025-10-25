@@ -26,29 +26,65 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Save, Loader2 } from "lucide-react";
+import { INDUSTRY_OPTIONS, PAYMENT_TERMS_OPTIONS } from "@tms/shared-constants";
+import { EQUIPMENT_TYPES } from "@tms/shared-constants";
 
 const customerFormSchema = z.object({
   // Company Info
-  companyName: z.string().min(1, "Company name is required"),
-  dba: z.string().optional(),
+  companyName: z
+    .string()
+    .min(1, "Company name is required")
+    .max(100, "Company name too long"),
+  dba: z.string().max(100, "DBA too long").optional(),
   industry: z.string().optional(),
   website: z.string().url("Must be a valid URL").optional().or(z.literal("")),
-  ein: z.string().optional(),
+  ein: z
+    .string()
+    .regex(/^\d{2}-\d{7}$/, "EIN must be in format XX-XXXXXXX")
+    .optional()
+    .or(z.literal("")),
 
   // Billing Address
-  billingStreet: z.string().min(1, "Street address is required"),
-  billingCity: z.string().min(1, "City is required"),
-  billingState: z.string().min(1, "State is required"),
-  billingZip: z.string().min(1, "ZIP code is required"),
+  billingStreet: z
+    .string()
+    .min(1, "Street address is required")
+    .max(200, "Address too long"),
+  billingCity: z
+    .string()
+    .min(1, "City is required")
+    .max(100, "City name too long"),
+  billingState: z
+    .string()
+    .min(2, "State is required")
+    .max(2, "State must be 2 characters"),
+  billingZip: z
+    .string()
+    .min(5, "ZIP code is required")
+    .max(10, "ZIP code too long"),
 
   // Billing Contact
-  billingEmail: z.string().email("Valid email is required"),
-  billingPhone: z.string().min(1, "Phone number is required"),
+  billingEmail: z
+    .string()
+    .email("Valid email is required")
+    .max(100, "Email too long"),
+  billingPhone: z
+    .string()
+    .min(10, "Phone number must be at least 10 digits")
+    .max(20, "Phone number too long"),
 
   // Financial
   creditLimit: z
-    .number()
-    .min(0, "Credit limit must be non-negative")
+    .union([z.string(), z.number()])
+    .transform((val) => {
+      if (typeof val === "string") {
+        const num = parseFloat(val);
+        return isNaN(num) ? 0 : num;
+      }
+      return val;
+    })
+    .refine((val) => val >= 0, "Credit limit must be non-negative")
+    .refine((val) => val <= 10000000, "Credit limit too high")
     .optional(),
   paymentTerms: z.string().optional(),
 
@@ -56,44 +92,12 @@ const customerFormSchema = z.object({
   equipmentTypes: z.array(z.string()).default([]),
 
   // Status & Notes
-  notes: z.string().optional(),
+  notes: z.string().max(1000, "Notes too long").optional(),
 });
 
 type CustomerFormData = z.infer<typeof customerFormSchema>;
 
-const equipmentTypes = [
-  { value: "DRY_VAN", label: "Dry Van" },
-  { value: "REEFER", label: "Refrigerated" },
-  { value: "FLATBED", label: "Flatbed" },
-  { value: "STEP_DECK", label: "Step Deck" },
-  { value: "RGN", label: "RGN" },
-  { value: "POWER_ONLY", label: "Power Only" },
-  { value: "HOTSHOT", label: "Hotshot" },
-  { value: "BOX_TRUCK", label: "Box Truck" },
-  { value: "STRAIGHT_TRUCK", label: "Straight Truck" },
-  { value: "OTHER", label: "Other" },
-];
-
-const paymentTermsOptions = [
-  { value: "NET15", label: "Net 15" },
-  { value: "NET30", label: "Net 30" },
-  { value: "NET45", label: "Net 45" },
-  { value: "NET60", label: "Net 60" },
-  { value: "COD", label: "COD" },
-];
-
-const industries = [
-  { value: "MANUFACTURING", label: "Manufacturing" },
-  { value: "RETAIL", label: "Retail" },
-  { value: "WHOLESALE", label: "Wholesale" },
-  { value: "CONSTRUCTION", label: "Construction" },
-  { value: "AGRICULTURE", label: "Agriculture" },
-  { value: "AUTOMOTIVE", label: "Automotive" },
-  { value: "FOOD_BEVERAGE", label: "Food & Beverage" },
-  { value: "CHEMICALS", label: "Chemicals" },
-  { value: "ELECTRONICS", label: "Electronics" },
-  { value: "OTHER", label: "Other" },
-];
+// Using equipment types from shared constants
 
 interface CustomerFormProps {
   initialData?: Customer;
@@ -227,7 +231,7 @@ export function CustomerForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {industries.map((industry) => (
+                        {INDUSTRY_OPTIONS.map((industry) => (
                           <SelectItem
                             key={industry.value}
                             value={industry.value}
@@ -420,7 +424,7 @@ export function CustomerForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {paymentTermsOptions.map((term) => (
+                      {PAYMENT_TERMS_OPTIONS.map((term) => (
                         <SelectItem key={term.value} value={term.value}>
                           {term.label}
                         </SelectItem>
@@ -447,7 +451,7 @@ export function CustomerForm({
                 <FormItem>
                   <FormLabel>Preferred Equipment Types</FormLabel>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
-                    {equipmentTypes.map((equipment) => (
+                    {EQUIPMENT_TYPES.map((equipment) => (
                       <FormField
                         key={equipment.value}
                         control={form.control}
@@ -513,28 +517,34 @@ export function CustomerForm({
         </Card>
 
         {/* Form Actions */}
-        <div className="flex gap-4">
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="min-w-[150px]"
-          >
-            {isSubmitting
-              ? initialData
-                ? "Updating..."
-                : "Creating..."
-              : initialData
-                ? "Update Customer"
-                : "Create Customer"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.back()}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="min-w-[150px]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {initialData ? "Updating..." : "Creating..."}
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  {initialData ? "Update Customer" : "Create Customer"}
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
       </form>
     </Form>

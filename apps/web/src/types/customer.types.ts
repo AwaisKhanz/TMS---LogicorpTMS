@@ -2,7 +2,6 @@
 export type {
   Customer,
   CustomerContact,
-  PreferredCarrier,
   CreateCustomerRequest,
   UpdateCustomerRequest,
   CreateCustomerContactRequest,
@@ -17,6 +16,9 @@ export type {
 } from "@tms/shared-types";
 
 // Legacy aliases for compatibility - types are already imported above
-import type { GetCustomersResponse, GetCustomerResponse } from "@tms/shared-types";
+import type {
+  GetCustomersResponse,
+  GetCustomerResponse,
+} from "@tms/shared-types";
 export type CustomersResponse = GetCustomersResponse;
 export type CustomerResponse = GetCustomerResponse;

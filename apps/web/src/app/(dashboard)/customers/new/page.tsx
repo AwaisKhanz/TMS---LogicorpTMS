@@ -16,8 +16,7 @@ export default function NewCustomerPage() {
   const handleSubmit = async (data: CreateCustomerRequest) => {
     try {
       const newCustomer = await createCustomer.mutateAsync(data);
-      toast.success("Customer created successfully!");
-      router.push(`/customers/${newCustomer.id}`);
+      router.push(`/customers/${newCustomer.data.id}`);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to create customer";
@@ -29,18 +28,21 @@ export default function NewCustomerPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/customers">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Customers
-          </Link>
-        </Button>
+      <div className="flex flex-col w-full gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/customers">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Customers
+            </Link>
+          </Button>
+        </div>
+
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
             Add New Customer
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-1">
             Create a new customer account in your system
           </p>
         </div>

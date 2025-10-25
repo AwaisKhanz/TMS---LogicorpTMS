@@ -1,12 +1,6 @@
 import type { Address } from "./api.types";
 
 // Customer Sub-Types
-export interface PreferredCarrier {
-  carrierId: string;
-  carrierName?: string;
-  priority?: number;
-  notes?: string;
-}
 
 export interface CustomerContact {
   id: string;
@@ -37,11 +31,11 @@ export interface Customer {
   billingPhone: string;
 
   // Financial
-  creditLimit?: number;
+  creditLimit: number;
+  creditUsed: number;
   paymentTerms: string;
 
   // Preferences
-  preferredCarriers?: PreferredCarrier[];
   equipmentTypes: string[];
 
   // Status
@@ -51,6 +45,7 @@ export interface Customer {
   // Performance
   totalLoads: number;
   totalRevenue: number;
+  averageMargin: number;
 
   // Metadata
   createdAt: string;
@@ -61,6 +56,7 @@ export interface Customer {
   contacts?: CustomerContact[];
   _count?: {
     loads: number;
+    invoices: number;
   };
 }
 
@@ -76,7 +72,6 @@ export interface CreateCustomerRequest extends Record<string, unknown> {
   billingPhone: string;
   creditLimit?: number;
   paymentTerms?: string;
-  preferredCarriers?: PreferredCarrier[];
   equipmentTypes?: string[];
   notes?: string;
 }
@@ -92,7 +87,6 @@ export interface UpdateCustomerRequest extends Record<string, unknown> {
   billingPhone?: string;
   creditLimit?: number;
   paymentTerms?: string;
-  preferredCarriers?: PreferredCarrier[];
   equipmentTypes?: string[];
   isActive?: boolean;
   notes?: string;
@@ -117,7 +111,8 @@ export interface CustomerContactData {
   notes?: string;
 }
 
-export interface UpdateCustomerContactRequest extends Partial<CreateCustomerContactRequest> {}
+export interface UpdateCustomerContactRequest
+  extends Partial<CreateCustomerContactRequest> {}
 
 export interface CustomerFilters {
   industry?: string;
@@ -127,25 +122,46 @@ export interface CustomerFilters {
   search?: string;
   page?: number;
   limit?: number;
-  sort?: string;
+  sort?:
+    | "companyName"
+    | "totalRevenue"
+    | "totalLoads"
+    | "creditLimit"
+    | "createdAt"
+    | "updatedAt";
   order?: "asc" | "desc";
+  creditStatus?: "good" | "warning" | "critical";
+  dateRange?: {
+    start: string;
+    end: string;
+  };
 }
 
 // Response Types
 export interface CreateCustomerResponse {
-  customer: Customer;
+  success: boolean;
+  data: Customer;
 }
 
 export interface UpdateCustomerResponse {
-  customer: Customer;
+  success: boolean;
+  data: Customer;
 }
 
 export interface GetCustomerResponse {
-  customer: Customer;
+  success: boolean;
+  data: Customer;
 }
 
 export interface GetCustomersResponse {
-  customers: Customer[];
+  success: boolean;
+  data: Customer[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
 export interface DeleteCustomerResponse {
@@ -173,18 +189,68 @@ export interface CustomerStatistics {
   topByLoads: Customer[];
   avgRevenue: number;
   totalRevenue: number;
+  avgRevenuePerCustomer: number;
+  breakdown: Array<{
+    isActive: boolean;
+    _count: { id: number };
+    _sum: { totalRevenue: number | null; creditUsed: number | null };
+  }>;
 }
 
 export interface CustomerPerformance {
   totalLoads: number;
   totalRevenue: number;
   averageLoadValue: number;
+  averageMargin: number;
   recentLoads: number;
   paymentHistory: {
     onTime: number;
     late: number;
     outstanding: number;
   };
+  creditUtilization: {
+    used: number;
+    limit: number;
+    percentage: number;
+    status: "good" | "warning" | "critical";
+  };
+  loadTrends: Array<{
+    period: string;
+    loads: number;
+    revenue: number;
+  }>;
+  topLanes: Array<{
+    lane: string;
+    loads: number;
+    revenue: number;
+  }>;
+}
+
+// Customer Invoice Types
+export interface CustomerInvoice {
+  id: string;
+  invoiceNumber: string;
+  status: "DRAFT" | "SENT" | "VIEWED" | "PAID" | "PARTIAL" | "OVERDUE" | "VOID";
+  invoiceDate: string;
+  dueDate: string;
+  total: number;
+  paidAmount: number;
+  paymentMethod?: string;
+  paymentDate?: string;
+  sentAt?: string;
+  viewedAt?: string;
+  remindersSent: number;
+  lastReminderAt?: string;
+}
+
+export interface CustomerInvoiceSummary {
+  totalInvoices: number;
+  totalAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+  overdueAmount: number;
+  averagePaymentDays: number;
+  recentInvoices: CustomerInvoice[];
 }
 
 // Customer Load Data for display
@@ -201,8 +267,59 @@ export interface CustomerLoadData {
   carrierRate?: number;
 }
 
+export interface GetCustomerInvoicesResponse {
+  success: boolean;
+  data: CustomerInvoice[];
+  summary: CustomerInvoiceSummary;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface GetCustomerPerformanceResponse {
+  success: boolean;
+  data: CustomerPerformance;
+}
+
+export interface GetCustomerContactsResponse {
+  success: boolean;
+  data: CustomerContact[];
+}
+
+// Statistics Response
+export interface GetCustomerStatisticsResponse {
+  success: boolean;
+  data: CustomerStatistics;
+}
+
+// Customer Loads Response
 export interface GetCustomerLoadsResponse {
-  loads: CustomerLoadData[];
+  success: boolean;
+  data: CustomerLoadData[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+// Validation Schemas
+export interface CustomerValidationErrors {
+  companyName?: string[];
+  billingEmail?: string[];
+  billingPhone?: string[];
+  creditLimit?: string[];
+  paymentTerms?: string[];
+}
+
+export interface ContactValidationErrors {
+  name?: string[];
+  email?: string[];
+  phone?: string[];
 }
 
 // Export Types
@@ -218,8 +335,26 @@ export interface CustomerExportData {
   };
   paymentTerms: string;
   creditLimit?: number | string;
+  creditUsed?: number | string;
   totalLoads: number;
   totalRevenue: number | string;
+  averageMargin?: number | string;
   isActive: boolean;
+  createdAt: string;
   [key: string]: unknown;
+}
+
+// Bulk Operations
+export interface BulkCustomerAction {
+  action: "activate" | "deactivate" | "export" | "delete";
+  customerIds: string[];
+}
+
+export interface BulkCustomerResponse {
+  success: number;
+  failed: number;
+  errors: Array<{
+    customerId: string;
+    error: string;
+  }>;
 }

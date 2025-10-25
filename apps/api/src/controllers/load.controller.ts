@@ -1,36 +1,23 @@
 import { Request, Response, NextFunction } from "express";
 import { LoadService } from "../services/load.service.js";
 import { z } from "zod";
-import { LoadStatus, EquipmentType, LoadType } from "@prisma/client";
-import type { LoadFiltersDto } from "../types/load.types.js";
+import {
+  LoadStatus,
+  EquipmentType,
+  LoadType,
+  LoadFilters as LoadFiltersDto,
+} from "@tms/shared-types";
 
 const loadService = new LoadService();
-
-// Validation schemas
-const addressSchema = z.object({
-  street: z.string(),
-  city: z.string(),
-  state: z.string(),
-  zip: z.string(),
-  country: z.string().optional(),
-  lat: z.number().optional(),
-  lng: z.number().optional(),
-});
 
 export const createLoadSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
   carrierId: z.string().optional(),
-  shipperName: z.string().min(1, "Shipper name is required"),
-  shipperAddress: addressSchema,
-  shipperPhone: z.string().min(1, "Shipper phone is required"),
-  shipperEmail: z.string().email().optional(),
+  shipperId: z.string().min(1, "Shipper is required"),
   pickupDate: z.string(),
   pickupStart: z.string().min(1, "Pickup start time is required"),
   pickupEnd: z.string().min(1, "Pickup end time is required"),
-  consigneeName: z.string().min(1, "Consignee name is required"),
-  consigneeAddress: addressSchema,
-  consigneePhone: z.string().min(1, "Consignee phone is required"),
-  consigneeEmail: z.string().email().optional(),
+  consigneeId: z.string().min(1, "Consignee is required"),
   deliveryDate: z.string(),
   deliveryStart: z.string().min(1, "Delivery start time is required"),
   deliveryEnd: z.string().min(1, "Delivery end time is required"),
@@ -67,17 +54,11 @@ export const createLoadSchema = z.object({
 export const updateLoadSchema = z.object({
   customerId: z.string().optional(),
   carrierId: z.string().optional(),
-  shipperName: z.string().optional(),
-  shipperAddress: addressSchema.optional(),
-  shipperPhone: z.string().optional(),
-  shipperEmail: z.string().email().optional(),
+  shipperId: z.string().optional(),
   pickupDate: z.string().optional(),
   pickupStart: z.string().optional(),
   pickupEnd: z.string().optional(),
-  consigneeName: z.string().optional(),
-  consigneeAddress: addressSchema.optional(),
-  consigneePhone: z.string().optional(),
-  consigneeEmail: z.string().email().optional(),
+  consigneeId: z.string().optional(),
   deliveryDate: z.string().optional(),
   deliveryStart: z.string().optional(),
   deliveryEnd: z.string().optional(),
@@ -132,7 +113,8 @@ export class LoadController {
 
       const result = await loadService.getLoads(
         req.auth.organizationId,
-        filters
+        filters,
+        req.auth.userId
       );
 
       res.status(200).json({
@@ -152,7 +134,11 @@ export class LoadController {
       }
 
       const { id } = req.params;
-      const load = await loadService.getLoadById(id, req.auth.organizationId);
+      const load = await loadService.getLoadById(
+        id,
+        req.auth.organizationId,
+        req.auth.userId
+      );
 
       res.status(200).json({
         success: true,
@@ -487,13 +473,54 @@ export class LoadController {
         throw new Error("Authentication required");
       }
 
-      const stats = await loadService.getDashboardStats(
+      const loadStats = await loadService.getDashboardStats(
         req.auth.organizationId
+      );
+
+      // Return the load stats in the format expected by the frontend
+      res.status(200).json({
+        success: true,
+        data: {
+          loads: loadStats,
+          carriers: {
+            totalCarriers: 0,
+            activeCarriers: 0,
+            approvedCarriers: 0,
+            pendingApproval: 0,
+          },
+          customers: {
+            totalCustomers: 0,
+            activeCustomers: 0,
+            totalRevenue: 0,
+            creditUsed: 0,
+          },
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getCompletedLoads(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      const result = await loadService.getCompletedLoads(
+        req.auth.organizationId,
+        page,
+        limit,
+        req.auth.userId
       );
 
       res.status(200).json({
         success: true,
-        data: stats,
+        data: result.data,
+        pagination: result.pagination,
       });
     } catch (error) {
       next(error);

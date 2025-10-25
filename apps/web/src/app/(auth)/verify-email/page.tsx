@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { apiClient, getErrorMessage } from "@/lib/api-client";
+import type {
+  AuthUser,
+  AuthOrganization,
+  AuthTokens,
+} from "@/types/auth.types";
 import { AuthHeader } from "@/components/auth/auth-header";
 import { AuthDivider } from "@/components/auth/auth-divider";
 import { AuthFooter } from "@/components/auth/auth-footer";
@@ -20,13 +25,15 @@ export default function VerifyEmailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const verificationAttempted = useRef(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, refreshUser } = useAuth();
+  const { user, loginWithTokens } = useAuth();
 
   const token = searchParams.get("token");
-  const email = user?.email;
+  const email = user?.email || userEmail;
 
   const verifyEmail = useCallback(
     async (verificationToken: string) => {
@@ -36,19 +43,36 @@ export default function VerifyEmailPage() {
       try {
         const response = await apiClient.post<{
           success: boolean;
-          data: { message: string };
+          data: {
+            message: string;
+            user: AuthUser;
+            organization: AuthOrganization;
+            tokens: AuthTokens;
+          };
         }>("/auth/verify-email", {
           token: verificationToken,
         });
 
-        if (response.success) {
+        if (response.success && response.data) {
           setVerificationStatus("success");
-          // Refresh user data to get updated emailVerified status
-          await refreshUser();
-          // Redirect to dashboard after a short delay
-          setTimeout(() => {
-            router.push("/");
-          }, 2000);
+
+          // Auto-login the user with the returned tokens
+          const {
+            user: userData,
+            organization: orgData,
+            tokens,
+          } = response.data;
+
+          // Login the user with the tokens
+          await loginWithTokens(userData, orgData, tokens);
+
+          // Wait for the authentication context to be fully updated
+          // This ensures all components (like sidebar) re-render with new permissions
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          // Redirect to dashboard
+          router.push("/");
+          router.refresh();
         }
       } catch (err: unknown) {
         console.error("Email verification error:", err);
@@ -58,15 +82,28 @@ export default function VerifyEmailPage() {
         setIsVerifying(false);
       }
     },
-    [refreshUser, router]
+    [loginWithTokens, router]
   );
 
-  // Auto-verify if token is present
+  // Get email from URL parameters if user is not logged in
   useEffect(() => {
-    if (token && verificationStatus === "pending") {
+    const emailParam = searchParams.get("email");
+    if (emailParam && !user?.email) {
+      setUserEmail(emailParam);
+    }
+  }, [searchParams, user?.email]);
+
+  // Auto-verify if token is present (only once)
+  useEffect(() => {
+    if (
+      token &&
+      verificationStatus === "pending" &&
+      !verificationAttempted.current
+    ) {
+      verificationAttempted.current = true;
       verifyEmail(token);
     }
-  }, [token, verificationStatus, verifyEmail]);
+  }, [token, verificationStatus]); // Removed verifyEmail from dependencies
 
   // Redirect if user is already verified
   useEffect(() => {
@@ -76,7 +113,12 @@ export default function VerifyEmailPage() {
   }, [user?.emailVerified, router]);
 
   const resendVerification = async () => {
-    if (!email) return;
+    // If user is not logged in, we can't resend verification
+    // This should be handled by the registration flow
+    if (!email) {
+      setResendMessage("Please check your email for the verification link.");
+      return;
+    }
 
     setIsResending(true);
     setResendMessage(null);
@@ -103,11 +145,11 @@ export default function VerifyEmailPage() {
   const getStatusIcon = () => {
     switch (verificationStatus) {
       case "success":
-        return <CheckCircle className="h-12 w-12 text-green-500" />;
+        return <CheckCircle className="h-12 w-12 text-success" />;
       case "error":
-        return <XCircle className="h-12 w-12 text-red-500" />;
+        return <XCircle className="h-12 w-12 text-destructive" />;
       default:
-        return <Mail className="h-12 w-12 text-blue-500" />;
+        return <Mail className="h-12 w-12 text-info" />;
     }
   };
 
@@ -214,7 +256,7 @@ export default function VerifyEmailPage() {
 
         {verificationStatus === "success" && (
           <div className="text-center">
-            <p className="text-sm text-green-600">
+            <p className="text-sm text-success">
               You will be redirected to the dashboard shortly.
             </p>
           </div>

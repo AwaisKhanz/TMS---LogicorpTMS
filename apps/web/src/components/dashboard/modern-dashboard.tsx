@@ -26,6 +26,7 @@ import { PerformanceChart } from "./charts/performance-chart";
 import { CarrierPerformance } from "./charts/carrier-performance";
 import { useDashboardCharts } from "@/hooks/use-dashboard-charts";
 import { useRouter } from "next/navigation";
+import { CanCreate } from "@/components/auth/can";
 
 interface ModernDashboardProps {
   user: {
@@ -103,10 +104,12 @@ export function ModernDashboard({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button size="sm" onClick={handleQuickActions}>
-            <Plus className="h-4 w-4 mr-2" />
-            Quick Actions
-          </Button>
+          <CanCreate resource="load">
+            <Button size="sm" onClick={handleQuickActions}>
+              <Plus className="h-4 w-4 mr-2" />
+              Quick Actions
+            </Button>
+          </CanCreate>
         </div>
       </div>
 
@@ -239,48 +242,54 @@ export function ModernDashboard({
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            <Button
-              variant="outline"
-              className="h-auto p-4 flex flex-col items-start gap-2"
-              onClick={handleCreateLoad}
-            >
-              <Truck className="h-5 w-5" />
-              <div className="text-left">
-                <p className="font-medium">Load Management </p>
-                <p className="text-sm text-muted-foreground">
-                  View and manage loads
-                </p>
-              </div>
-              <ArrowRight className="h-4 w-4 ml-auto" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto p-4 flex flex-col items-start gap-2"
-              onClick={handleManageCarriers}
-            >
-              <Users className="h-5 w-5" />
-              <div className="text-left">
-                <p className="font-medium">Manage Carriers</p>
-                <p className="text-sm text-muted-foreground">
-                  View and manage carriers
-                </p>
-              </div>
-              <ArrowRight className="h-4 w-4 ml-auto" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto p-4 flex flex-col items-start gap-2"
-              onClick={handleManageCustomers}
-            >
-              <Building2 className="h-5 w-5" />
-              <div className="text-left">
-                <p className="font-medium">Manage Customers</p>
-                <p className="text-sm text-muted-foreground">
-                  View and manage customers
-                </p>
-              </div>
-              <ArrowRight className="h-4 w-4 ml-auto" />
-            </Button>
+            <CanCreate resource="load">
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start gap-2"
+                onClick={handleCreateLoad}
+              >
+                <Truck className="h-5 w-5" />
+                <div className="text-left">
+                  <p className="font-medium">Load Management </p>
+                  <p className="text-sm text-muted-foreground">
+                    View and manage loads
+                  </p>
+                </div>
+                <ArrowRight className="h-4 w-4 ml-auto" />
+              </Button>
+            </CanCreate>
+            <CanCreate resource="carrier">
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start gap-2"
+                onClick={handleManageCarriers}
+              >
+                <Users className="h-5 w-5" />
+                <div className="text-left">
+                  <p className="font-medium">Manage Carriers</p>
+                  <p className="text-sm text-muted-foreground">
+                    View and manage carriers
+                  </p>
+                </div>
+                <ArrowRight className="h-4 w-4 ml-auto" />
+              </Button>
+            </CanCreate>
+            <CanCreate resource="customer">
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-start gap-2"
+                onClick={handleManageCustomers}
+              >
+                <Building2 className="h-5 w-5" />
+                <div className="text-left">
+                  <p className="font-medium">Manage Customers</p>
+                  <p className="text-sm text-muted-foreground">
+                    View and manage customers
+                  </p>
+                </div>
+                <ArrowRight className="h-4 w-4 ml-auto" />
+              </Button>
+            </CanCreate>
           </div>
         </CardContent>
       </Card>

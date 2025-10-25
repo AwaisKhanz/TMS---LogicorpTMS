@@ -30,11 +30,13 @@ interface DocumentTemplatesResponse {
 export const documentTemplateKeys = {
   all: ["document-templates"] as const,
   lists: () => [...documentTemplateKeys.all, "list"] as const,
-  list: (filters: DocumentTemplateFilters) => [...documentTemplateKeys.lists(), filters] as const,
+  list: (filters: DocumentTemplateFilters) =>
+    [...documentTemplateKeys.lists(), filters] as const,
   details: () => [...documentTemplateKeys.all, "detail"] as const,
   detail: (id: string) => [...documentTemplateKeys.details(), id] as const,
   defaults: () => [...documentTemplateKeys.all, "defaults"] as const,
-  default: (type: DocumentType) => [...documentTemplateKeys.defaults(), type] as const,
+  default: (type: DocumentType) =>
+    [...documentTemplateKeys.defaults(), type] as const,
 };
 
 /**
@@ -47,7 +49,8 @@ export function useDocumentTemplates(filters: DocumentTemplateFilters = {}) {
       const params = new URLSearchParams();
 
       if (filters.type) params.append("type", filters.type);
-      if (filters.isDefault !== undefined) params.append("isDefault", filters.isDefault.toString());
+      if (filters.isDefault !== undefined)
+        params.append("isDefault", filters.isDefault.toString());
 
       const response = await apiClient.get<DocumentTemplatesResponse>(
         `/document-templates?${params.toString()}`
@@ -108,8 +111,10 @@ export function useCreateDocumentTemplate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: documentTemplateKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: documentTemplateKeys.defaults() });
-      toast.success("Template created successfully");
+      queryClient.invalidateQueries({
+        queryKey: documentTemplateKeys.defaults(),
+      });
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -129,10 +134,10 @@ export function useUpdateDocumentTemplate() {
   return useMutation({
     mutationFn: async ({
       id,
-      data
+      data,
     }: {
       id: string;
-      data: UpdateDocumentTemplateRequest
+      data: UpdateDocumentTemplateRequest;
     }) => {
       const response = await apiClient.put<DocumentTemplateResponse>(
         `/document-templates/${id}`,
@@ -142,9 +147,13 @@ export function useUpdateDocumentTemplate() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: documentTemplateKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: documentTemplateKeys.detail(data.id) });
-      queryClient.invalidateQueries({ queryKey: documentTemplateKeys.defaults() });
-      toast.success("Template updated successfully");
+      queryClient.invalidateQueries({
+        queryKey: documentTemplateKeys.detail(data.id),
+      });
+      queryClient.invalidateQueries({
+        queryKey: documentTemplateKeys.defaults(),
+      });
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -168,8 +177,10 @@ export function useDeleteDocumentTemplate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: documentTemplateKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: documentTemplateKeys.defaults() });
-      toast.success("Template deleted successfully");
+      queryClient.invalidateQueries({
+        queryKey: documentTemplateKeys.defaults(),
+      });
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -195,13 +206,16 @@ export function useSetDefaultTemplate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: documentTemplateKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: documentTemplateKeys.defaults() });
-      toast.success("Default template updated successfully");
+      queryClient.invalidateQueries({
+        queryKey: documentTemplateKeys.defaults(),
+      });
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
       toast.error(
-        apiError.response?.data?.error?.message || "Failed to set default template"
+        apiError.response?.data?.error?.message ||
+          "Failed to set default template"
       );
     },
   });
@@ -230,12 +244,13 @@ export function useDuplicateDocumentTemplate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: documentTemplateKeys.lists() });
-      toast.success("Template duplicated successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
       toast.error(
-        apiError.response?.data?.error?.message || "Failed to duplicate template"
+        apiError.response?.data?.error?.message ||
+          "Failed to duplicate template"
       );
     },
   });

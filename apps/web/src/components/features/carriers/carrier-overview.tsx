@@ -57,7 +57,7 @@ export function CarrierOverview({ carrierId }: CarrierOverviewProps) {
               variant={carrier.isApproved ? "default" : "secondary"}
               className={cn(
                 carrier.isApproved &&
-                  "bg-green-500 hover:bg-green-600 text-white"
+                  "bg-success hover:bg-success/90 text-success-foreground"
               )}
             >
               {carrier.isApproved ? "Approved" : "Pending Approval"}
@@ -65,7 +65,8 @@ export function CarrierOverview({ carrierId }: CarrierOverviewProps) {
             <Badge
               variant={carrier.isActive ? "default" : "secondary"}
               className={cn(
-                carrier.isActive && "bg-blue-500 hover:bg-blue-600 text-white"
+                carrier.isActive &&
+                  "bg-primary hover:bg-primary/90 text-primary-foreground"
               )}
             >
               {carrier.isActive ? "Active" : "Inactive"}
@@ -126,7 +127,7 @@ export function CarrierOverview({ carrierId }: CarrierOverviewProps) {
               </div>
               <a
                 href={`tel:${carrier.contactPhone}`}
-                className="text-sm font-medium text-blue-600 hover:underline"
+                className="text-sm font-medium text-primary hover:underline"
               >
                 {carrier.contactPhone}
               </a>
@@ -139,7 +140,7 @@ export function CarrierOverview({ carrierId }: CarrierOverviewProps) {
               </div>
               <a
                 href={`mailto:${carrier.contactEmail}`}
-                className="text-sm font-medium text-blue-600 hover:underline"
+                className="text-sm font-medium text-primary hover:underline"
               >
                 {carrier.contactEmail}
               </a>
@@ -152,7 +153,7 @@ export function CarrierOverview({ carrierId }: CarrierOverviewProps) {
               </div>
               <a
                 href={`tel:${carrier.phone}`}
-                className="text-sm font-medium text-blue-600 hover:underline"
+                className="text-sm font-medium text-primary hover:underline"
               >
                 {carrier.phone}
               </a>
@@ -171,9 +172,12 @@ export function CarrierOverview({ carrierId }: CarrierOverviewProps) {
           <p className="text-sm">
             {(carrier.address as Address)?.street}
             <br />
-            {(carrier.address as Address)?.city}, {(carrier.address as Address)?.state}{" "}
+            {(carrier.address as Address)?.city},{" "}
+            {(carrier.address as Address)?.state}{" "}
             {(carrier.address as Address)?.zip}
-            {(carrier.address as Address)?.country && <>, {(carrier.address as Address)?.country}</>}
+            {(carrier.address as Address)?.country && (
+              <>, {(carrier.address as Address)?.country}</>
+            )}
           </p>
         </div>
 

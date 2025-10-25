@@ -27,7 +27,10 @@ export class SettingsController {
         throw new Error("Authentication required");
       }
 
-      const profile = await this.settingsService.getProfile(req.auth.userId);
+      const profile = await this.settingsService.getProfile(
+        req.auth.userId,
+        req.auth.organizationId
+      );
 
       res.json({
         success: true,
@@ -47,6 +50,7 @@ export class SettingsController {
       const updateData = req.body as UpdateProfileRequest;
       const profile = await this.settingsService.updateProfile(
         req.auth.userId,
+        req.auth.organizationId,
         updateData
       );
 
@@ -72,7 +76,8 @@ export class SettingsController {
       }
 
       const settings = await this.settingsService.getSecuritySettings(
-        req.auth.userId
+        req.auth.userId,
+        req.auth.organizationId
       );
 
       res.json({
@@ -91,7 +96,11 @@ export class SettingsController {
       }
 
       const changeData = req.body as ChangePasswordRequest;
-      await this.settingsService.changePassword(req.auth.userId, changeData);
+      await this.settingsService.changePassword(
+        req.auth.userId,
+        req.auth.organizationId,
+        changeData
+      );
 
       res.json({
         success: true,
@@ -108,7 +117,10 @@ export class SettingsController {
         throw new Error("Authentication required");
       }
 
-      const setup = await this.settingsService.setupTwoFactor(req.auth.userId);
+      const setup = await this.settingsService.setupTwoFactor(
+        req.auth.userId,
+        req.auth.organizationId
+      );
 
       res.json({
         success: true,
@@ -128,6 +140,7 @@ export class SettingsController {
       const enableData = req.body as EnableTwoFactorRequest;
       const result = await this.settingsService.enableTwoFactor(
         req.auth.userId,
+        req.auth.organizationId,
         enableData
       );
 
@@ -151,7 +164,11 @@ export class SettingsController {
       }
 
       const disableData = req.body as DisableTwoFactorRequest;
-      await this.settingsService.disableTwoFactor(req.auth.userId, disableData);
+      await this.settingsService.disableTwoFactor(
+        req.auth.userId,
+        req.auth.organizationId,
+        disableData
+      );
 
       res.json({
         success: true,
@@ -421,6 +438,82 @@ export class SettingsController {
       res.json({
         success: true,
         message: "Team member removed successfully",
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getMemberCustomers = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      if (!req.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const { memberId } = req.params;
+      const customers = await this.settingsService.getMemberCustomers(
+        req.auth.organizationId,
+        memberId
+      );
+
+      res.json({
+        success: true,
+        data: customers,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  assignCustomers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const { memberId } = req.params;
+      const { customerIds } = req.body;
+
+      await this.settingsService.assignCustomers(
+        req.auth.organizationId,
+        memberId,
+        customerIds
+      );
+
+      res.json({
+        success: true,
+        message: "Customers assigned successfully",
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  removeCustomerAssignment = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      if (!req.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const { memberId, customerId } = req.params;
+
+      await this.settingsService.removeCustomerAssignment(
+        req.auth.organizationId,
+        memberId,
+        customerId
+      );
+
+      res.json({
+        success: true,
+        message: "Customer assignment removed successfully",
       });
     } catch (error) {
       next(error);

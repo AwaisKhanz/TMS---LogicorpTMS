@@ -60,8 +60,8 @@ export function LoadStatusWorkflow({
     ],
     [LoadStatus.IN_TRANSIT]: [LoadStatus.DELIVERED, LoadStatus.CANCELLED],
     [LoadStatus.DELIVERED]: [LoadStatus.POD_RECEIVED, LoadStatus.CANCELLED],
-    [LoadStatus.POD_RECEIVED]: [LoadStatus.INVOICED, LoadStatus.CANCELLED],
-    [LoadStatus.INVOICED]: [LoadStatus.PAID],
+    [LoadStatus.POD_RECEIVED]: [LoadStatus.COMPLETED, LoadStatus.CANCELLED],
+    [LoadStatus.COMPLETED]: [LoadStatus.PAID],
     [LoadStatus.PAID]: [],
     [LoadStatus.CANCELLED]: [],
   };
@@ -104,14 +104,14 @@ export function LoadStatusWorkflow({
                   className={cn(
                     "flex items-center justify-center w-6 h-6 rounded-full border-2",
                     isCompleted
-                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20"
+                      ? "border-success bg-success/10"
                       : isCurrent
                         ? "border-primary bg-primary/10"
                         : "border-muted-foreground/30 bg-background"
                   )}
                 >
                   {isCompleted ? (
-                    <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                    <Check className="h-3 w-3 text-success" />
                   ) : isCurrent ? (
                     <div className="w-2 h-2 rounded-full bg-primary" />
                   ) : (

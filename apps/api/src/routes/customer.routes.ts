@@ -8,7 +8,7 @@ import { requireEmailVerification } from "../middleware/email-verification.middl
 import { authorize } from "../middleware/authorization.middleware.js";
 import { PERMISSIONS } from "@tms/shared-types";
 
-const router = Router();
+const router: Router = Router();
 const customerController = new CustomerController();
 
 // Apply authentication, tenant validation, and email verification to all routes
@@ -72,6 +72,12 @@ router.get(
   authorize(PERMISSIONS.CUSTOMER_VIEW),
   customerController.getCustomers
 );
+
+router.get(
+  "/my-customers",
+  authorize(PERMISSIONS.CUSTOMER_VIEW),
+  customerController.getCustomersForUser
+);
 router.get(
   "/statistics",
   authorize(PERMISSIONS.CUSTOMER_VIEW),
@@ -81,6 +87,11 @@ router.get(
   "/top",
   authorize(PERMISSIONS.CUSTOMER_VIEW),
   customerController.getTopCustomers
+);
+router.get(
+  "/export",
+  authorize(PERMISSIONS.CUSTOMER_VIEW),
+  customerController.exportCustomers
 );
 router.get(
   "/:id",
@@ -122,6 +133,33 @@ router.delete(
   "/contacts/:contactId",
   authorize(PERMISSIONS.CUSTOMER_EDIT),
   customerController.deleteCustomerContact
+);
+
+// Enhanced customer routes
+router.get(
+  "/:id/loads",
+  authorize(PERMISSIONS.CUSTOMER_VIEW),
+  customerController.getCustomerLoads
+);
+router.get(
+  "/:id/invoices",
+  authorize(PERMISSIONS.CUSTOMER_VIEW),
+  customerController.getCustomerInvoices
+);
+router.get(
+  "/:id/performance",
+  authorize(PERMISSIONS.CUSTOMER_VIEW),
+  customerController.getCustomerPerformance
+);
+router.post(
+  "/bulk-update",
+  authorize(PERMISSIONS.CUSTOMER_EDIT),
+  customerController.bulkUpdateCustomers
+);
+router.post(
+  "/:id/validate-credit",
+  authorize(PERMISSIONS.CUSTOMER_VIEW),
+  customerController.validateCreditLimit
 );
 
 export default router;

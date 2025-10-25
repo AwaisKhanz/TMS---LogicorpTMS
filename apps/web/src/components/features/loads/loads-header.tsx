@@ -1,10 +1,20 @@
+"use client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Upload, FileText, TrendingUp, Truck } from "lucide-react";
+import {
+  Plus,
+  Upload,
+  FileText,
+  TrendingUp,
+  Truck,
+  Loader2,
+} from "lucide-react";
 import { CanCreate } from "@/components/auth/can";
+import { useLoadStatistics } from "@/hooks/use-loads";
 
 export function LoadsHeader() {
+  const { data: stats, isLoading } = useLoadStatistics();
   return (
     <div className="space-y-6">
       {/* Main Header */}
@@ -23,7 +33,7 @@ export function LoadsHeader() {
             Import
           </Button>
           <CanCreate resource="load">
-            <Button asChild className="bg-primary hover:bg-primary/90">
+            <Button asChild variant="default">
               <Link href="/loads/new">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Load
@@ -42,7 +52,15 @@ export function LoadsHeader() {
                 <p className="text-sm font-medium text-muted-foreground">
                   Total Loads
                 </p>
-                <p className="text-2xl font-bold">-</p>
+                <p className="text-2xl font-bold">
+                  {isLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    Object.values(stats || {})
+                      .reduce((total, status) => total + (status.count || 0), 0)
+                      .toLocaleString()
+                  )}
+                </p>
               </div>
               <FileText className="h-8 w-8 text-primary/60" />
             </div>
@@ -56,7 +74,13 @@ export function LoadsHeader() {
                 <p className="text-sm font-medium text-muted-foreground">
                   In Transit
                 </p>
-                <p className="text-2xl font-bold">-</p>
+                <p className="text-2xl font-bold">
+                  {isLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    stats?.IN_TRANSIT?.count || "0"
+                  )}
+                </p>
               </div>
               <Truck className="h-8 w-8 text-success/60" />
             </div>
@@ -70,7 +94,13 @@ export function LoadsHeader() {
                 <p className="text-sm font-medium text-muted-foreground">
                   Pending
                 </p>
-                <p className="text-2xl font-bold">-</p>
+                <p className="text-2xl font-bold">
+                  {isLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    (stats?.QUOTE?.count || 0) + (stats?.BOOKED?.count || 0)
+                  )}
+                </p>
               </div>
               <TrendingUp className="h-8 w-8 text-warning/60" />
             </div>
@@ -84,7 +114,18 @@ export function LoadsHeader() {
                 <p className="text-sm font-medium text-muted-foreground">
                   This Month
                 </p>
-                <p className="text-2xl font-bold">-</p>
+                <p className="text-2xl font-bold">
+                  {isLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    `$${Object.values(stats || {})
+                      .reduce(
+                        (total, status) => total + (status.revenue || 0),
+                        0
+                      )
+                      .toLocaleString()}`
+                  )}
+                </p>
               </div>
               <FileText className="h-8 w-8 text-info/60" />
             </div>

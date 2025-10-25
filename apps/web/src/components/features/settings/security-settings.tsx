@@ -56,6 +56,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
+import { CanEdit } from "@/components/auth/can";
 
 const changePasswordSchema = z
   .object({
@@ -198,12 +199,14 @@ export function SecuritySettings() {
                     : "Never"}
                 </p>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => setIsChangingPassword(!isChangingPassword)}
-              >
-                {isChangingPassword ? "Cancel" : "Change Password"}
-              </Button>
+              <CanEdit resource="settings">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsChangingPassword(!isChangingPassword)}
+                >
+                  {isChangingPassword ? "Cancel" : "Change Password"}
+                </Button>
+              </CanEdit>
             </div>
 
             {isChangingPassword && (
@@ -464,7 +467,7 @@ export function SecuritySettings() {
                 <TableBody>
                   {activeSessions.map((session) => (
                     <TableRow key={session.id}>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">
                             {getDeviceIcon(session.userAgent)}
@@ -479,7 +482,7 @@ export function SecuritySettings() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <div>
                           <div className="font-medium">
                             {session.location || "Unknown"}
@@ -489,17 +492,17 @@ export function SecuritySettings() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <code className="text-sm bg-muted px-2 py-1 rounded">
                           {session.ipAddress}
                         </code>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <span className="text-sm text-muted-foreground">
                           {formatLastActive(session.lastActive)}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {session.isCurrent ? (
                           <Badge
                             variant="default"
@@ -512,7 +515,7 @@ export function SecuritySettings() {
                           <Badge variant="secondary">Active</Badge>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {!session.isCurrent && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -578,7 +581,7 @@ export function SecuritySettings() {
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
                 {securitySettings?.twoFactorEnabled ? (
-                  <CheckCircle className="h-5 w-5 text-emerald-500" />
+                  <CheckCircle className="h-5 w-5 text-success" />
                 ) : (
                   <XCircle className="h-5 w-5 text-destructive" />
                 )}
@@ -593,7 +596,7 @@ export function SecuritySettings() {
 
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
-                <CheckCircle className="h-5 w-5 text-emerald-500" />
+                <CheckCircle className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="font-medium">Use a Strong Password</p>
@@ -606,7 +609,7 @@ export function SecuritySettings() {
 
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
-                <CheckCircle className="h-5 w-5 text-emerald-500" />
+                <CheckCircle className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="font-medium">Regularly Review Active Sessions</p>
@@ -619,7 +622,7 @@ export function SecuritySettings() {
 
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
-                <CheckCircle className="h-5 w-5 text-emerald-500" />
+                <CheckCircle className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="font-medium">Keep Your Information Updated</p>

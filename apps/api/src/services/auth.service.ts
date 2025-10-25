@@ -79,13 +79,13 @@ export class AuthService {
 
       // Find or create admin role
       let adminRole = await tx.role.findUnique({
-        where: { name: "ADMIN" },
+        where: { name: "ADMINISTRATOR" },
       });
 
       if (!adminRole) {
         adminRole = await tx.role.create({
           data: {
-            name: "ADMIN",
+            name: "ADMINISTRATOR",
             description: "System Administrator",
             isSystem: true,
           },
@@ -105,18 +105,6 @@ export class AuthService {
 
     // Generate tokens
     const tokens = await this.generateTokens(result.user, result.organization);
-
-    // Send welcome email
-    try {
-      await emailService.sendWelcomeEmail(
-        result.user.email,
-        result.user.firstName,
-        result.organization.name
-      );
-    } catch (error) {
-      // Log error but don't fail the registration
-      console.error("Failed to send welcome email:", error);
-    }
 
     // Send email verification
     try {
@@ -218,6 +206,13 @@ export class AuthService {
       throw new AuthenticationError("Organization is inactive");
     }
 
+    // Check if email is verified
+    if (!user.emailVerified) {
+      throw new AuthenticationError(
+        "Please verify your email address before logging in"
+      );
+    }
+
     // Check if 2FA is enabled
     if (user.twoFactorEnabled) {
       if (!data.twoFactorToken) {
@@ -258,6 +253,15 @@ export class AuthService {
 
     // Generate tokens
     const tokens = await this.generateTokens(user, user.organization);
+
+    // Create session in database
+    await this.createSession(
+      user.id,
+      tokens.accessToken,
+      tokens.accessToken,
+      ipAddress,
+      userAgent
+    );
 
     // Update last login
     await this.userRepo.updateLastLogin(user.id);
@@ -319,6 +323,9 @@ export class AuthService {
   }
 
   async logout(userId: string, organizationId: string): Promise<void> {
+    // Delete all sessions for the user
+    await this.deleteUserSessions(userId);
+
     // Audit log - User logout
     await auditService.logAuthentication(userId, organizationId, "LOGOUT");
   }
@@ -360,13 +367,18 @@ export class AuthService {
     });
 
     const { passwordHash, ...userWithoutPassword } = user;
-    return {
+    const result = {
       ...userWithoutPassword,
       roles,
       permissions: Array.from(permissions),
       createdAt: userWithoutPassword.createdAt.toISOString(),
       updatedAt: userWithoutPassword.updatedAt.toISOString(),
     };
+    console.log("getCurrentUser returning:", {
+      avatar: result.avatar,
+      id: result.id,
+    });
+    return result;
   }
 
   private async generateTokens(
@@ -390,7 +402,7 @@ export class AuthService {
     });
 
     // Extract primary role (first role or ADMIN)
-    const primaryRole = userWithRoles?.roles[0]?.role?.name || "USER";
+    const primaryRole = userWithRoles?.roles[0]?.role?.name || "VIEWER";
 
     // Extract all permissions from all roles
     const permissions = new Set<string>();
@@ -439,7 +451,7 @@ export class AuthService {
       sub: user.id,
       org: user.organizationId,
       email: user.email,
-      role: "USER",
+      role: "VIEWER",
       permissions: [],
     });
 
@@ -515,6 +527,47 @@ export class AuthService {
   async verifyEmail(token: string) {
     const user = await emailVerificationService.verifyEmail(token);
 
+    // Get user with organization for token generation
+    const userWithOrg = await this.userRepo.findByEmail(user.email);
+    if (!userWithOrg) {
+      throw new Error("User not found after verification");
+    }
+
+    // Generate authentication tokens
+    const tokens = await this.generateTokens(
+      userWithOrg,
+      userWithOrg.organization
+    );
+
+    // Get user's roles and permissions (same as login method)
+    const userWithRoles = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Extract roles and permissions with proper typing
+    const roles: Role[] =
+      userWithRoles?.roles.map((userRole) => userRole.role.name as Role) || [];
+    const permissions = new Set<Permission>();
+    userWithRoles?.roles.forEach((userRole) => {
+      userRole.role.permissions.forEach((permission) => {
+        permissions.add(permission.name as Permission);
+      });
+    });
+
+    // Remove password hash from response
+    const { passwordHash, ...userWithoutPassword } = userWithOrg;
+
     // Audit log - Email verified
     await auditService.logAuthentication(
       user.id,
@@ -522,7 +575,23 @@ export class AuthService {
       "EMAIL_VERIFIED"
     );
 
-    return { message: "Email verified successfully", user };
+    return {
+      message: "Email verified successfully",
+      user: {
+        ...userWithoutPassword,
+        roles,
+        permissions: Array.from(permissions),
+        createdAt: userWithoutPassword.createdAt.toISOString(),
+        updatedAt: userWithoutPassword.updatedAt.toISOString(),
+      },
+      organization: {
+        ...userWithOrg.organization,
+        createdAt: userWithOrg.organization.createdAt.toISOString(),
+        updatedAt: userWithOrg.organization.updatedAt.toISOString(),
+        address: (userWithOrg.organization.address as Address) || null,
+      },
+      tokens,
+    };
   }
 
   async resendVerification(email: string) {
@@ -546,4 +615,70 @@ export class AuthService {
         "If an account with that email exists, we've sent a verification link.",
     };
   }
+
+  /**
+   * Creates a new session in the database
+   */
+  private async createSession(
+    userId: string,
+    accessToken: string,
+    refreshToken: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    try {
+      // Calculate expiration time (24 hours from now)
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+
+      await prisma.session.create({
+        data: {
+          userId,
+          token: accessToken,
+          refreshToken,
+          ipAddress,
+          userAgent,
+          expiresAt,
+        },
+      });
+    } catch (error) {
+      // Log error but don't throw - session creation failure shouldn't break login
+      console.error("Failed to create session:", error);
+    }
+  }
+
+  /**
+   * Deletes all sessions for a user
+   */
+  private async deleteUserSessions(userId: string): Promise<void> {
+    try {
+      await prisma.session.deleteMany({
+        where: { userId },
+      });
+    } catch (error) {
+      // Log error but don't throw - session deletion failure shouldn't break logout
+      console.error("Failed to delete user sessions:", error);
+    }
+  }
+
+  /**
+   * Cleans up expired sessions (should be called periodically)
+   */
+  async cleanupExpiredSessions(): Promise<void> {
+    try {
+      const result = await prisma.session.deleteMany({
+        where: {
+          expiresAt: { lt: new Date() },
+        },
+      });
+
+      if (result.count > 0) {
+        console.log(`Cleaned up ${result.count} expired sessions`);
+      }
+    } catch (error) {
+      console.error("Failed to cleanup expired sessions:", error);
+    }
+  }
 }
+
+export const authService = new AuthService();

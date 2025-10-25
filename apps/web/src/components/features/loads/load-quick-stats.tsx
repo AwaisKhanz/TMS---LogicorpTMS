@@ -21,47 +21,47 @@ const statusConfig = {
   QUOTE: {
     label: "Quote",
     variant: "secondary" as const,
-    color: "bg-gray-500",
+    color: "bg-muted",
   },
   BOOKED: {
     label: "Booked",
     variant: "default" as const,
-    color: "bg-blue-500",
+    color: "bg-primary",
   },
   DISPATCHED: {
     label: "Dispatched",
     variant: "default" as const,
-    color: "bg-yellow-500",
+    color: "bg-warning",
   },
   IN_TRANSIT: {
     label: "In Transit",
     variant: "default" as const,
-    color: "bg-purple-500",
+    color: "bg-info",
   },
   DELIVERED: {
     label: "Delivered",
     variant: "default" as const,
-    color: "bg-green-500",
+    color: "bg-success",
   },
   POD_RECEIVED: {
     label: "POD Received",
     variant: "default" as const,
-    color: "bg-green-600",
+    color: "bg-success",
   },
-  INVOICED: {
-    label: "Invoiced",
+  COMPLETED: {
+    label: "Completed",
     variant: "default" as const,
-    color: "bg-blue-600",
+    color: "bg-info",
   },
   PAID: {
     label: "Paid",
     variant: "default" as const,
-    color: "bg-green-700",
+    color: "bg-success",
   },
   CANCELLED: {
     label: "Cancelled",
     variant: "destructive" as const,
-    color: "bg-red-500",
+    color: "bg-destructive",
   },
 };
 

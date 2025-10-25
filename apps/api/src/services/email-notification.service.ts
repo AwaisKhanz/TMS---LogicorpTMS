@@ -1,6 +1,5 @@
-import sgMail from "@sendgrid/mail";
-import { config } from "../config/env.js";
 import { logger } from "../config/logger.js";
+import { SMTPService } from "./smtp.service.js";
 
 interface DocumentExpirationData {
   id: string;
@@ -19,24 +18,14 @@ interface EmailRecipient {
 }
 
 /**
- * Email Notification Service using SendGrid
+ * Email Notification Service using SMTP
  * Handles all email notifications in the system
  */
 export class EmailNotificationService {
-  private isConfigured: boolean;
+  private smtpService: SMTPService;
 
   constructor() {
-    // Check if SendGrid is configured
-    this.isConfigured = !!config.email.sendgridApiKey;
-
-    if (this.isConfigured) {
-      sgMail.setApiKey(config.email.sendgridApiKey!);
-      logger.info("SendGrid email service initialized");
-    } else {
-      logger.warn(
-        "SendGrid API key not configured. Email notifications will be logged only."
-      );
-    }
+    this.smtpService = new SMTPService();
   }
 
   /**
@@ -49,23 +38,6 @@ export class EmailNotificationService {
     warningDocuments: DocumentExpirationData[]
   ): Promise<{ sent: boolean; message: string }> {
     try {
-      if (!this.isConfigured) {
-        logger.info(
-          `Email notification would be sent to ${organizationEmail}:`
-        );
-        logger.info(`Organization: ${organizationName}`);
-        logger.info(`Urgent documents (≤7 days): ${urgentDocuments.length}`);
-        logger.info(
-          `Warning documents (8-30 days): ${warningDocuments.length}`
-        );
-
-        return {
-          sent: false,
-          message:
-            "SendGrid not configured. Notification logged only. Configure SENDGRID_API_KEY to enable email delivery.",
-        };
-      }
-
       const htmlContent = this.generateExpirationEmailHTML(
         organizationName,
         urgentDocuments,
@@ -78,27 +50,30 @@ export class EmailNotificationService {
         warningDocuments
       );
 
-      const msg = {
-        to: organizationEmail,
-        from: {
-          email: config.email.fromEmail,
-          name: "TMS Document Alerts",
-        },
-        subject: `⚠️ Document Expiration Alert - ${urgentDocuments.length} Urgent, ${warningDocuments.length} Warning`,
-        text: textContent,
-        html: htmlContent,
-      };
-
-      await sgMail.send(msg);
-
-      logger.info(
-        `Document expiration email sent to ${organizationEmail} for ${organizationName}`
+      const result = await this.smtpService.sendEmail(
+        organizationEmail,
+        `⚠️ Document Expiration Alert - ${urgentDocuments.length} Urgent, ${warningDocuments.length} Warning`,
+        htmlContent,
+        textContent
       );
 
-      return {
-        sent: true,
-        message: `Email sent successfully to ${organizationEmail}`,
-      };
+      if (result.sent) {
+        logger.info(
+          `Document expiration email sent to ${organizationEmail} for ${organizationName}`
+        );
+        return {
+          sent: true,
+          message: `Email sent successfully to ${organizationEmail}`,
+        };
+      } else {
+        logger.warn(
+          `Failed to send email to ${organizationEmail}: ${result.error}`
+        );
+        return {
+          sent: false,
+          message: result.error || "Failed to send email",
+        };
+      }
     } catch (error) {
       logger.error("Failed to send document expiration email:", error);
       throw new Error("Failed to send email notification");
@@ -113,30 +88,26 @@ export class EmailNotificationService {
     organizationName: string,
     document: DocumentExpirationData
   ): Promise<void> {
-    if (!this.isConfigured) {
-      logger.info(
-        `Single document expiration email would be sent to ${recipient.email}`
-      );
-      return;
-    }
-
-    const msg = {
-      to: recipient.email,
-      from: {
-        email: config.email.fromEmail,
-        name: "TMS Document Alerts",
-      },
-      subject: `🔔 Document Expiring Soon: ${document.name}`,
-      html: this.generateSingleDocumentEmailHTML(
+    const result = await this.smtpService.sendEmail(
+      recipient.email,
+      `🔔 Document Expiring Soon: ${document.name}`,
+      this.generateSingleDocumentEmailHTML(
         organizationName,
         document,
         recipient.name
       ),
-      text: this.generateSingleDocumentEmailText(organizationName, document),
-    };
+      this.generateSingleDocumentEmailText(organizationName, document)
+    );
 
-    await sgMail.send(msg);
-    logger.info(`Single document expiration email sent to ${recipient.email}`);
+    if (result.sent) {
+      logger.info(
+        `Single document expiration email sent to ${recipient.email}`
+      );
+    } else {
+      logger.warn(
+        `Failed to send single document email to ${recipient.email}: ${result.error}`
+      );
+    }
   }
 
   /**

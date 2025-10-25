@@ -12,7 +12,7 @@ import {
 } from "../middleware/rate-limit.middleware.js";
 import { z } from "zod";
 
-const router = Router();
+const router: Router = Router();
 const authController = new AuthController();
 
 // Validation schemas

@@ -155,7 +155,8 @@ export class CarrierController {
 
       const carrier = await carrierService.createCarrier(
         req.body,
-        req.auth.organizationId
+        req.auth.organizationId,
+        req.auth.userId
       );
 
       res.status(201).json({
@@ -583,35 +584,6 @@ export class CarrierController {
       res.status(200).json({
         success: true,
         data: alerts,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async submitRating(req: Request, res: Response, next: NextFunction) {
-    try {
-      if (!req.auth) {
-        throw new Error("Authentication required");
-      }
-
-      const { id } = req.params;
-      const { rating, comment, loadId } = req.body;
-
-      if (!rating || rating < 1 || rating > 5) {
-        throw new Error("Rating must be between 1 and 5");
-      }
-
-      const result = await carrierService.submitRating(
-        id,
-        { rating, comment, loadId },
-        req.auth.userId,
-        req.auth.organizationId
-      );
-
-      res.status(201).json({
-        success: true,
-        data: result,
       });
     } catch (error) {
       next(error);

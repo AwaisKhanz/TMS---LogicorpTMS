@@ -54,7 +54,7 @@ export const LOAD_STATUS_OPTIONS = [
   { value: "IN_TRANSIT", label: "In Transit" },
   { value: "DELIVERED", label: "Delivered" },
   { value: "POD_RECEIVED", label: "POD Received" },
-  { value: "INVOICED", label: "Invoiced" },
+  { value: "COMPLETED", label: "Completed" },
   { value: "PAID", label: "Paid" },
   { value: "CANCELLED", label: "Cancelled" },
 ] as const;

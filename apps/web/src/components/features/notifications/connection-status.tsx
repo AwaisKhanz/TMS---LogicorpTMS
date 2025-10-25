@@ -17,7 +17,7 @@ export function ConnectionStatus() {
     if (isConnected) {
       return {
         icon: Wifi,
-        color: "text-green-500",
+        color: "text-success",
         label: "Connected",
         description: "Real-time notifications enabled",
       };
@@ -26,7 +26,7 @@ export function ConnectionStatus() {
     if (connectionError) {
       return {
         icon: WifiOff,
-        color: "text-red-500",
+        color: "text-destructive",
         label: "Disconnected",
         description: `Connection failed: ${connectionError}${
           reconnectAttempts > 0 ? ` (Attempt ${reconnectAttempts})` : ""
@@ -36,11 +36,12 @@ export function ConnectionStatus() {
 
     return {
       icon: AlertCircle,
-      color: "text-yellow-500",
+      color: "text-warning",
       label: "Connecting",
-      description: reconnectAttempts > 0
-        ? `Reconnecting... (Attempt ${reconnectAttempts})`
-        : "Establishing connection...",
+      description:
+        reconnectAttempts > 0
+          ? `Reconnecting... (Attempt ${reconnectAttempts})`
+          : "Establishing connection...",
     };
   };
 
@@ -52,7 +53,9 @@ export function ConnectionStatus() {
         <TooltipTrigger asChild>
           <div className={cn("flex items-center space-x-1", color)}>
             <Icon className="h-3 w-3" />
-            <span className="text-xs font-medium hidden sm:inline">{label}</span>
+            <span className="text-xs font-medium hidden sm:inline">
+              {label}
+            </span>
           </div>
         </TooltipTrigger>
         <TooltipContent>

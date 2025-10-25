@@ -199,7 +199,7 @@ export function TwoFactorSettings() {
             <AlertDialogAction
               onClick={handleDisable}
               disabled={disableVerificationCode.length !== 6 || isDisabling}
-              className="bg-destructive hover:bg-destructive/90"
+              variant="destructive"
             >
               {isDisabling ? "Disabling..." : "Disable 2FA"}
             </AlertDialogAction>

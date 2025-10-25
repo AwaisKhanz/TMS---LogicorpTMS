@@ -54,8 +54,15 @@ import {
   Package,
   Grid3X3,
   List,
+  CheckSquare,
+  Square,
+  X,
 } from "lucide-react";
-import { CanEdit, CanDelete } from "@/components/auth/can";
+import {
+  CanEdit,
+  CanDelete,
+  CanDelete as CanBulkDelete,
+} from "@/components/auth/can";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -66,7 +73,7 @@ const statusConfig = {
   IN_TRANSIT: { label: "In Transit", variant: "default" as const },
   DELIVERED: { label: "Delivered", variant: "success" as const },
   POD_RECEIVED: { label: "POD Received", variant: "success" as const },
-  INVOICED: { label: "Invoiced", variant: "info" as const },
+  COMPLETED: { label: "Completed", variant: "success" as const },
   PAID: { label: "Paid", variant: "success" as const },
   CANCELLED: { label: "Cancelled", variant: "destructive" as const },
 };
@@ -77,7 +84,8 @@ export function LoadsDataTable() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteLoadId, setDeleteLoadId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("table");
+  const [selectedLoads, setSelectedLoads] = useState<string[]>([]);
 
   const deleteLoad = useDeleteLoad();
 
@@ -100,6 +108,28 @@ export function LoadsDataTable() {
       await deleteLoad.mutateAsync(deleteLoadId);
       setDeleteLoadId(null);
     }
+  };
+
+  const handleSelectLoad = (loadId: string) => {
+    setSelectedLoads((prev) =>
+      prev.includes(loadId)
+        ? prev.filter((id) => id !== loadId)
+        : [...prev, loadId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedLoads.length === loads.length) {
+      setSelectedLoads([]);
+    } else {
+      setSelectedLoads(loads.map((load) => load.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    // Implement bulk delete logic here
+    console.log("Bulk delete loads:", selectedLoads);
+    setSelectedLoads([]);
   };
 
   const formatCurrency = (amount: number | null) => {
@@ -152,36 +182,37 @@ export function LoadsDataTable() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search loads, commodities, customers..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search loads, commodities, customers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 h-10"
-              />
-            </div>
+                />
+              </div>
               <div className="flex gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-full sm:w-48 h-10">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="QUOTE">Quote</SelectItem>
-                <SelectItem value="BOOKED">Booked</SelectItem>
-                <SelectItem value="DISPATCHED">Dispatched</SelectItem>
-                <SelectItem value="IN_TRANSIT">In Transit</SelectItem>
-                <SelectItem value="DELIVERED">Delivered</SelectItem>
-                <SelectItem value="INVOICED">Invoiced</SelectItem>
-                <SelectItem value="PAID">Paid</SelectItem>
-              </SelectContent>
-            </Select>
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="QUOTE">Quote</SelectItem>
+                    <SelectItem value="BOOKED">Booked</SelectItem>
+                    <SelectItem value="DISPATCHED">Dispatched</SelectItem>
+                    <SelectItem value="IN_TRANSIT">In Transit</SelectItem>
+                    <SelectItem value="DELIVERED">Delivered</SelectItem>
+                    <SelectItem value="POD_RECEIVED">POD Received</SelectItem>
+                    <SelectItem value="COMPLETED">Completed</SelectItem>
+                    <SelectItem value="PAID">Paid</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button variant="outline" size="sm" className="h-10">
-              <Filter className="h-4 w-4 mr-2" />
-              More Filters
-            </Button>
-          </div>
+                  <Filter className="h-4 w-4 mr-2" />
+                  More Filters
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -242,12 +273,11 @@ export function LoadsDataTable() {
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     <div className="flex-1">
                       <div className="font-medium">
-                        {load.shipperAddress.city}, {load.shipperAddress.state}
+                        {load.shipper.city}, {load.shipper.state}
                       </div>
                       <div className="text-muted-foreground">→</div>
                       <div className="font-medium">
-                        {load.consigneeAddress.city},{" "}
-                        {load.consigneeAddress.state}
+                        {load.consignee.city}, {load.consignee.state}
                       </div>
                     </div>
                   </div>
@@ -367,201 +397,268 @@ export function LoadsDataTable() {
             ))}
           </div>
         ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Load #</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Carrier</TableHead>
-                  <TableHead>Route</TableHead>
-                  <TableHead>Pickup Date</TableHead>
-                  <TableHead>Commodity</TableHead>
-                  <TableHead>Rate</TableHead>
-                  <TableHead>Margin</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                  {loads.map((load) => (
-                    <TableRow
-                      key={load.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => router.push(`/loads/${load.id}`)}
-                    >
-                      <TableCell className="font-medium">
-                        {load.loadNumber}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            statusConfig[
-                              load.status as keyof typeof statusConfig
-                            ]?.variant
-                          }
-                          className="whitespace-nowrap"
-                        >
-                          {
-                            statusConfig[
-                              load.status as keyof typeof statusConfig
-                            ]?.label
-                          }
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-48 truncate">
-                        {load.customer.companyName}
-                      </TableCell>
-                      <TableCell className="max-w-48 truncate">
-                        {load.carrier ? (
-                          <div>
-                            <div className="font-medium">
-                              {load.carrier.companyName}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {load.carrier.mcNumber}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            Not assigned
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div>
-                            {load.shipperAddress.city},{" "}
-                            {load.shipperAddress.state}
-                          </div>
-                          <div className="text-muted-foreground">→</div>
-                          <div>
-                            {load.consigneeAddress.city},{" "}
-                            {load.consigneeAddress.state}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(load.pickupDate), "MMM dd, yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div className="font-medium">{load.commodity}</div>
-                          <div className="text-muted-foreground">
-                            {formatWeight(load.weight)} •{" "}
-                            {load.equipmentType.replace("_", " ")}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div className="font-medium">
-                            {formatCurrency(load.customerRate)}
-                          </div>
-                          {load.carrierRate && (
-                            <div className="text-muted-foreground">
-                              Cost: {formatCurrency(load.carrierRate)}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {load.margin !== null && load.margin !== undefined ? (
-                          <div
-                            className={cn(
-                              "text-sm font-medium",
-                              load.margin > 0
-                                ? "text-success"
-                                : "text-destructive"
-                            )}
+          <>
+            {/* Bulk Actions Toolbar */}
+            {selectedLoads.length > 0 && (
+              <CanBulkDelete resource="load">
+                <Card className="p-4 bg-primary/5 border-primary/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm font-medium">
+                        {selectedLoads.length} load
+                        {selectedLoads.length > 1 ? "s" : ""} selected
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedLoads([])}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Clear
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Selected
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              </CanBulkDelete>
+            )}
+
+            <Card>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <CanBulkDelete resource="load">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSelectAll}
+                            className="h-8 w-8 p-0"
                           >
-                            {formatCurrency(load.margin ?? null)}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                            {selectedLoads.length === loads.length &&
+                            loads.length > 0 ? (
+                              <CheckSquare className="h-4 w-4" />
+                            ) : (
+                              <Square className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </CanBulkDelete>
+                      </TableHead>
+                      <TableHead>Load #</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Carrier</TableHead>
+                      <TableHead>Route</TableHead>
+                      <TableHead>Pickup Date</TableHead>
+                      <TableHead>Commodity</TableHead>
+                      <TableHead>Rate</TableHead>
+                      <TableHead>Margin</TableHead>
+                      <TableHead className="w-12"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loads.map((load) => (
+                      <TableRow
+                        key={load.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => router.push(`/loads/${load.id}`)}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <CanBulkDelete resource="load">
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => handleSelectLoad(load.id)}
                               className="h-8 w-8 p-0"
                             >
-                              <MoreHorizontal className="h-4 w-4" />
+                              {selectedLoads.includes(load.id) ? (
+                                <CheckSquare className="h-4 w-4" />
+                              ) : (
+                                <Square className="h-4 w-4" />
+                              )}
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => router.push(`/loads/${load.id}`)}
+                          </CanBulkDelete>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {load.loadNumber}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <Badge
+                            variant={
+                              statusConfig[
+                                load.status as keyof typeof statusConfig
+                              ]?.variant
+                            }
+                            className="whitespace-nowrap"
+                          >
+                            {
+                              statusConfig[
+                                load.status as keyof typeof statusConfig
+                              ]?.label
+                            }
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-48 truncate">
+                          {load.customer.companyName}
+                        </TableCell>
+                        <TableCell className="max-w-48 truncate">
+                          {load.carrier ? (
+                            <div>
+                              <div className="font-medium">
+                                {load.carrier.companyName}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {load.carrier.mcNumber}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              Not assigned
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className="text-sm">
+                            <div>
+                              {load.shipper.city}, {load.shipper.state}
+                            </div>
+                            <div className="text-muted-foreground">→</div>
+                            <div>
+                              {load.consignee.city}, {load.consignee.state}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {format(new Date(load.pickupDate), "MMM dd, yyyy")}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className="text-sm">
+                            <div className="font-medium">{load.commodity}</div>
+                            <div className="text-muted-foreground">
+                              {formatWeight(load.weight)} •{" "}
+                              {load.equipmentType.replace("_", " ")}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className="text-sm">
+                            <div className="font-medium">
+                              {formatCurrency(load.customerRate)}
+                            </div>
+                            {load.carrierRate && (
+                              <div className="text-muted-foreground">
+                                Cost: {formatCurrency(load.carrierRate)}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {load.margin !== null && load.margin !== undefined ? (
+                            <div
+                              className={cn(
+                                "text-sm font-medium",
+                                load.margin > 0
+                                  ? "text-success"
+                                  : "text-destructive"
+                              )}
                             >
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </DropdownMenuItem>
-                            <CanEdit resource="load">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                router.push(`/loads/${load.id}/edit`)
-                              }
-                            >
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit Load
-                            </DropdownMenuItem>
-                            </CanEdit>
-                            <CanDelete resource="load">
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => setDeleteLoadId(load.id)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete Load
-                            </DropdownMenuItem>
-                            </CanDelete>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </div>
-          </Card>
+                              {formatCurrency(load.margin ?? null)}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => router.push(`/loads/${load.id}`)}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              <CanEdit resource="load">
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    router.push(`/loads/${load.id}/edit`)
+                                  }
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit Load
+                                </DropdownMenuItem>
+                              </CanEdit>
+                              <CanDelete resource="load">
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => setDeleteLoadId(load.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Load
+                                </DropdownMenuItem>
+                              </CanDelete>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </>
         )}
 
-          {/* Pagination */}
+        {/* Pagination */}
         {pagination && pagination.pages > 1 && (
           <Card>
             <CardContent className="flex items-center justify-between py-4">
-            <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Showing {loads.length} of {pagination.total} loads
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={currentPage === 1}
                   onClick={() =>
                     setCurrentPage((prev) => Math.max(1, prev - 1))
                   }
-              >
-                Previous
-              </Button>
+                >
+                  Previous
+                </Button>
                 <span className="text-sm px-2">
                   Page {currentPage} of {pagination.pages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={currentPage === pagination.pages}
-                onClick={() => setCurrentPage((prev) => prev + 1)}
-              >
-                Next
-              </Button>
-            </div>
+                  onClick={() => setCurrentPage((prev) => prev + 1)}
+                >
+                  Next
+                </Button>
+              </div>
             </CardContent>
-        </Card>
+          </Card>
         )}
       </div>
 
@@ -580,10 +677,7 @@ export function LoadsDataTable() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteLoad}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDeleteLoad} variant="destructive">
               {deleteLoad.isPending ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>

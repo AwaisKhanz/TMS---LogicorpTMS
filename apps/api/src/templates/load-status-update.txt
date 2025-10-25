@@ -1,0 +1,47 @@
+Load Status Update - LogicorpTMS
+=====================================
+
+Hi {{userName}},
+
+Your load {{loadNumber}} status has been updated to {{status}}.
+
+{{#if message}}
+Update Message: {{message}}
+{{/if}}
+
+Load Details:
+-------------
+Load Number: {{loadNumber}}
+Status: {{status}}
+Commodity: {{commodity}}
+Weight: {{weight}} lbs
+Pickup Date: {{pickupDate}}
+Delivery Date: {{deliveryDate}}
+Customer Rate: ${{customerRate}}
+
+{{#if trackingNumber}}
+Tracking Information:
+--------------------
+Tracking Number: {{trackingNumber}}
+{{#if carrierName}}
+Carrier: {{carrierName}}
+{{/if}}
+{{#if currentLocation}}
+Current Location: {{currentLocation}}
+{{/if}}
+{{#if eta}}
+Estimated Arrival: {{eta}}
+{{/if}}
+{{/if}}
+
+View Load Details: {{loadUrl}}
+
+Need to make changes? You can update load details, add notes, or contact the carrier directly from your dashboard.
+
+---
+This email was sent by LogicorpTMS
+Dashboard: {{dashboardUrl}}
+Support: {{supportUrl}}
+Privacy Policy: {{privacyUrl}}
+
+© 2024 LogicorpTMS. All rights reserved.

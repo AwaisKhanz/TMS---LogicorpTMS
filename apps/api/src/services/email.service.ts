@@ -1,26 +1,13 @@
-import sgMail from "@sendgrid/mail";
 import { logger } from "../config/logger.js";
 import { config } from "../config/env.js";
 import { templateService } from "./template.service.js";
+import { SMTPService } from "./smtp.service.js";
 
 export class EmailService {
-  private isInitialized = false;
+  private smtpService: SMTPService;
 
   constructor() {
-    this.initialize();
-  }
-
-  private initialize() {
-    if (!config.email.sendgridApiKey) {
-      logger.warn(
-        "SENDGRID_API_KEY not found. Email service will be disabled."
-      );
-      return;
-    }
-
-    sgMail.setApiKey(config.email.sendgridApiKey);
-    this.isInitialized = true;
-    logger.info("SendGrid email service initialized");
+    this.smtpService = new SMTPService();
   }
 
   private async sendEmail(
@@ -29,25 +16,19 @@ export class EmailService {
     html: string,
     text?: string
   ) {
-    if (!this.isInitialized) {
-      logger.warn("Email service not initialized. Skipping email send.");
-      return;
-    }
-
     try {
-      const msg = {
+      const result = await this.smtpService.sendEmail(
         to,
-        from: {
-          email: config.email.fromEmail,
-          name: "LogicorpTMS",
-        },
         subject,
-        text,
         html,
-      };
+        text || html
+      );
 
-      await sgMail.send(msg);
-      logger.info(`Email sent successfully to ${to}`);
+      if (result.sent) {
+        logger.info(`Email sent successfully to ${to}`);
+      } else {
+        logger.warn(`Failed to send email to ${to}: ${result.error}`);
+      }
     } catch (error) {
       logger.error("Failed to send email:", error);
       throw new Error("Failed to send email");
@@ -102,10 +83,272 @@ export class EmailService {
     const html = templateService.getEmailVerificationHtml({
       verificationUrl,
       userName,
+      supportUrl: `${config.email.frontendUrl}/support`,
+      privacyUrl: `${config.email.frontendUrl}/privacy`,
+      termsUrl: `${config.email.frontendUrl}/terms`,
     });
     const text = templateService.getEmailVerificationText({
       verificationUrl,
       userName,
+    });
+
+    await this.sendEmail(email, subject, html, text);
+  }
+
+  async sendLoadStatusUpdate(
+    email: string,
+    userName: string,
+    loadData: {
+      loadNumber: string;
+      status: string;
+      message?: string;
+      commodity: string;
+      weight: string;
+      pickupDate: string;
+      deliveryDate: string;
+      customerRate: string;
+      trackingNumber?: string;
+      carrierName?: string;
+      currentLocation?: string;
+      eta?: string;
+      loadId: string;
+    }
+  ) {
+    const subject = `Load Status Update: ${loadData.loadNumber} - ${loadData.status}`;
+    const loadUrl = `${config.email.frontendUrl}/loads/${loadData.loadId}`;
+
+    const html = templateService.getLoadStatusUpdateHtml({
+      userName,
+      loadNumber: loadData.loadNumber,
+      status: loadData.status,
+      message: loadData.message,
+      commodity: loadData.commodity,
+      weight: loadData.weight,
+      pickupDate: loadData.pickupDate,
+      deliveryDate: loadData.deliveryDate,
+      customerRate: loadData.customerRate,
+      trackingNumber: loadData.trackingNumber,
+      carrierName: loadData.carrierName,
+      currentLocation: loadData.currentLocation,
+      eta: loadData.eta,
+      loadUrl,
+      dashboardUrl: `${config.email.frontendUrl}/dashboard`,
+      supportUrl: `${config.email.frontendUrl}/support`,
+      privacyUrl: `${config.email.frontendUrl}/privacy`,
+    });
+
+    const text = templateService.getLoadStatusUpdateText({
+      userName,
+      loadNumber: loadData.loadNumber,
+      status: loadData.status,
+      message: loadData.message,
+      commodity: loadData.commodity,
+      weight: loadData.weight,
+      pickupDate: loadData.pickupDate,
+      deliveryDate: loadData.deliveryDate,
+      customerRate: loadData.customerRate,
+      trackingNumber: loadData.trackingNumber,
+      carrierName: loadData.carrierName,
+      currentLocation: loadData.currentLocation,
+      eta: loadData.eta,
+      loadUrl,
+      dashboardUrl: `${config.email.frontendUrl}/dashboard`,
+      supportUrl: `${config.email.frontendUrl}/support`,
+      privacyUrl: `${config.email.frontendUrl}/privacy`,
+    });
+
+    await this.sendEmail(email, subject, html, text);
+  }
+
+  async sendDocumentDelivery(
+    email: string,
+    userName: string,
+    documentData: {
+      loadNumber: string;
+      documentType: string;
+      message?: string;
+      generatedDate: string;
+      expiryDate: string;
+      referenceNumber?: string;
+      attachments?: Array<{ name: string; size: string }>;
+      downloadUrl: string;
+      loadId: string;
+    }
+  ) {
+    const subject = `${documentData.documentType} Ready: ${documentData.loadNumber}`;
+    const loadUrl = `${config.email.frontendUrl}/loads/${documentData.loadId}`;
+
+    const html = templateService.getDocumentDeliveryHtml({
+      userName,
+      loadNumber: documentData.loadNumber,
+      documentType: documentData.documentType,
+      message: documentData.message,
+      generatedDate: documentData.generatedDate,
+      expiryDate: documentData.expiryDate,
+      referenceNumber: documentData.referenceNumber,
+      attachments: documentData.attachments,
+      downloadUrl: documentData.downloadUrl,
+      loadUrl,
+      dashboardUrl: `${config.email.frontendUrl}/dashboard`,
+      supportUrl: `${config.email.frontendUrl}/support`,
+    });
+
+    const text = templateService.getDocumentDeliveryText({
+      userName,
+      loadNumber: documentData.loadNumber,
+      documentType: documentData.documentType,
+      message: documentData.message,
+      generatedDate: documentData.generatedDate,
+      expiryDate: documentData.expiryDate,
+      referenceNumber: documentData.referenceNumber,
+      attachments: documentData.attachments,
+      downloadUrl: documentData.downloadUrl,
+      loadUrl,
+      dashboardUrl: `${config.email.frontendUrl}/dashboard`,
+      supportUrl: `${config.email.frontendUrl}/support`,
+    });
+
+    await this.sendEmail(email, subject, html, text);
+  }
+
+  async sendNotification(
+    email: string,
+    notificationData: {
+      title: string;
+      userName: string;
+      message: string;
+      type: string;
+      priority: string;
+      date: string;
+      entityType?: string;
+      entityId?: string;
+      content?: string;
+      actionRequired?: string;
+      actionUrl?: string;
+      actionText?: string;
+    }
+  ) {
+    const subject = `${notificationData.title} - LogicorpTMS`;
+
+    const html = templateService.getNotificationHtml({
+      title: notificationData.title,
+      userName: notificationData.userName,
+      message: notificationData.message,
+      type: notificationData.type,
+      priority: notificationData.priority,
+      date: notificationData.date,
+      entityType: notificationData.entityType,
+      entityId: notificationData.entityId,
+      content: notificationData.content,
+      actionRequired: notificationData.actionRequired,
+      actionUrl: notificationData.actionUrl,
+      actionText: notificationData.actionText,
+      dashboardUrl: `${config.email.frontendUrl}/dashboard`,
+      notificationsUrl: `${config.email.frontendUrl}/notifications`,
+      supportUrl: `${config.email.frontendUrl}/support`,
+    });
+
+    const text = templateService.getNotificationText({
+      title: notificationData.title,
+      userName: notificationData.userName,
+      message: notificationData.message,
+      type: notificationData.type,
+      priority: notificationData.priority,
+      date: notificationData.date,
+      entityType: notificationData.entityType,
+      entityId: notificationData.entityId,
+      content: notificationData.content,
+      actionRequired: notificationData.actionRequired,
+      actionUrl: notificationData.actionUrl,
+      actionText: notificationData.actionText,
+      dashboardUrl: `${config.email.frontendUrl}/dashboard`,
+      notificationsUrl: `${config.email.frontendUrl}/notifications`,
+      supportUrl: `${config.email.frontendUrl}/support`,
+    });
+
+    await this.sendEmail(email, subject, html, text);
+  }
+
+  async sendTeamInvitation(
+    email: string,
+    invitationData: {
+      userName: string;
+      inviterName: string;
+      organizationName: string;
+      roles: string[];
+      invitationToken: string;
+    }
+  ) {
+    const acceptUrl = `${config.email.frontendUrl}/accept-invitation?token=${invitationData.invitationToken}`;
+    const subject = `You're invited to join ${invitationData.organizationName} on LogicorpTMS`;
+
+    const html = templateService.getTeamInvitationHtml({
+      userName: invitationData.userName,
+      inviterName: invitationData.inviterName,
+      organizationName: invitationData.organizationName,
+      roles: invitationData.roles.join(", "),
+      invitationDate: new Date().toLocaleDateString(),
+      email,
+      acceptUrl,
+      supportUrl: `${config.email.frontendUrl}/support`,
+      privacyUrl: `${config.email.frontendUrl}/privacy`,
+      termsUrl: `${config.email.frontendUrl}/terms`,
+    });
+
+    const text = templateService.getTeamInvitationText({
+      userName: invitationData.userName,
+      inviterName: invitationData.inviterName,
+      organizationName: invitationData.organizationName,
+      roles: invitationData.roles.join(", "),
+      invitationDate: new Date().toLocaleDateString(),
+      email,
+      acceptUrl,
+      supportUrl: `${config.email.frontendUrl}/support`,
+      privacyUrl: `${config.email.frontendUrl}/privacy`,
+      termsUrl: `${config.email.frontendUrl}/terms`,
+    });
+
+    await this.sendEmail(email, subject, html, text);
+  }
+
+  async sendPermissionChangeNotification(
+    email: string,
+    firstName: string,
+    organizationName: string,
+    changes: {
+      addedPermissions: string[];
+      removedPermissions: string[];
+      roleChanges: string[];
+    }
+  ) {
+    const subject = `Your permissions have been updated - ${organizationName}`;
+
+    const html = templateService.getPermissionChangeHtml({
+      firstName,
+      organizationName,
+      addedPermissions: changes.addedPermissions,
+      removedPermissions: changes.removedPermissions,
+      roleChanges: changes.roleChanges,
+      oldRoles: changes.roleChanges.slice(
+        0,
+        Math.floor(changes.roleChanges.length / 2)
+      ),
+      newRoles: changes.roleChanges.slice(
+        Math.floor(changes.roleChanges.length / 2)
+      ),
+      date: new Date().toLocaleDateString(),
+      dashboardUrl: `${config.email.frontendUrl}/dashboard`,
+      supportUrl: `${config.email.frontendUrl}/support`,
+    });
+
+    const text = templateService.getPermissionChangeText({
+      firstName,
+      organizationName,
+      addedPermissions: changes.addedPermissions,
+      removedPermissions: changes.removedPermissions,
+      roleChanges: changes.roleChanges,
+      date: new Date().toLocaleDateString(),
+      dashboardUrl: `${config.email.frontendUrl}/dashboard`,
     });
 
     await this.sendEmail(email, subject, html, text);

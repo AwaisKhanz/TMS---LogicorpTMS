@@ -1,0 +1,49 @@
+{{title}} - LogicorpTMS
+=======================
+
+Hi {{userName}},
+
+{{message}}
+
+{{#if actionRequired}}
+Action Required: {{actionRequired}}
+{{/if}}
+
+Notification Details:
+--------------------
+Type: {{type}}
+Priority: {{priority}}
+Date: {{date}}
+{{#if entityType}}
+Related To: {{entityType}}
+{{/if}}
+{{#if entityId}}
+Reference ID: {{entityId}}
+{{/if}}
+
+{{#if content}}
+Additional Information:
+-----------------------
+{{content}}
+{{/if}}
+
+{{#if actionUrl}}
+Take Action: {{actionUrl}}
+{{/if}}
+
+{{#if actionRequired}}
+Action Required: {{actionRequired}}
+{{#if actionUrl}}
+Please visit the link above to take the required action.
+{{/if}}
+{{/if}}
+
+Need help? If you have any questions about this notification, please contact our support team or check your dashboard for more details.
+
+---
+This email was sent by LogicorpTMS
+Dashboard: {{dashboardUrl}}
+All Notifications: {{notificationsUrl}}
+Support: {{supportUrl}}
+
+© 2024 LogicorpTMS. All rights reserved.

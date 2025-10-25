@@ -3,6 +3,7 @@ import { UserRepository } from "../repositories/user.repository.js";
 import { hashPassword } from "../utils/hash.util.js";
 import { NotFoundError, ConflictError } from "../utils/errors.util.js";
 import type { CreateUserDto, UpdateUserDto } from "../types/user.types.js";
+import prisma from "../config/database.js";
 
 export class UserService {
   private userRepo: UserRepository;
@@ -58,7 +59,15 @@ export class UserService {
       isActive: true,
     });
 
-    // TODO: Assign roles if roleIds provided
+    // Assign roles if roleIds provided
+    if (data.roleIds && data.roleIds.length > 0) {
+      await prisma.userRole.createMany({
+        data: data.roleIds.map((roleId) => ({
+          userId: user.id,
+          roleId,
+        })),
+      });
+    }
 
     const { passwordHash: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
@@ -91,5 +100,62 @@ export class UserService {
 
     // Soft delete by deactivating user
     await this.userRepo.update(id, { isActive: false }, organizationId);
+  }
+
+  async assignCustomers(
+    userId: string,
+    customerIds: string[],
+    organizationId: string
+  ): Promise<void> {
+    // Check if user exists
+    const user = await this.userRepo.findById(userId, organizationId);
+    if (!user) {
+      throw new NotFoundError("User");
+    }
+
+    // Verify all customers exist and belong to the organization
+    const customers = await prisma.customer.findMany({
+      where: {
+        id: { in: customerIds },
+        organizationId,
+        deletedAt: null,
+      },
+    });
+
+    if (customers.length !== customerIds.length) {
+      throw new NotFoundError("One or more customers not found");
+    }
+
+    // Use repository method
+    await this.userRepo.assignCustomers(userId, customerIds);
+  }
+
+  async getUserCustomers(
+    userId: string,
+    organizationId: string
+  ): Promise<any[]> {
+    // Check if user exists
+    const user = await this.userRepo.findById(userId, organizationId);
+    if (!user) {
+      throw new NotFoundError("User");
+    }
+
+    // Use repository method
+    return await this.userRepo.getUserCustomers(userId);
+  }
+
+  async removeCustomerAssignment(
+    userId: string,
+    customerId: string,
+    organizationId: string
+  ): Promise<void> {
+    // Check if user exists
+    const user = await this.userRepo.findById(userId, organizationId);
+    if (!user) {
+      throw new NotFoundError("User");
+    }
+
+    // Use repository method
+    await this.userRepo.removeCustomerAssignment(userId, customerId);
   }
 }

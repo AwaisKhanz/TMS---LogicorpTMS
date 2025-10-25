@@ -130,8 +130,8 @@
   html,
   body {
     @apply bg-background text-foreground;
-    height: 100%;
-    overflow: hidden;
+    /* height: 100%; */
+    /* overflow: hidden; */
   }
 
   #__next {

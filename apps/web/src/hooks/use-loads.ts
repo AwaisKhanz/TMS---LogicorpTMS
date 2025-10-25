@@ -5,12 +5,12 @@ import type { ApiErrorException } from "@/types/api.types";
 import type { LoadEvent, Document } from "@tms/shared-types";
 import type {
   LoadFilters,
-  CreateLoadInput,
-  UpdateLoadInput,
+  CreateLoadRequest,
+  UpdateLoadRequest,
   LoadStatus,
   DashboardStats,
   LoadStatisticsByStatus,
-} from "@/types/load.types";
+} from "@tms/shared-types";
 import type { Load } from "@tms/shared-types";
 
 interface PaginatedLoadsResponse {
@@ -121,7 +121,7 @@ export function useCreateLoad() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateLoadInput) => {
+    mutationFn: async (data: CreateLoadRequest) => {
       const response = await apiClient.post<{ success: boolean; data: Load }>(
         "/loads",
         data
@@ -132,7 +132,7 @@ export function useCreateLoad() {
       queryClient.invalidateQueries({ queryKey: loadKeys.lists() });
       queryClient.invalidateQueries({ queryKey: loadKeys.statistics() });
       queryClient.invalidateQueries({ queryKey: loadKeys.dashboardStats() });
-      toast.success("Load created successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -148,7 +148,13 @@ export function useUpdateLoad() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateLoadInput }) => {
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdateLoadRequest;
+    }) => {
       const response = await apiClient.put<{ success: boolean; data: Load }>(
         `/loads/${id}`,
         data
@@ -159,7 +165,7 @@ export function useUpdateLoad() {
       queryClient.invalidateQueries({ queryKey: loadKeys.lists() });
       queryClient.invalidateQueries({ queryKey: loadKeys.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: loadKeys.statistics() });
-      toast.success("Load updated successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -187,7 +193,7 @@ export function useUpdateLoadStatus() {
       queryClient.invalidateQueries({ queryKey: loadKeys.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: loadKeys.statistics() });
       queryClient.invalidateQueries({ queryKey: loadKeys.dashboardStats() });
-      toast.success("Load status updated successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -212,7 +218,7 @@ export function useDeleteLoad() {
       queryClient.invalidateQueries({ queryKey: loadKeys.lists() });
       queryClient.invalidateQueries({ queryKey: loadKeys.statistics() });
       queryClient.invalidateQueries({ queryKey: loadKeys.dashboardStats() });
-      toast.success("Load deleted successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -236,7 +242,7 @@ export function useDuplicateLoad() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: loadKeys.lists() });
-      toast.success("Load duplicated successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -273,7 +279,7 @@ export function useAssignCarrier() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: loadKeys.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: loadKeys.lists() });
-      toast.success("Carrier assigned successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;

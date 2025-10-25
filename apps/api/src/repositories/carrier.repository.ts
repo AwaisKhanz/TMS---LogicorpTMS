@@ -346,54 +346,8 @@ export class CarrierRepository extends BaseRepository<Carrier> {
         contactName: true,
         contactPhone: true,
         equipment: true,
-        onTimeDelivery: true,
-        rating: true,
       },
-      orderBy: [{ rating: "desc" }, { onTimeDelivery: "desc" }],
-    });
-  }
-
-  async updatePerformanceMetrics(
-    carrierId: string,
-    organizationId: string
-  ): Promise<void> {
-    // Calculate performance metrics
-    const stats = await this.prisma.load.groupBy({
-      by: ["status"],
-      where: {
-        carrierId,
-        organizationId,
-        deletedAt: null,
-        deliveredAt: { not: null },
-      },
-      _count: {
-        id: true,
-      },
-    });
-
-    const totalDelivered = stats.reduce((sum, stat) => sum + stat._count.id, 0);
-
-    // Calculate on-time delivery percentage
-    const onTimeDeliveries = await this.prisma.load.count({
-      where: {
-        carrierId,
-        organizationId,
-        deletedAt: null,
-        status: "DELIVERED",
-        deliveredAt: { not: null },
-        // TODO: Add logic for on-time delivery based on your requirements
-      },
-    });
-
-    const onTimePercentage =
-      totalDelivered > 0 ? (onTimeDeliveries / totalDelivered) * 100 : 100;
-
-    await this.prisma.carrier.update({
-      where: { id: carrierId },
-      data: {
-        totalLoads: totalDelivered,
-        onTimeDelivery: onTimePercentage,
-      },
+      orderBy: [{ companyName: "asc" }],
     });
   }
 
@@ -411,8 +365,12 @@ export class CarrierRepository extends BaseRepository<Carrier> {
     return this.prisma.carrierContact.create({
       data: {
         ...contactData,
-        carrierId,
-      } as Prisma.CarrierContactCreateInput,
+        carrier: {
+          connect: {
+            id: carrierId,
+          },
+        },
+      },
     });
   }
 
@@ -494,7 +452,7 @@ export class CarrierRepository extends BaseRepository<Carrier> {
             carrierId,
             organizationId,
             deletedAt: null,
-            status: { in: ["DELIVERED", "POD_RECEIVED", "INVOICED", "PAID"] },
+            status: { in: ["DELIVERED", "POD_RECEIVED", "COMPLETED", "PAID"] },
           },
         }),
         this.prisma.load.aggregate({
@@ -514,8 +472,6 @@ export class CarrierRepository extends BaseRepository<Carrier> {
       totalLoads,
       activeLoads,
       completedLoads,
-      onTimeDeliveryRate: carrier.onTimeDelivery,
-      averageRating: carrier.rating,
       totalRevenue: Number(revenue._sum.carrierRate) || 0,
       averageMargin:
         totalLoads > 0 ? (Number(revenue._sum.margin) || 0) / totalLoads : 0,
@@ -619,33 +575,6 @@ export class CarrierRepository extends BaseRepository<Carrier> {
         alertLevel,
       };
     });
-  }
-
-  async addRating(
-    carrierId: string,
-    rating: number,
-    comment: string | undefined,
-    userId: string,
-    loadId: string | undefined
-  ) {
-    // Store rating in a separate table (needs to be added to schema)
-    // For now, we'll update the carrier's average rating directly
-    // In production, create a CarrierRating table to track history
-
-    return {
-      carrierId,
-      rating,
-      comment,
-      userId,
-      loadId,
-      createdAt: new Date(),
-    };
-  }
-
-  async recalculateAverageRating(_carrierId: string) {
-    // In production, calculate from CarrierRating table
-    // For now, this is a placeholder
-    // The rating will be updated manually or from load feedback
   }
 
   async getCarrierNamesByIds(organizationId: string, carrierIds: string[]) {

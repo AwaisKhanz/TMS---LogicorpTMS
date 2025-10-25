@@ -31,7 +31,7 @@ const statusConfig: Record<
   IN_TRANSIT: { label: "In Transit", variant: "default" },
   DELIVERED: { label: "Delivered", variant: "default" },
   POD_RECEIVED: { label: "POD Received", variant: "default" },
-  INVOICED: { label: "Invoiced", variant: "default" },
+  COMPLETED: { label: "Completed", variant: "default" },
   PAID: { label: "Paid", variant: "default" },
   CANCELLED: { label: "Cancelled", variant: "destructive" },
 };
@@ -45,7 +45,8 @@ export function CarrierLoads({ carrierId }: CarrierLoadsProps) {
   const [page, setPage] = useState(1);
   const { data: loadsData, isLoading } = useCarrierLoads(carrierId);
 
-  const loads = loadsData?.loads || [];
+  // Handle both array response and object response
+  const loads = loadsData?.data || [];
   const pagination = loadsData?.pagination;
 
   const formatCurrency = (amount: number) => {
@@ -68,7 +69,7 @@ export function CarrierLoads({ carrierId }: CarrierLoadsProps) {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : loads.length === 0 ? (
+        ) : loads?.length === 0 ? (
           <div className="text-center py-12">
             <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-sm text-muted-foreground">No loads yet</p>
@@ -87,7 +88,7 @@ export function CarrierLoads({ carrierId }: CarrierLoadsProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loads.map((load: CarrierLoadData) => (
+                  {loads?.map((load: CarrierLoadData) => (
                     <TableRow
                       key={load.id}
                       className="cursor-pointer hover:bg-muted/50"
@@ -96,7 +97,7 @@ export function CarrierLoads({ carrierId }: CarrierLoadsProps) {
                       <TableCell className="font-medium">
                         {load.loadNumber}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <Badge
                           variant={
                             statusConfig[load.status]?.variant || "secondary"
@@ -105,11 +106,13 @@ export function CarrierLoads({ carrierId }: CarrierLoadsProps) {
                           {statusConfig[load.status]?.label || load.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{load.customer?.companyName}</TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {load.customer?.companyName}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {format(new Date(load.pickupDate), "MMM dd, yyyy")}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {load.carrierRate
                           ? formatCurrency(Number(load.carrierRate))
                           : "-"}

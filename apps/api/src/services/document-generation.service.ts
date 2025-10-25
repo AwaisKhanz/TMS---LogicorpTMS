@@ -33,7 +33,7 @@ export class DocumentGenerationService {
     organizationId: string,
     userId: string
   ) {
-    // Fetch load data
+    // Fetch load data with shipper and consignee relations
     const load = await prisma.load.findFirst({
       where: {
         id: loadId,
@@ -44,6 +44,8 @@ export class DocumentGenerationService {
         customer: true,
         carrier: true,
         organization: true,
+        shipper: true,
+        consignee: true,
       },
     });
 
@@ -57,9 +59,23 @@ export class DocumentGenerationService {
       );
     }
 
-    // Parse JSON address fields
-    const shipperAddress = load.shipperAddress as Address;
-    const consigneeAddress = load.consigneeAddress as Address;
+    // Construct address objects from shipper/consignee data
+    const shipperAddress: Address = {
+      street: load.shipper.streetAddress,
+      city: load.shipper.city,
+      state: load.shipper.state,
+      zip: load.shipper.zipCode,
+      country: load.shipper.country,
+    };
+
+    const consigneeAddress: Address = {
+      street: load.consignee.streetAddress,
+      city: load.consignee.city,
+      state: load.consignee.state,
+      zip: load.consignee.zipCode,
+      country: load.consignee.country,
+    };
+
     const customerAddress = load.customer.billingAddress as Address;
 
     const data: RateConfirmationData = {
@@ -72,14 +88,14 @@ export class DocumentGenerationService {
       pickupDate: load.pickupDate.toISOString().split("T")[0],
       deliveryDate: load.deliveryDate.toISOString().split("T")[0],
       shipper: {
-        name: load.shipperName,
+        name: load.shipper.companyName,
         address: shipperAddress,
-        phone: load.shipperPhone,
+        phone: load.shipper.phone,
       },
       consignee: {
-        name: load.consigneeName,
+        name: load.consignee.companyName,
         address: consigneeAddress,
-        phone: load.consigneePhone,
+        phone: load.consignee.phone,
       },
       commodity: load.commodity,
       weight: load.weight,
@@ -155,7 +171,7 @@ export class DocumentGenerationService {
   }
 
   async generateBOL(loadId: string, organizationId: string, userId: string) {
-    // Fetch load data
+    // Fetch load data with shipper and consignee relations
     const load = await prisma.load.findFirst({
       where: {
         id: loadId,
@@ -165,6 +181,8 @@ export class DocumentGenerationService {
       include: {
         carrier: true,
         organization: true,
+        shipper: true,
+        consignee: true,
       },
     });
 
@@ -176,23 +194,36 @@ export class DocumentGenerationService {
       throw new Error("Load must have a carrier assigned to generate BOL");
     }
 
-    // Parse JSON address fields
-    const shipperAddress = load.shipperAddress as Address;
-    const consigneeAddress = load.consigneeAddress as Address;
+    // Construct address objects from shipper/consignee data
+    const shipperAddress: Address = {
+      street: load.shipper.streetAddress,
+      city: load.shipper.city,
+      state: load.shipper.state,
+      zip: load.shipper.zipCode,
+      country: load.shipper.country,
+    };
+
+    const consigneeAddress: Address = {
+      street: load.consignee.streetAddress,
+      city: load.consignee.city,
+      state: load.consignee.state,
+      zip: load.consignee.zipCode,
+      country: load.consignee.country,
+    };
 
     const data: BOLData = {
       loadId: load.id,
       loadNumber: load.loadNumber,
       bolNumber: load.loadNumber, // Use load number as BOL number
       shipper: {
-        name: load.shipperName,
+        name: load.shipper.companyName,
         address: shipperAddress,
-        phone: load.shipperPhone,
+        phone: load.shipper.phone,
       },
       consignee: {
-        name: load.consigneeName,
+        name: load.consignee.companyName,
         address: consigneeAddress,
-        phone: load.consigneePhone,
+        phone: load.consignee.phone,
       },
       carrierName: load.carrier.companyName,
       carrierMC: load.carrier.mcNumber,
@@ -381,7 +412,7 @@ export class DocumentGenerationService {
   }
 
   async generatePOD(loadId: string, organizationId: string, userId: string) {
-    // Fetch load data
+    // Fetch load data with consignee relation
     const load = await prisma.load.findFirst({
       where: {
         id: loadId,
@@ -391,6 +422,7 @@ export class DocumentGenerationService {
       include: {
         carrier: true,
         organization: true,
+        consignee: true,
       },
     });
 
@@ -402,17 +434,23 @@ export class DocumentGenerationService {
       throw new Error("Load must have a carrier assigned to generate POD");
     }
 
-    // Parse JSON address fields
-    const consigneeAddress = load.consigneeAddress as Address;
+    // Construct address object from consignee data
+    const consigneeAddress: Address = {
+      street: load.consignee.streetAddress,
+      city: load.consignee.city,
+      state: load.consignee.state,
+      zip: load.consignee.zipCode,
+      country: load.consignee.country,
+    };
 
     const data = {
       loadId: load.id,
       loadNumber: load.loadNumber,
       podNumber: await this.generatePODNumber(organizationId),
       consignee: {
-        name: load.consigneeName,
+        name: load.consignee.companyName,
         address: consigneeAddress,
-        phone: load.consigneePhone,
+        phone: load.consignee.phone,
       },
       carrierName: load.carrier.companyName,
       carrierMC: load.carrier.mcNumber,

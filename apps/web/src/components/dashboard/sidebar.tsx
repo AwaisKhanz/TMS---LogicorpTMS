@@ -11,11 +11,13 @@ import {
   Truck,
   Users,
   Building2,
-  FileText,
   Bell,
   Settings,
   HelpCircle,
   LogOut,
+  Package,
+  MapPin,
+  Receipt,
 } from "lucide-react";
 import { Logo } from "@/components/common/logo";
 import { Button } from "@/components/ui/button";
@@ -63,15 +65,33 @@ const mainNavItems: NavItem[] = [
     permission: PERMISSIONS.CUSTOMER_VIEW,
   },
   {
-    title: "Documents",
-    href: "/documents",
-    icon: FileText,
-    permission: PERMISSIONS.LOAD_VIEW_ALL, // Documents are typically associated with loads
+    title: "Shippers",
+    href: "/shippers",
+    icon: Package,
+    permission: PERMISSIONS.CUSTOMER_VIEW, // Using customer permissions for now
+  },
+  {
+    title: "Consignees",
+    href: "/consignees",
+    icon: MapPin,
+    permission: PERMISSIONS.CUSTOMER_VIEW, // Using customer permissions for now
+  },
+  {
+    title: "Invoices",
+    href: "/invoices",
+    icon: Receipt,
+    permission: PERMISSIONS.INVOICE_VIEW,
   },
   {
     title: "Notifications",
     href: "/notifications",
     icon: Bell,
+  },
+  {
+    title: "Team",
+    href: "/team",
+    icon: Users,
+    permission: PERMISSIONS.USER_VIEW,
   },
 ];
 

@@ -26,18 +26,54 @@ import {
   type Notification,
 } from "@tms/shared-types";
 
+// Helper function to get navigation URL based on entity type and ID
+const getEntityUrl = (
+  entityType: string | null | undefined,
+  entityId: string | null | undefined
+): string | null => {
+  if (!entityType || !entityId) return null;
+
+  switch (entityType) {
+    case "CUSTOMER":
+      return `/customers/${entityId}`;
+    case "LOAD":
+      return `/loads/${entityId}`;
+    case "CARRIER":
+      return `/carriers/${entityId}`;
+    case "INVOICE":
+      return `/invoices/${entityId}`;
+    case "DOCUMENT":
+      return `/documents/${entityId}`;
+    default:
+      return null;
+  }
+};
+
 interface NotificationItemProps {
   notification: Notification;
   onMarkAsRead: (id: string) => void;
+  onClose?: () => void;
 }
 
 function NotificationItem({
   notification,
   onMarkAsRead,
+  onClose,
 }: NotificationItemProps) {
+  const router = useRouter();
+
   const handleClick = () => {
+    // Mark as read if unread
     if (!notification.readAt) {
       onMarkAsRead(notification.id);
+    }
+
+    // Navigate to the entity if available
+    const url = getEntityUrl(notification.entityType, notification.entityId);
+    if (url) {
+      router.push(url);
+      // Close the dropdown after navigation
+      onClose?.();
     }
   };
 
@@ -53,7 +89,7 @@ function NotificationItem({
     >
       {/* Unread indicator */}
       {isUnread && (
-        <div className="w-1 h-full absolute left-0 top-0 rounded-r bg-blue-500" />
+        <div className="w-1 h-full absolute left-0 top-0 rounded-r bg-primary" />
       )}
 
       {/* Icon */}
@@ -184,6 +220,7 @@ export function NotificationDropdown() {
                   key={notification.id}
                   notification={notification}
                   onMarkAsRead={handleMarkAsRead}
+                  onClose={() => setIsOpen(false)}
                 />
               ))}
             </div>

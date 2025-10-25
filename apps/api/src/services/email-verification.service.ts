@@ -14,7 +14,7 @@ export class EmailVerificationService {
       sub: userId,
       org: "",
       email: email,
-      role: "USER",
+      role: "VIEWER",
       permissions: [],
     });
 
@@ -51,13 +51,20 @@ export class EmailVerificationService {
         },
       },
       include: {
-        user: true,
+        user: {
+          include: {
+            organization: true,
+          },
+        },
       },
     });
 
     if (!verification) {
       throw new Error("Invalid or expired verification token");
     }
+
+    // Check if user is already verified to prevent duplicate welcome emails
+    const wasAlreadyVerified = verification.user.emailVerified;
 
     // Update user email verification status
     await prisma.user.update({
@@ -68,10 +75,37 @@ export class EmailVerificationService {
       },
     });
 
-    // Delete verification token
-    await prisma.emailVerification.delete({
-      where: { id: verification.id },
-    });
+    // Delete verification token (with error handling for duplicate requests)
+    try {
+      await prisma.emailVerification.delete({
+        where: { id: verification.id },
+      });
+    } catch (error) {
+      // If record doesn't exist, it might have been deleted already (duplicate request)
+      // This is not a critical error, so we can continue
+      logger.warn(
+        `Email verification token already deleted for user ${verification.userId}`
+      );
+    }
+
+    // Send welcome email only if user was just verified (not already verified)
+    if (!wasAlreadyVerified) {
+      try {
+        await emailService.sendWelcomeEmail(
+          verification.user.email,
+          verification.user.firstName,
+          verification.user.organization.name
+        );
+        logger.info(`Welcome email sent to ${verification.user.email}`);
+      } catch (error) {
+        // Log error but don't fail the verification
+        logger.error("Failed to send welcome email:", error);
+      }
+    } else {
+      logger.info(
+        `User ${verification.userId} was already verified, skipping welcome email`
+      );
+    }
 
     logger.info(`Email verified for user ${verification.userId}`);
     return verification.user;

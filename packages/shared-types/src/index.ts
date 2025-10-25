@@ -5,6 +5,8 @@ export * from "./user.types";
 export * from "./load.types";
 export * from "./carrier.types";
 export * from "./customer.types";
+export * from "./shipper.types";
+export * from "./consignee.types";
 export * from "./dashboard.types";
 export * from "./document.types";
 export * from "./settings.types";

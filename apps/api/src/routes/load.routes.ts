@@ -8,7 +8,7 @@ import { authorize } from "../middleware/authorization.middleware.js";
 import { PERMISSIONS } from "@tms/shared-types";
 import { z } from "zod";
 
-const router = Router();
+const router: Router = Router();
 const loadController = new LoadController();
 
 // Validation schemas
@@ -112,7 +112,7 @@ export const updateStatusSchema = z.object({
     "IN_TRANSIT",
     "DELIVERED",
     "POD_RECEIVED",
-    "INVOICED",
+    "COMPLETED",
     "PAID",
     "CANCELLED",
   ]),
@@ -128,6 +128,11 @@ router.get(
   "/",
   authorize(PERMISSIONS.LOAD_VIEW_ALL, PERMISSIONS.LOAD_VIEW_OWN),
   loadController.getLoads
+);
+router.get(
+  "/completed",
+  authorize(PERMISSIONS.LOAD_VIEW_ALL, PERMISSIONS.LOAD_VIEW_OWN),
+  loadController.getCompletedLoads
 );
 router.get(
   "/statistics",
@@ -190,6 +195,11 @@ router.put(
   authorize(PERMISSIONS.LOAD_EDIT),
   validateRequest(updateLoadSchema),
   loadController.updateLoad
+);
+router.put(
+  "/:id/status",
+  authorize(PERMISSIONS.LOAD_EDIT),
+  loadController.updateLoadStatus
 );
 router.patch(
   "/:id/status",

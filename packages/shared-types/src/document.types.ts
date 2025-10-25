@@ -10,6 +10,7 @@ export enum DocumentType {
   INSURANCE = "INSURANCE",
   AUTHORITY = "AUTHORITY",
   CONTRACT = "CONTRACT",
+  AVATAR = "AVATAR",
   OTHER = "OTHER",
 }
 
@@ -62,23 +63,36 @@ export interface DocumentFilters {
 
 // Response Types
 export interface CreateDocumentResponse {
-  document: Document;
+  success: boolean;
+  data: Document;
 }
 
 export interface UpdateDocumentResponse {
-  document: Document;
+  success: boolean;
+  data: Document;
 }
 
 export interface GetDocumentResponse {
-  document: Document;
+  success: boolean;
+  data: Document;
 }
 
 export interface GetDocumentsResponse {
-  documents: Document[];
+  success: boolean;
+  data: Document[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
 export interface DeleteDocumentResponse {
-  message: string;
+  success: boolean;
+  data: {
+    message: string;
+  };
 }
 
 // Upload Types
@@ -92,7 +106,8 @@ export interface UploadFileRequest {
 }
 
 export interface UploadFileResponse {
-  document: Document;
+  success: boolean;
+  data: Document;
   fileUrl: string;
 }
 
@@ -220,7 +235,8 @@ export interface GenerateInvoiceRequest {
 
 // Generate Document Responses
 export interface GenerateDocumentResponse {
-  document: Document;
+  success: boolean;
+  data: Document;
   fileUrl: string;
   pdfBuffer?: Buffer;
 }
@@ -263,6 +279,7 @@ export interface DocumentDownloadRequest {
 }
 
 export interface DocumentPreviewResponse {
-  document: Document;
+  success: boolean;
+  data: Document;
   previewUrl: string;
 }

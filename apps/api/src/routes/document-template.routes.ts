@@ -9,7 +9,7 @@ import { authenticate } from "../middleware/auth.middleware.js";
 import { validateTenant } from "../middleware/tenant.middleware.js";
 import { requireEmailVerification } from "../middleware/email-verification.middleware.js";
 
-const router = Router();
+const router: Router = Router();
 const documentTemplateController = new DocumentTemplateController();
 
 // All template routes require authentication, tenant validation, and email verification

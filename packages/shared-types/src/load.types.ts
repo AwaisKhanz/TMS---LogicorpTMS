@@ -8,7 +8,7 @@ export enum LoadStatus {
   IN_TRANSIT = "IN_TRANSIT",
   DELIVERED = "DELIVERED",
   POD_RECEIVED = "POD_RECEIVED",
-  INVOICED = "INVOICED",
+  COMPLETED = "COMPLETED",
   PAID = "PAID",
   CANCELLED = "CANCELLED",
 }
@@ -55,6 +55,32 @@ export interface LoadCarrier {
   id: string;
   companyName: string;
   mcNumber: string;
+}
+
+export interface LoadShipper {
+  id: string;
+  companyName: string;
+  phone: string;
+  email?: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  contactPerson?: string;
+}
+
+export interface LoadConsignee {
+  id: string;
+  companyName: string;
+  phone: string;
+  email?: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  contactPerson?: string;
 }
 
 export interface LoadCreator {
@@ -113,29 +139,29 @@ export interface Load {
   carrier?: LoadCarrier;
 
   // Shipper
-  shipperName: string;
-  shipperAddress: Address;
-  shipperPhone: string;
-  shipperEmail?: string;
+  shipperId: string;
+  shipper: LoadShipper;
   pickupDate: string;
   pickupStart: string;
   pickupEnd: string;
   pickupNotes?: string;
+  pickupType: "FCFS" | "BY_APPOINTMENT";
 
   // Consignee
-  consigneeName: string;
-  consigneeAddress: Address;
-  consigneePhone: string;
-  consigneeEmail?: string;
+  consigneeId: string;
+  consignee: LoadConsignee;
   deliveryDate: string;
   deliveryStart: string;
   deliveryEnd: string;
   deliveryNotes?: string;
+  deliveryType: "FCFS" | "BY_APPOINTMENT";
 
   // Load Details
   commodity: string;
   weight: number;
   pieces?: number;
+  units?: number;
+  multipleCommodityDescription?: string;
   dimensions?: Dimensions;
   equipmentType: EquipmentType;
   loadType: LoadType;
@@ -145,6 +171,12 @@ export interface Load {
   carrierRate?: number;
   margin?: number;
   accessorials?: Accessorial[];
+
+  // Rate Change Tracking
+  customerRateChangeReason?: string;
+  carrierRateChangeReason?: string;
+  lastCustomerRateChange?: string;
+  lastCarrierRateChange?: string;
 
   // Tracking
   currentLocation?: LoadTrackingInfo;
@@ -181,29 +213,27 @@ export interface CreateLoadRequest {
   carrierId?: string;
 
   // Shipper
-  shipperName: string;
-  shipperAddress: Address;
-  shipperPhone: string;
-  shipperEmail?: string;
+  shipperId: string;
   pickupDate: string; // Always string in requests
   pickupStart: string;
   pickupEnd: string;
   pickupNotes?: string;
+  pickupType: "FCFS" | "BY_APPOINTMENT";
 
   // Consignee
-  consigneeName: string;
-  consigneeAddress: Address;
-  consigneePhone: string;
-  consigneeEmail?: string;
+  consigneeId: string;
   deliveryDate: string; // Always string in requests
   deliveryStart: string;
   deliveryEnd: string;
   deliveryNotes?: string;
+  deliveryType: "FCFS" | "BY_APPOINTMENT";
 
   // Load Details
   commodity: string;
   weight: number;
   pieces?: number;
+  units?: number;
+  multipleCommodityDescription?: string;
   dimensions?: Dimensions;
   equipmentType: EquipmentType;
   loadType?: LoadType;
@@ -212,6 +242,10 @@ export interface CreateLoadRequest {
   customerRate: number;
   carrierRate?: number;
   accessorials?: Accessorial[];
+
+  // Rate Change Tracking
+  customerRateChangeReason?: string;
+  carrierRateChangeReason?: string;
 
   // Instructions
   internalNotes?: string;
@@ -240,23 +274,36 @@ export interface LoadFilters {
 
 // Response Types
 export interface CreateLoadResponse {
-  load: Load;
+  success: boolean;
+  data: Load;
 }
 
 export interface UpdateLoadResponse {
-  load: Load;
+  success: boolean;
+  data: Load;
 }
 
 export interface GetLoadResponse {
-  load: Load;
+  success: boolean;
+  data: Load;
 }
 
 export interface GetLoadsResponse {
-  loads: Load[];
+  success: boolean;
+  data: Load[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
 export interface DeleteLoadResponse {
-  message: string;
+  success: boolean;
+  data: {
+    message: string;
+  };
 }
 
 // Statistics Types
@@ -293,9 +340,10 @@ export interface LoadUpdatedEventData {
 }
 
 export interface StatusChangeEventData {
-  oldStatus: string;
-  newStatus: string;
-  updatedBy: string;
+  fromStatus: string;
+  toStatus: string;
+  changedBy: string;
+  reason?: string;
 }
 
 export type LoadEventData =

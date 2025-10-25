@@ -60,7 +60,7 @@ export class AuditService {
       organizationId,
       userId,
       action,
-      entityType: "USER",
+      entityType: "VIEWER",
       entityId: userId,
       ipAddress,
       userAgent,

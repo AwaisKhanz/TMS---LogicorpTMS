@@ -30,39 +30,11 @@ export function LoadForm({
       ? ({
           customerId: initialData.customerId,
           carrierId: initialData.carrierId,
-          shipperName: initialData.shipperName,
-          shipperStreet:
-            initialData.shipperStreet ||
-            (initialData.shipperAddress as Record<string, unknown>)?.street,
-          shipperCity:
-            initialData.shipperCity ||
-            (initialData.shipperAddress as Record<string, unknown>)?.city,
-          shipperState:
-            initialData.shipperState ||
-            (initialData.shipperAddress as Record<string, unknown>)?.state,
-          shipperZip:
-            initialData.shipperZip ||
-            (initialData.shipperAddress as Record<string, unknown>)?.zip,
-          shipperPhone: initialData.shipperPhone,
-          shipperEmail: initialData.shipperEmail,
+          shipperId: initialData.shipperId,
           pickupDate: initialData.pickupDate,
           pickupStart: initialData.pickupStart || "08:00",
           pickupEnd: initialData.pickupEnd || "17:00",
-          consigneeName: initialData.consigneeName,
-          consigneeStreet:
-            initialData.consigneeStreet ||
-            (initialData.consigneeAddress as Record<string, unknown>)?.street,
-          consigneeCity:
-            initialData.consigneeCity ||
-            (initialData.consigneeAddress as Record<string, unknown>)?.city,
-          consigneeState:
-            initialData.consigneeState ||
-            (initialData.consigneeAddress as Record<string, unknown>)?.state,
-          consigneeZip:
-            initialData.consigneeZip ||
-            (initialData.consigneeAddress as Record<string, unknown>)?.zip,
-          consigneePhone: initialData.consigneePhone,
-          consigneeEmail: initialData.consigneeEmail,
+          consigneeId: initialData.consigneeId,
           deliveryDate: initialData.deliveryDate,
           deliveryStart: initialData.deliveryStart || "08:00",
           deliveryEnd: initialData.deliveryEnd || "17:00",
@@ -77,12 +49,14 @@ export function LoadForm({
           deliveryNotes: initialData.deliveryNotes,
           internalNotes: initialData.internalNotes,
           referenceNumber: initialData.referenceNumber,
-        } as Partial<LoadFormData>)
+        } as LoadFormData)
       : {
           pickupStart: "08:00",
           pickupEnd: "17:00",
           deliveryStart: "08:00",
           deliveryEnd: "17:00",
+          pickupType: "FCFS",
+          deliveryType: "FCFS",
           weight: 0,
           customerRate: 0,
           equipmentType: "DRY_VAN",
@@ -96,27 +70,11 @@ export function LoadForm({
       const loadData = {
         customerId: data.customerId,
         carrierId: data.carrierId || undefined,
-        shipperName: data.shipperName,
-        shipperAddress: {
-          street: data.shipperStreet,
-          city: data.shipperCity,
-          state: data.shipperState,
-          zip: data.shipperZip,
-        },
-        shipperPhone: data.shipperPhone,
-        shipperEmail: data.shipperEmail || undefined,
+        shipperId: data.shipperId,
         pickupDate: data.pickupDate,
         pickupStart: data.pickupStart,
         pickupEnd: data.pickupEnd,
-        consigneeName: data.consigneeName,
-        consigneeAddress: {
-          street: data.consigneeStreet,
-          city: data.consigneeCity,
-          state: data.consigneeState,
-          zip: data.consigneeZip,
-        },
-        consigneePhone: data.consigneePhone,
-        consigneeEmail: data.consigneeEmail || undefined,
+        consigneeId: data.consigneeId,
         deliveryDate: data.deliveryDate,
         deliveryStart: data.deliveryStart,
         deliveryEnd: data.deliveryEnd,
@@ -163,7 +121,7 @@ export function LoadForm({
           <Button
             type="submit"
             disabled={isSubmittingProp}
-            className="flex items-center gap-2 px-8 py-3 h-12 font-medium bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-8 py-3 h-12 font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmittingProp ? (
               <>

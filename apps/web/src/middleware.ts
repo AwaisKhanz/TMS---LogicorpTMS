@@ -25,7 +25,6 @@ export function middleware(request: NextRequest) {
     "/register",
     "/forgot-password",
     "/reset-password",
-    "/verify-email",
   ];
 
   // Check if current path is a protected route

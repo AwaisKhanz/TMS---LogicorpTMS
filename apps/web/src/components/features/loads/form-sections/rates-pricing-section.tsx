@@ -10,6 +10,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import type { LoadFormData } from "@tms/shared-types";
 
 interface RatesPricingSectionProps {
@@ -94,9 +95,9 @@ export function RatesPricingSection({ control }: RatesPricingSectionProps) {
             <span
               className={`text-lg font-bold ${
                 margin > 0
-                  ? "text-green-600"
+                  ? "text-success"
                   : margin < 0
-                    ? "text-red-600"
+                    ? "text-destructive"
                     : "text-muted-foreground"
               }`}
             >
@@ -104,15 +105,57 @@ export function RatesPricingSection({ control }: RatesPricingSectionProps) {
             </span>
           </div>
           {margin > 0 && (
-            <p className="text-xs text-green-600 mt-1">
+            <p className="text-xs text-success mt-1">
               Positive margin - profitable load
             </p>
           )}
           {margin < 0 && (
-            <p className="text-xs text-red-600 mt-1">
+            <p className="text-xs text-destructive mt-1">
               Negative margin - review pricing
             </p>
           )}
+        </div>
+
+        <div className="space-y-4">
+          <h4 className="text-sm font-medium text-foreground">
+            Rate Change Tracking
+          </h4>
+
+          <FormField
+            control={control}
+            name="customerRateChangeReason"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Customer Rate Change Reason</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    placeholder="Reason for customer rate change..."
+                    className="min-h-[80px]"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name="carrierRateChangeReason"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Carrier Rate Change Reason</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    placeholder="Reason for carrier rate change..."
+                    className="min-h-[80px]"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
       </div>
     </div>

@@ -30,7 +30,7 @@ const createNotificationSchema = z.object({
       "DOCUMENT",
       "INVOICE",
       "PAYMENT",
-      "USER",
+      "VIEWER",
       "ORGANIZATION",
     ])
     .optional(),

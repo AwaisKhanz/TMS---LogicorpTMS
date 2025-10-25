@@ -10,7 +10,7 @@ import { authenticate } from "../middleware/auth.middleware.js";
 import { validateRequest } from "../middleware/validation.middleware.js";
 import { twoFactorRateLimiter } from "../middleware/rate-limit.middleware.js";
 
-const router = Router();
+const router: Router = Router();
 const twoFactorController = new TwoFactorController();
 
 // All 2FA routes require authentication

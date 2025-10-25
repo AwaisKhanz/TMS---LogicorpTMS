@@ -3,6 +3,7 @@
 import React, { ReactNode } from "react";
 import { usePermissions } from "@/hooks/use-permissions";
 import type { Role } from "@tms/shared-types";
+import { ROLES } from "@tms/shared-types";
 
 interface RoleGuardProps {
   role: Role;
@@ -93,7 +94,7 @@ interface AdminGuardProps {
  */
 export function AdminGuard({ children, fallback = null }: AdminGuardProps) {
   const { hasRole } = usePermissions();
-  const isAdmin = hasRole("ADMIN");
+  const isAdmin = hasRole(ROLES.ADMINISTRATOR);
 
   if (!isAdmin) {
     return <>{fallback}</>;
@@ -117,7 +118,8 @@ export function ManagerOrAdminGuard({
   fallback = null,
 }: ManagerOrAdminGuardProps) {
   const { hasRole } = usePermissions();
-  const isManagerOrAdmin = hasRole("ADMIN") || hasRole("MANAGER");
+  const isManagerOrAdmin =
+    hasRole(ROLES.ADMINISTRATOR) || hasRole(ROLES.MANAGER);
 
   if (!isManagerOrAdmin) {
     return <>{fallback}</>;
@@ -142,7 +144,9 @@ export function DispatcherOrHigherGuard({
 }: DispatcherOrHigherGuardProps) {
   const { hasRole } = usePermissions();
   const isDispatcherOrHigher =
-    hasRole("ADMIN") || hasRole("MANAGER") || hasRole("DISPATCHER");
+    hasRole(ROLES.ADMINISTRATOR) ||
+    hasRole(ROLES.MANAGER) ||
+    hasRole(ROLES.DISPATCHER);
 
   if (!isDispatcherOrHigher) {
     return <>{fallback}</>;

@@ -21,17 +21,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import {
   Dialog,
   DialogContent,
@@ -39,32 +30,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   useOrganizationSettings,
   useUpdateOrganization,
-  useUpdateBusinessSettings,
-  useUpdateDocumentNumbering,
-  useTeamMembers,
-  useInviteTeamMember,
-  useRemoveTeamMember,
 } from "@/hooks/use-settings";
-import {
-  Building,
-  Users,
-  Settings,
-  FileText,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Building, Upload } from "lucide-react";
+import { CanEdit } from "@/components/auth/can";
+import { apiClient } from "@/lib/api-client";
+import { toast } from "sonner";
 
 const organizationSchema = z.object({
   name: z.string().min(1, "Organization name is required"),
@@ -81,84 +55,24 @@ const organizationSchema = z.object({
   }),
 });
 
-const businessSettingsSchema = z.object({
-  timezone: z.string().min(1, "Timezone is required"),
-  currency: z.string().min(1, "Currency is required"),
-  dateFormat: z.string().min(1, "Date format is required"),
-  fuelSurchargeRate: z.number().min(0, "Fuel surcharge rate must be positive"),
-  defaultLoadMargin: z.number().min(0, "Default load margin must be positive"),
-  requireApprovalForLoads: z.boolean(),
-  allowCarrierSelfDispatch: z.boolean(),
-});
-
-const documentNumberingSchema = z.object({
-  loadNumberPrefix: z.string().min(1, "Load number prefix is required"),
-  loadNumberStart: z.number().min(1, "Load number start must be positive"),
-  invoiceNumberPrefix: z.string().min(1, "Invoice number prefix is required"),
-  invoiceNumberStart: z
-    .number()
-    .min(1, "Invoice number start must be positive"),
-  autoIncrement: z.boolean(),
-});
-
-const inviteTeamMemberSchema = z.object({
-  email: z.string().email("Invalid email"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  roleIds: z.array(z.string()).min(1, "At least one role must be selected"),
-});
-
-const timezones = [
-  { value: "America/New_York", label: "Eastern Time (ET)" },
-  { value: "America/Chicago", label: "Central Time (CT)" },
-  { value: "America/Denver", label: "Mountain Time (MT)" },
-  { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
-  { value: "America/Phoenix", label: "Arizona Time (MST)" },
-  { value: "America/Anchorage", label: "Alaska Time (AKST)" },
-  { value: "Pacific/Honolulu", label: "Hawaii Time (HST)" },
-];
-
-const currencies = [
-  { value: "USD", label: "US Dollar ($)" },
-  { value: "CAD", label: "Canadian Dollar (C$)" },
-  { value: "EUR", label: "Euro (€)" },
-  { value: "GBP", label: "British Pound (£)" },
-];
-
-const dateFormats = [
-  { value: "MM/DD/YYYY", label: "MM/DD/YYYY" },
-  { value: "DD/MM/YYYY", label: "DD/MM/YYYY" },
-  { value: "YYYY-MM-DD", label: "YYYY-MM-DD" },
-];
-
-const roles = [
-  {
-    id: "admin",
-    name: "Administrator",
-    description: "Full access to all features",
-  },
-  { id: "manager", name: "Manager", description: "Manage loads and carriers" },
-  {
-    id: "dispatcher",
-    name: "Dispatcher",
-    description: "Create and manage loads",
-  },
-  { id: "viewer", name: "Viewer", description: "View-only access" },
-];
-
 export function OrganizationSettings() {
   const { data: organization, isLoading } = useOrganizationSettings();
-  const { data: teamMembers } = useTeamMembers();
   const updateOrganization = useUpdateOrganization();
-  const updateBusinessSettings = useUpdateBusinessSettings();
-  const updateDocumentNumbering = useUpdateDocumentNumbering();
-  const inviteTeamMember = useInviteTeamMember();
-  const removeTeamMember = useRemoveTeamMember();
 
   const [isEditingOrg, setIsEditingOrg] = useState(false);
-  const [isEditingBusiness, setIsEditingBusiness] = useState(false);
-  const [isEditingNumbering, setIsEditingNumbering] = useState(false);
-  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [showLogoDialog, setShowLogoDialog] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Cleanup object URL on component unmount
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const organizationForm = useForm<z.infer<typeof organizationSchema>>({
     resolver: zodResolver(organizationSchema),
@@ -178,45 +92,6 @@ export function OrganizationSettings() {
     },
   });
 
-  const businessForm = useForm<z.infer<typeof businessSettingsSchema>>({
-    resolver: zodResolver(businessSettingsSchema),
-    defaultValues: {
-      timezone: organization?.businessSettings?.timezone || "America/New_York",
-      currency: organization?.businessSettings?.currency || "USD",
-      dateFormat: organization?.businessSettings?.dateFormat || "MM/DD/YYYY",
-      fuelSurchargeRate: organization?.businessSettings?.fuelSurchargeRate || 0,
-      defaultLoadMargin: organization?.businessSettings?.defaultLoadMargin || 0,
-      requireApprovalForLoads:
-        organization?.businessSettings?.requireApprovalForLoads || false,
-      allowCarrierSelfDispatch:
-        organization?.businessSettings?.allowCarrierSelfDispatch || false,
-    },
-  });
-
-  const numberingForm = useForm<z.infer<typeof documentNumberingSchema>>({
-    resolver: zodResolver(documentNumberingSchema),
-    defaultValues: {
-      loadNumberPrefix:
-        organization?.documentNumbering?.loadNumberPrefix || "LD",
-      loadNumberStart: organization?.documentNumbering?.loadNumberStart || 1000,
-      invoiceNumberPrefix:
-        organization?.documentNumbering?.invoiceNumberPrefix || "INV",
-      invoiceNumberStart:
-        organization?.documentNumbering?.invoiceNumberStart || 1000,
-      autoIncrement: organization?.documentNumbering?.autoIncrement || true,
-    },
-  });
-
-  const inviteForm = useForm<z.infer<typeof inviteTeamMemberSchema>>({
-    resolver: zodResolver(inviteTeamMemberSchema),
-    defaultValues: {
-      email: "",
-      firstName: "",
-      lastName: "",
-      roleIds: [],
-    },
-  });
-
   // Update forms when organization data loads
   React.useEffect(() => {
     if (organization) {
@@ -228,30 +103,23 @@ export function OrganizationSettings() {
         billingEmail: organization.billingEmail || "",
         address: organization.address,
       });
-      businessForm.reset({
-        timezone: organization.businessSettings.timezone,
-        currency: organization.businessSettings.currency,
-        dateFormat: organization.businessSettings.dateFormat,
-        fuelSurchargeRate: organization.businessSettings.fuelSurchargeRate,
-        defaultLoadMargin: organization.businessSettings.defaultLoadMargin,
-        requireApprovalForLoads:
-          organization.businessSettings.requireApprovalForLoads,
-        allowCarrierSelfDispatch:
-          organization.businessSettings.allowCarrierSelfDispatch,
-      });
-      numberingForm.reset({
-        loadNumberPrefix: organization.documentNumbering.loadNumberPrefix,
-        loadNumberStart: organization.documentNumbering.loadNumberStart,
-        invoiceNumberPrefix: organization.documentNumbering.invoiceNumberPrefix,
-        invoiceNumberStart: organization.documentNumbering.invoiceNumberStart,
-        autoIncrement: organization.documentNumbering.autoIncrement,
-      });
     }
-  }, [organization, organizationForm, businessForm, numberingForm]);
+  }, [organization, organizationForm]);
 
   const onOrganizationSubmit = async (
     data: z.infer<typeof organizationSchema>
   ) => {
+    console.log("Organization form submitted with data:", data);
+    console.log("isEditingOrg state:", isEditingOrg);
+
+    // Only submit if we're actually in editing mode
+    if (!isEditingOrg) {
+      console.log(
+        "Organization form submission prevented - not in editing mode"
+      );
+      return;
+    }
+
     try {
       await updateOrganization.mutateAsync(data);
       setIsEditingOrg(false);
@@ -260,47 +128,81 @@ export function OrganizationSettings() {
     }
   };
 
-  const onBusinessSubmit = async (
-    data: z.infer<typeof businessSettingsSchema>
-  ) => {
-    try {
-      await updateBusinessSettings.mutateAsync(data);
-      setIsEditingBusiness(false);
-    } catch (error) {
-      // Error is handled by the hook
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type and size
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
     }
+
+    if (file.size > 5 * 1024 * 1024) {
+      // 5MB limit
+      toast.error("Image size must be less than 5MB");
+      return;
+    }
+
+    // Set selected file and create preview
+    setSelectedFile(file);
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    setShowLogoDialog(true);
   };
 
-  const onNumberingSubmit = async (
-    data: z.infer<typeof documentNumberingSchema>
-  ) => {
-    try {
-      await updateDocumentNumbering.mutateAsync(data);
-      setIsEditingNumbering(false);
-    } catch (error) {
-      // Error is handled by the hook
-    }
-  };
+  const handleConfirmLogoUpload = async () => {
+    if (!selectedFile || !organization) return;
 
-  const onInviteSubmit = async (
-    data: z.infer<typeof inviteTeamMemberSchema>
-  ) => {
+    setIsUploading(true);
     try {
-      await inviteTeamMember.mutateAsync(data);
-      setIsInviteDialogOpen(false);
-      inviteForm.reset();
-    } catch (error) {
-      // Error is handled by the hook
-    }
-  };
+      // Use the existing document upload API
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("entityType", "ORGANIZATION");
+      formData.append("entityId", organization.id);
+      formData.append("type", "AVATAR");
+      formData.append("name", "logo");
 
-  const handleRemoveMember = async (memberId: string) => {
-    if (confirm("Are you sure you want to remove this team member?")) {
-      try {
-        await removeTeamMember.mutateAsync(memberId);
-      } catch (error) {
-        // Error is handled by the hook
+      // Upload file using the existing upload API
+      const response = (await apiClient.post("/documents/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      })) as { success: boolean; data?: { fileUrl: string } };
+
+      if (response.success && response.data?.fileUrl) {
+        // Update organization with the new logo URL
+        await updateOrganization.mutateAsync({
+          ...organization,
+          logo: response.data.fileUrl,
+        });
+
+        toast.success("Logo updated successfully");
+        // Close dialog and reset state
+        setShowLogoDialog(false);
+        setSelectedFile(null);
+        if (previewUrl) {
+          URL.revokeObjectURL(previewUrl);
+          setPreviewUrl(null);
+        }
+      } else {
+        throw new Error("Failed to upload logo");
       }
+    } catch (error) {
+      console.error("Logo upload error:", error);
+      toast.error("Failed to upload logo");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleCancelLogoUpload = () => {
+    setShowLogoDialog(false);
+    setSelectedFile(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
     }
   };
 
@@ -328,10 +230,60 @@ export function OrganizationSettings() {
             Manage your organization details and contact information
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          {/* Logo Section */}
+          <div className="flex items-center gap-4">
+            <Avatar className="h-20 w-20">
+              <AvatarImage
+                src={organization?.logo || ""}
+                alt="Organization Logo"
+                crossOrigin="anonymous"
+                referrerPolicy="no-referrer"
+              />
+              <AvatarFallback className="text-lg">
+                <Building className="h-8 w-8" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-2">
+              <div>
+                <label htmlFor="logo-upload" className="cursor-pointer">
+                  <Button variant="outline" size="sm" asChild>
+                    <span>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Change Logo
+                    </span>
+                  </Button>
+                </label>
+                <input
+                  id="logo-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                JPG, PNG or GIF. Max size 5MB.
+              </p>
+            </div>
+          </div>
+
           <Form {...organizationForm}>
             <form
-              onSubmit={organizationForm.handleSubmit(onOrganizationSubmit)}
+              onSubmit={(e) => {
+                console.log(
+                  "Organization form onSubmit triggered, isEditingOrg:",
+                  isEditingOrg
+                );
+                if (!isEditingOrg) {
+                  console.log(
+                    "Preventing organization form submission - not in editing mode"
+                  );
+                  e.preventDefault();
+                  return;
+                }
+                organizationForm.handleSubmit(onOrganizationSubmit)(e);
+              }}
               className="space-y-4"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -495,9 +447,21 @@ export function OrganizationSettings() {
 
               <div className="flex gap-2">
                 {!isEditingOrg ? (
-                  <Button type="button" onClick={() => setIsEditingOrg(true)}>
-                    Edit Organization
-                  </Button>
+                  <CanEdit resource="settings">
+                    <Button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log(
+                          "Edit Organization button clicked, setting isEditingOrg to true"
+                        );
+                        setIsEditingOrg(true);
+                      }}
+                    >
+                      Edit Organization
+                    </Button>
+                  </CanEdit>
                 ) : (
                   <>
                     <Button
@@ -526,8 +490,8 @@ export function OrganizationSettings() {
         </CardContent>
       </Card>
 
-      {/* Business Settings */}
-      <Card>
+      {/* Business Settings - Hidden for now */}
+      {/* <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -540,7 +504,20 @@ export function OrganizationSettings() {
         <CardContent>
           <Form {...businessForm}>
             <form
-              onSubmit={businessForm.handleSubmit(onBusinessSubmit)}
+              onSubmit={(e) => {
+                console.log(
+                  "Business form onSubmit triggered, isEditingBusiness:",
+                  isEditingBusiness
+                );
+                if (!isEditingBusiness) {
+                  console.log(
+                    "Preventing business form submission - not in editing mode"
+                  );
+                  e.preventDefault();
+                  return;
+                }
+                businessForm.handleSubmit(onBusinessSubmit)(e);
+              }}
               className="space-y-4"
             >
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -731,7 +708,14 @@ export function OrganizationSettings() {
                 {!isEditingBusiness ? (
                   <Button
                     type="button"
-                    onClick={() => setIsEditingBusiness(true)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log(
+                        "Edit Business Settings button clicked, setting isEditingBusiness to true"
+                      );
+                      setIsEditingBusiness(true);
+                    }}
                   >
                     Edit Business Settings
                   </Button>
@@ -761,10 +745,10 @@ export function OrganizationSettings() {
             </form>
           </Form>
         </CardContent>
-      </Card>
+      </Card> */}
 
-      {/* Document Numbering */}
-      <Card>
+      {/* Document Numbering - Hidden for now */}
+      {/* <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -920,243 +904,54 @@ export function OrganizationSettings() {
             </form>
           </Form>
         </CardContent>
-      </Card>
+      </Card> */}
 
-      {/* Team Management */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Team Members
-          </CardTitle>
-          <CardDescription>
-            Manage your team members and their permissions
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      {/* Team Management - Moved to dedicated /team page */}
+
+      {/* Logo Upload Confirmation Dialog */}
+      <Dialog open={showLogoDialog} onOpenChange={setShowLogoDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Logo Upload</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to upload this image as your organization
+              logo?
+            </DialogDescription>
+          </DialogHeader>
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">
-                {teamMembers?.length || 0} team members
-              </p>
-              <Dialog
-                open={isInviteDialogOpen}
-                onOpenChange={setIsInviteDialogOpen}
-              >
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Invite Member
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Invite Team Member</DialogTitle>
-                    <DialogDescription>
-                      Send an invitation to a new team member
-                    </DialogDescription>
-                  </DialogHeader>
-                  <Form {...inviteForm}>
-                    <form
-                      onSubmit={inviteForm.handleSubmit(onInviteSubmit)}
-                      className="space-y-4"
-                    >
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={inviteForm.control}
-                          name="firstName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>First Name</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={inviteForm.control}
-                          name="lastName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Last Name</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <FormField
-                        control={inviteForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="email" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={inviteForm.control}
-                        name="roleIds"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Roles</FormLabel>
-                            <FormControl>
-                              <div className="space-y-2">
-                                {roles.map((role) => (
-                                  <div
-                                    key={role.id}
-                                    className="flex items-center space-x-2"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      id={role.id}
-                                      value={role.id}
-                                      checked={field.value.includes(role.id)}
-                                      onChange={(e) => {
-                                        const value = e.target.value;
-                                        if (e.target.checked) {
-                                          field.onChange([
-                                            ...field.value,
-                                            value,
-                                          ]);
-                                        } else {
-                                          field.onChange(
-                                            field.value.filter(
-                                              (id) => id !== value
-                                            )
-                                          );
-                                        }
-                                      }}
-                                      className="rounded border-border"
-                                    />
-                                    <label
-                                      htmlFor={role.id}
-                                      className="text-sm"
-                                    >
-                                      <div className="font-medium">
-                                        {role.name}
-                                      </div>
-                                      <div className="text-muted-foreground">
-                                        {role.description}
-                                      </div>
-                                    </label>
-                                  </div>
-                                ))}
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <DialogFooter>
-                        <Button
-                          type="submit"
-                          disabled={inviteTeamMember.isPending}
-                        >
-                          {inviteTeamMember.isPending
-                            ? "Sending..."
-                            : "Send Invitation"}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {teamMembers && teamMembers.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Member</TableHead>
-                    <TableHead>Roles</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Active</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {teamMembers.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>
-                              {member.firstName[0]}
-                              {member.lastName[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">
-                              {member.firstName} {member.lastName}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {member.email}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {member.roles.map((role) => (
-                            <Badge key={role} variant="secondary">
-                              {role}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={member.isActive ? "default" : "secondary"}
-                        >
-                          {member.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {member.lastLogin ? (
-                          <span className="text-sm text-muted-foreground">
-                            {new Date(member.lastLogin).toLocaleDateString()}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            Never
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveMember(member.id)}
-                          disabled={removeTeamMember.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No team members yet</p>
-                <p className="text-sm">
-                  Invite your first team member to get started
-                </p>
+            {previewUrl && (
+              <div className="flex justify-center">
+                <img
+                  src={previewUrl}
+                  alt="Logo preview"
+                  className="max-w-48 max-h-48 object-contain rounded-lg border"
+                />
               </div>
             )}
+            <div className="text-sm text-muted-foreground">
+              <p>File: {selectedFile?.name}</p>
+              <p>
+                Size:{" "}
+                {selectedFile
+                  ? (selectedFile.size / 1024 / 1024).toFixed(2) + " MB"
+                  : "N/A"}
+              </p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCancelLogoUpload}
+              disabled={isUploading}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmLogoUpload} disabled={isUploading}>
+              {isUploading ? "Uploading..." : "Upload Logo"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

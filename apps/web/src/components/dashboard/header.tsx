@@ -15,7 +15,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth-context";
-import { NotificationDropdown, ConnectionStatus } from "@/components/features/notifications";
+import {
+  NotificationDropdown,
+  ConnectionStatus,
+} from "@/components/features/notifications";
 
 interface HeaderProps {
   user: {

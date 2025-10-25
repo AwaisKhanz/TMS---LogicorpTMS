@@ -54,7 +54,7 @@ export function LoadSpecificationsSection({
           )}
         />
 
-        <div className="grid gap-6 sm:grid-cols-2">
+        <div className="grid gap-6 sm:grid-cols-3">
           <FormField
             control={control}
             name="weight"
@@ -96,7 +96,45 @@ export function LoadSpecificationsSection({
               </FormItem>
             )}
           />
+
+          <FormField
+            control={control}
+            name="units"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Units</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    type="number"
+                    placeholder="1"
+                    onChange={(e) =>
+                      field.onChange(parseFloat(e.target.value) || undefined)
+                    }
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
+
+        <FormField
+          control={control}
+          name="multipleCommodityDescription"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Multiple Commodity Description</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="Steel coils, Electronics, Furniture, etc."
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="grid gap-6 sm:grid-cols-2">
           <FormField

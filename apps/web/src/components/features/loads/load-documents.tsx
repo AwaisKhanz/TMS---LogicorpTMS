@@ -50,17 +50,11 @@ import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
 import type { ApiErrorException } from "@/types/api.types";
 
-const documentTypeLabels: Record<string, string> = {
-  RATE_CONFIRMATION: "Rate Confirmation",
-  BOL: "Bill of Lading",
-  POD: "Proof of Delivery",
-  INVOICE: "Invoice",
-  W9: "W-9 Form",
-  INSURANCE: "Insurance Certificate",
-  AUTHORITY: "Authority Document",
-  CONTRACT: "Contract",
-  OTHER: "Other",
-};
+import { DOCUMENT_TYPE_OPTIONS } from "@tms/shared-constants";
+
+const documentTypeLabels: Record<string, string> = Object.fromEntries(
+  DOCUMENT_TYPE_OPTIONS.map((option) => [option.value, option.label])
+);
 
 interface LoadDocumentsProps {
   loadId: string;
@@ -219,7 +213,10 @@ export function LoadDocuments({ loadId }: LoadDocumentsProps) {
             link.href = url;
             // Ensure filename has proper extension for PDFs
             let filename = response.filename || doc.name;
-            if (doc.mimeType === 'application/pdf' && !filename.toLowerCase().endsWith('.pdf')) {
+            if (
+              doc.mimeType === "application/pdf" &&
+              !filename.toLowerCase().endsWith(".pdf")
+            ) {
               filename = `${filename}.pdf`;
             }
             link.setAttribute("download", filename);
@@ -249,7 +246,10 @@ export function LoadDocuments({ loadId }: LoadDocumentsProps) {
         link.href = url;
         // Ensure filename has proper extension for PDFs
         let filename = doc.name;
-        if (doc.mimeType === 'application/pdf' && !filename.toLowerCase().endsWith('.pdf')) {
+        if (
+          doc.mimeType === "application/pdf" &&
+          !filename.toLowerCase().endsWith(".pdf")
+        ) {
           filename = `${filename}.pdf`;
         }
         link.setAttribute("download", filename);
@@ -574,10 +574,7 @@ export function LoadDocuments({ loadId }: LoadDocumentsProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDelete} variant="destructive">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

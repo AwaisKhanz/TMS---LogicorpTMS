@@ -21,7 +21,6 @@ export default function EditCustomerPage() {
   const handleSubmit = async (data: UpdateCustomerRequest) => {
     try {
       await updateCustomer.mutateAsync(data);
-      toast.success("Customer updated successfully!");
       router.push(`/customers/${id}`);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error));
@@ -57,24 +56,28 @@ export default function EditCustomerPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/customers/${id}`}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Customer
-          </Link>
-        </Button>
+      <div className="flex flex-col  gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Edit Customer</h1>
-          <p className="text-muted-foreground">
-            Update {customer.companyName}&apos;s information
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/customers/${id}`}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Customer
+            </Link>
+          </Button>
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Edit Customer
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Update {customer.data.companyName}&apos;s information
           </p>
         </div>
       </div>
 
       {/* Form */}
       <CustomerForm
-        initialData={customer}
+        initialData={customer.data}
         onSubmit={handleSubmit}
         isSubmitting={updateCustomer.isPending}
       />

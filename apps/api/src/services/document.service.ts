@@ -1,4 +1,4 @@
-import { EntityType, DocumentType } from "@prisma/client";
+import { EntityType, DocumentType } from "@tms/shared-types";
 import {
   CreateDocumentDto,
   UpdateDocumentDto,
@@ -142,6 +142,45 @@ export class DocumentService {
           expiresAt: documentData.expiresAt,
         },
       });
+
+      // Update carrier fields based on document type
+      if (documentData.entityType === "CARRIER") {
+        const updateData: any = {};
+
+        if (documentData.type === "W9") {
+          updateData.w9OnFile = true;
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await prisma.carrier.update({
+            where: { id: documentData.entityId },
+            data: updateData,
+          });
+        }
+      }
+
+      // Send WebSocket notification for carrier document uploads
+      if (String(documentData.entityType) === "CARRIER") {
+        const { webSocketService } = await import("./websocket.service.js");
+
+        // Get carrier details
+        const carrier = await prisma.carrier.findUnique({
+          where: { id: documentData.entityId },
+          select: { companyName: true },
+        });
+
+        webSocketService.sendCarrierUpdate(
+          documentData.entityId,
+          organizationId,
+          "document_uploaded",
+          {
+            documentId: document.id,
+            documentName: document.name,
+            documentType: documentData.type,
+            companyName: carrier?.companyName,
+          }
+        );
+      }
 
       // Create load event for document upload (if it's a load document)
       if (String(documentData.entityType) === "LOAD") {

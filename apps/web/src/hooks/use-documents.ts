@@ -35,7 +35,8 @@ interface DocumentsResponse {
 export const documentKeys = {
   all: ["documents"] as const,
   lists: () => [...documentKeys.all, "list"] as const,
-  list: (filters: DocumentFilters) => [...documentKeys.lists(), filters] as const,
+  list: (filters: DocumentFilters) =>
+    [...documentKeys.lists(), filters] as const,
   details: () => [...documentKeys.all, "detail"] as const,
   detail: (id: string) => [...documentKeys.details(), id] as const,
   entity: (entityType: string, entityId: string) =>
@@ -93,7 +94,9 @@ export function useDocument(id: string | undefined) {
   return useQuery<Document>({
     queryKey: documentKeys.detail(id!),
     queryFn: async () => {
-      const response = await apiClient.get<DocumentResponse>(`/documents/${id}`);
+      const response = await apiClient.get<DocumentResponse>(
+        `/documents/${id}`
+      );
       return response.data;
     },
     enabled: !!id,
@@ -136,9 +139,30 @@ export function useUploadDocument() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
       queryClient.invalidateQueries({
-        queryKey: documentKeys.entity(variables.entityType, variables.entityId)
+        queryKey: documentKeys.entity(variables.entityType, variables.entityId),
       });
-      toast.success("Document uploaded successfully");
+
+      // Also invalidate carrier documents cache if uploading to a carrier
+      if (variables.entityType === "CARRIER") {
+        // Invalidate carrier documents
+        queryClient.invalidateQueries({
+          queryKey: ["carrier-documents", variables.entityId],
+        });
+        // Invalidate carrier data to update w9OnFile status
+        queryClient.invalidateQueries({
+          queryKey: ["carriers", variables.entityId],
+        });
+        // Also invalidate all carrier-related queries
+        queryClient.invalidateQueries({
+          queryKey: ["carriers"],
+        });
+        // Force refetch carrier documents immediately
+        queryClient.refetchQueries({
+          queryKey: ["carrier-documents", variables.entityId],
+        });
+      }
+
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -158,10 +182,10 @@ export function useUpdateDocument() {
   return useMutation({
     mutationFn: async ({
       id,
-      data
+      data,
     }: {
       id: string;
-      data: UpdateDocumentRequest
+      data: UpdateDocumentRequest;
     }) => {
       const response = await apiClient.put<DocumentResponse>(
         `/documents/${id}`,
@@ -172,7 +196,7 @@ export function useUpdateDocument() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
       queryClient.invalidateQueries({ queryKey: documentKeys.detail(data.id) });
-      toast.success("Document updated successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -196,7 +220,7 @@ export function useDeleteDocument() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
-      toast.success("Document deleted successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -214,10 +238,7 @@ export function useGenerateDocument() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: {
-      loadId: string;
-      documentType: string;
-    }) => {
+    mutationFn: async (data: { loadId: string; documentType: string }) => {
       const response = await apiClient.post<DocumentResponse>(
         "/documents/generate",
         data
@@ -226,7 +247,7 @@ export function useGenerateDocument() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
-      toast.success("Document generated successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -242,7 +263,11 @@ export function useGenerateDocument() {
  */
 export function useDownloadDocument() {
   return useMutation({
-    mutationFn: async (doc: { id: string; name: string; mimeType?: string }) => {
+    mutationFn: async (doc: {
+      id: string;
+      name: string;
+      mimeType?: string;
+    }) => {
       const response = await apiClient.get<Blob>(
         `/documents/${doc.id}/download`,
         {
@@ -252,7 +277,10 @@ export function useDownloadDocument() {
 
       // Ensure filename has proper extension for PDFs
       let filename = doc.name;
-      if (doc.mimeType === 'application/pdf' && !filename.toLowerCase().endsWith('.pdf')) {
+      if (
+        doc.mimeType === "application/pdf" &&
+        !filename.toLowerCase().endsWith(".pdf")
+      ) {
         filename = `${filename}.pdf`;
       }
 

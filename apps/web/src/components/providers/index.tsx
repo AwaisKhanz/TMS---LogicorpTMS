@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import { AuthProvider } from "@/contexts/auth-context";
+import { WebSocketProvider } from "@/contexts/websocket-context";
 import { QueryProvider } from "./query-provider";
 import { ThemeProvider } from "./theme-provider";
 
@@ -17,9 +18,11 @@ export function Providers({ children }: ProvidersProps) {
       enableSystem
       disableTransitionOnChange
     >
-      <AuthProvider>
-        <QueryProvider>{children}</QueryProvider>
-      </AuthProvider>
+      <QueryProvider>
+        <AuthProvider>
+          <WebSocketProvider>{children}</WebSocketProvider>
+        </AuthProvider>
+      </QueryProvider>
     </ThemeProvider>
   );
 }

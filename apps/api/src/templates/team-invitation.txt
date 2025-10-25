@@ -1,0 +1,35 @@
+🎉 TEAM INVITATION - LogicorpTMS
+=====================================
+
+Hi {{userName}},
+
+{{inviterName}} has invited you to join {{organizationName}} on LogicorpTMS, our comprehensive transportation management system.
+
+INVITATION DETAILS:
+-------------------
+Organization: {{organizationName}}
+Your Role: {{roles}}
+Invited By: {{inviterName}}
+Invitation Date: {{invitationDate}}
+
+NEXT STEPS:
+-----------
+1. Click the link below to accept the invitation
+2. Create your account password
+3. Verify your email address
+4. Start managing loads and customers!
+
+Accept Invitation: {{acceptUrl}}
+
+SECURITY NOTICE:
+----------------
+This invitation was sent to {{email}}. If you didn't expect this invitation, please ignore this email or contact our support team.
+
+Need help? Contact us at support@logicorptms.com
+
+---
+LogicorpTMS - Transportation Management System
+Support: {{supportUrl}}
+Privacy: {{privacyUrl}}
+Terms: {{termsUrl}}
+

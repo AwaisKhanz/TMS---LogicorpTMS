@@ -6,28 +6,22 @@ export const loadFormSchema = z.object({
   carrierId: z.string().optional(),
 
   // Shipper
-  shipperName: z.string().min(1, "Shipper name is required"),
-  shipperStreet: z.string().min(1, "Shipper address is required"),
-  shipperCity: z.string().min(1, "Shipper city is required"),
-  shipperState: z.string().min(1, "Shipper state is required"),
-  shipperZip: z.string().min(1, "Shipper ZIP is required"),
-  shipperPhone: z.string().min(1, "Shipper phone is required"),
-  shipperEmail: z.string().email().optional().or(z.literal("")),
+  shipperId: z.string().min(1, "Shipper is required"),
   pickupDate: z.date({ required_error: "Pickup date is required" }),
   pickupStart: z.string().min(1, "Pickup start time is required"),
   pickupEnd: z.string().min(1, "Pickup end time is required"),
+  pickupType: z.enum(["FCFS", "BY_APPOINTMENT"], {
+    required_error: "Pickup type is required",
+  }),
 
   // Consignee
-  consigneeName: z.string().min(1, "Consignee name is required"),
-  consigneeStreet: z.string().min(1, "Consignee address is required"),
-  consigneeCity: z.string().min(1, "Consignee city is required"),
-  consigneeState: z.string().min(1, "Consignee state is required"),
-  consigneeZip: z.string().min(1, "Consignee ZIP is required"),
-  consigneePhone: z.string().min(1, "Consignee phone is required"),
-  consigneeEmail: z.string().email().optional().or(z.literal("")),
+  consigneeId: z.string().min(1, "Consignee is required"),
   deliveryDate: z.date({ required_error: "Delivery date is required" }),
   deliveryStart: z.string().min(1, "Delivery start time is required"),
   deliveryEnd: z.string().min(1, "Delivery end time is required"),
+  deliveryType: z.enum(["FCFS", "BY_APPOINTMENT"], {
+    required_error: "Delivery type is required",
+  }),
 
   // Load Details
   commodity: z.string().min(1, "Commodity is required"),
@@ -51,6 +45,17 @@ export const loadFormSchema = z.object({
       return val;
     })
     .optional(),
+  units: z
+    .union([z.number(), z.string()])
+    .transform((val) => {
+      if (typeof val === "string") {
+        const parsed = parseFloat(val);
+        return isNaN(parsed) ? undefined : parsed;
+      }
+      return val;
+    })
+    .optional(),
+  multipleCommodityDescription: z.string().optional(),
   equipmentType: z.string().min(1, "Equipment type is required"),
   loadType: z.string().optional(),
 
@@ -75,6 +80,10 @@ export const loadFormSchema = z.object({
       return val;
     })
     .optional(),
+
+  // Rate Change Tracking
+  customerRateChangeReason: z.string().optional(),
+  carrierRateChangeReason: z.string().optional(),
 
   // Instructions
   pickupNotes: z.string().optional(),

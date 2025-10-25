@@ -32,7 +32,6 @@ export type {
   // Customer Types
   Customer,
   CustomerContact,
-  PreferredCarrier,
 
   // Document Types
   Document,

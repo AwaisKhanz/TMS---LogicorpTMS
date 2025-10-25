@@ -22,7 +22,8 @@ export const createDocumentTemplateSchema = z.object({
   isDefault: z.boolean().optional(),
 });
 
-export const updateDocumentTemplateSchema = createDocumentTemplateSchema.partial();
+export const updateDocumentTemplateSchema =
+  createDocumentTemplateSchema.partial();
 
 export class DocumentTemplateController {
   async getTemplates(req: Request, res: Response, next: NextFunction) {
@@ -124,10 +125,7 @@ export class DocumentTemplateController {
 
       const { id } = req.params;
 
-      await documentTemplateService.deleteTemplate(
-        id,
-        req.auth.organizationId
-      );
+      await documentTemplateService.deleteTemplate(id, req.auth.organizationId);
 
       res.status(200).json({
         success: true,

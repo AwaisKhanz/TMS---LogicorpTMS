@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell, Check, Search, Eye, FileText, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +21,29 @@ import {
   formatNotificationTime,
   type Notification,
 } from "@tms/shared-types";
+
+// Helper function to get navigation URL based on entity type and ID
+const getEntityUrl = (
+  entityType: string | null | undefined,
+  entityId: string | null | undefined
+): string | null => {
+  if (!entityType || !entityId) return null;
+
+  switch (entityType) {
+    case "CUSTOMER":
+      return `/customers/${entityId}`;
+    case "LOAD":
+      return `/loads/${entityId}`;
+    case "CARRIER":
+      return `/carriers/${entityId}`;
+    case "INVOICE":
+      return `/invoices/${entityId}`;
+    case "DOCUMENT":
+      return `/documents/${entityId}`;
+    default:
+      return null;
+  }
+};
 
 // Helper function to get action buttons based on notification type
 function getActionButtons(notification: Notification) {
@@ -84,21 +108,37 @@ function NotificationItem({
   isSelected,
   onSelect,
 }: NotificationItemProps) {
+  const router = useRouter();
   const icon = getNotificationIcon(notification.type);
   const actionButtons = getActionButtons(notification);
+
+  const handleClick = () => {
+    // Mark as read if unread
+    if (!notification.readAt) {
+      onMarkAsRead(notification.id);
+    }
+
+    // Navigate to the entity if available
+    const url = getEntityUrl(notification.entityType, notification.entityId);
+    if (url) {
+      router.push(url);
+    }
+  };
 
   return (
     <div
       className={cn(
-        "flex items-start space-x-3 p-4 border rounded-lg transition-colors",
+        "flex items-start space-x-3 p-4 border rounded-lg transition-colors cursor-pointer",
         notification.readAt
           ? "bg-muted/30 border-muted"
           : "bg-background border-border hover:bg-muted/50"
       )}
+      onClick={handleClick}
     >
       <Checkbox
         checked={isSelected}
         onCheckedChange={(checked) => onSelect(notification.id, !!checked)}
+        onClick={(e) => e.stopPropagation()}
         className="mt-1"
       />
 
@@ -109,7 +149,7 @@ function NotificationItem({
             <div className="flex items-center space-x-2">
               <h3 className="font-medium text-sm">{notification.title}</h3>
               {!notification.readAt && (
-                <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                <div className="w-2 h-2 bg-primary rounded-full" />
               )}
             </div>
           </div>
@@ -128,11 +168,19 @@ function NotificationItem({
         </p>
 
         {actionButtons && (
-          <div className="mt-3 flex space-x-2">{actionButtons}</div>
+          <div
+            className="mt-3 flex space-x-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {actionButtons}
+          </div>
         )}
       </div>
 
-      <div className="flex flex-col space-y-1">
+      <div
+        className="flex flex-col space-y-1"
+        onClick={(e) => e.stopPropagation()}
+      >
         {!notification.readAt && (
           <Button
             size="sm"

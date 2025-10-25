@@ -1,4 +1,5 @@
 // Settings Types for TMS Application
+import { Customer } from "./customer.types";
 
 // ==================== PROFILE SETTINGS ====================
 export interface ProfileSettings {
@@ -115,6 +116,7 @@ export interface TeamMember {
   lastName: string;
   email: string;
   roles: string[];
+  assignedCustomers?: Customer[];
   isActive: boolean;
   lastLogin?: string | null;
   invitedAt?: string | null;
@@ -154,6 +156,7 @@ export interface InviteTeamMemberRequest {
   firstName: string;
   lastName: string;
   roleIds: string[];
+  customerIds?: string[];
 }
 
 export interface UpdateTeamMemberRequest {

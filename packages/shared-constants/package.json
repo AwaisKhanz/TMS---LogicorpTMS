@@ -2,6 +2,7 @@
   "name": "@tms/shared-constants",
   "version": "1.0.0",
   "description": "Shared constants for TMS application",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

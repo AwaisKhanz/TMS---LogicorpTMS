@@ -1,14 +1,14 @@
 "use client";
 
 import { useAuth } from "@/contexts/auth-context";
-import { useDashboard } from "@/hooks/use-dashboard";
+import { useDashboardStats } from "@/hooks/use-loads";
 import { ModernDashboard } from "@/components/dashboard/modern-dashboard";
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function DashboardPage() {
   const { user, organization } = useAuth();
-  const { stats, isLoading, error } = useDashboard();
+  const { data: dashboardStats, isLoading, error } = useDashboardStats();
 
   // Show loading state
   if (isLoading) {
@@ -39,19 +39,21 @@ export default function DashboardPage() {
         </div>
         <Alert variant="destructive">
           <AlertDescription>
-            Failed to load dashboard data: {error}
+            Failed to load dashboard data: {error?.message}
           </AlertDescription>
         </Alert>
       </div>
     );
   }
 
+  console.log(dashboardStats);
+
   return (
     <ModernDashboard
       user={user}
       organization={organization}
       stats={
-        stats || {
+        dashboardStats || {
           loads: {
             totalLoads: 0,
             activeLoads: 0,

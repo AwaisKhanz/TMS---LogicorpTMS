@@ -30,7 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Filter, X, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import type { LoadFilters } from "@/types/load.types";
+import type { LoadFilters } from "@tms/shared-types";
 
 interface LoadsFiltersProps {
   filters: LoadFilters;
@@ -99,7 +99,7 @@ export function LoadsFilters({ filters, onFiltersChange }: LoadsFiltersProps) {
                 <SelectItem value="IN_TRANSIT">In Transit</SelectItem>
                 <SelectItem value="DELIVERED">Delivered</SelectItem>
                 <SelectItem value="POD_RECEIVED">POD Received</SelectItem>
-                <SelectItem value="INVOICED">Invoiced</SelectItem>
+                <SelectItem value="COMPLETED">Completed</SelectItem>
                 <SelectItem value="PAID">Paid</SelectItem>
                 <SelectItem value="CANCELLED">Cancelled</SelectItem>
               </SelectContent>
@@ -235,4 +235,3 @@ export function LoadsFilters({ filters, onFiltersChange }: LoadsFiltersProps) {
     </Sheet>
   );
 }
-

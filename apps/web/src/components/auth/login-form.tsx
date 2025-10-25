@@ -81,10 +81,22 @@ export function LoginForm() {
       console.error("Login error:", error);
 
       if (apiError.response?.status === 401) {
+        const errorMessage =
+          apiError.response?.data?.error?.message ||
+          "Invalid credentials or 2FA code.";
+
+        // Check if it's an email verification error
+        if (errorMessage.includes("verify your email")) {
+          toast.error("Email Verification Required", {
+            description: "Please verify your email address before logging in.",
+          });
+          // Redirect to verify-email page with email parameter
+          router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+          return;
+        }
+
         toast.error("Login Failed", {
-          description:
-            apiError.response?.data?.error?.message ||
-            "Invalid credentials or 2FA code.",
+          description: errorMessage,
         });
       } else {
         toast.error("Something went wrong", {

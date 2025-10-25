@@ -21,7 +21,6 @@ export type {
   DeleteCarrierContactResponse,
   CarrierStatistics,
   CarrierPerformance,
-  CarrierRating,
   CarrierOnboarding,
   InsuranceAlert,
   GetInsuranceAlertsResponse,
@@ -39,7 +38,7 @@ import type {
   CreateCarrierRequest,
   UpdateCarrierRequest,
   CreateCarrierContactRequest,
-  UpdateCarrierContactRequest
+  UpdateCarrierContactRequest,
 } from "@tms/shared-types";
 
 // Legacy aliases for compatibility

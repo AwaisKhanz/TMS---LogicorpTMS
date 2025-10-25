@@ -6,6 +6,13 @@ import { z } from "zod";
 import { useRouter } from "next/navigation";
 import type { Carrier, CreateCarrierInput } from "@/types/carrier.types";
 import {
+  CARRIER_EQUIPMENT_TYPES,
+  AUTHORITY_STATUS_OPTIONS,
+  SAFETY_RATING_OPTIONS,
+  PAYMENT_TERMS_OPTIONS,
+  PAYMENT_METHOD_OPTIONS,
+} from "@tms/shared-constants";
+import {
   Form,
   FormControl,
   FormField,
@@ -90,48 +97,12 @@ const carrierFormSchema = z.object({
 
 type CarrierFormData = z.infer<typeof carrierFormSchema>;
 
-const equipmentTypes = [
-  { value: "DRY_VAN", label: "Dry Van" },
-  { value: "REEFER", label: "Refrigerated" },
-  { value: "FLATBED", label: "Flatbed" },
-  { value: "STEP_DECK", label: "Step Deck" },
-  { value: "RGN", label: "RGN" },
-  { value: "POWER_ONLY", label: "Power Only" },
-  { value: "HOTSHOT", label: "Hotshot" },
-  { value: "BOX_TRUCK", label: "Box Truck" },
-  { value: "STRAIGHT_TRUCK", label: "Straight Truck" },
-  { value: "OTHER", label: "Other" },
-];
-
-const authorityStatuses = [
-  { value: "ACTIVE", label: "Active" },
-  { value: "INACTIVE", label: "Inactive" },
-  { value: "REVOKED", label: "Revoked" },
-  { value: "SUSPENDED", label: "Suspended" },
-];
-
-const safetyRatings = [
-  { value: "SATISFACTORY", label: "Satisfactory" },
-  { value: "CONDITIONAL", label: "Conditional" },
-  { value: "UNSATISFACTORY", label: "Unsatisfactory" },
-  { value: "NOT_RATED", label: "Not Rated" },
-];
-
-const paymentTermsOptions = [
-  { value: "NET15", label: "Net 15" },
-  { value: "NET30", label: "Net 30" },
-  { value: "NET45", label: "Net 45" },
-  { value: "NET60", label: "Net 60" },
-  { value: "COD", label: "COD" },
-  { value: "QUICKPAY", label: "Quick Pay" },
-];
-
-const paymentMethods = [
-  { value: "CHECK", label: "Check" },
-  { value: "ACH", label: "ACH" },
-  { value: "WIRE", label: "Wire Transfer" },
-  { value: "CARD", label: "Credit Card" },
-];
+// Use shared constants
+const equipmentTypes = CARRIER_EQUIPMENT_TYPES;
+const authorityStatuses = AUTHORITY_STATUS_OPTIONS;
+const safetyRatings = SAFETY_RATING_OPTIONS;
+const paymentTermsOptions = PAYMENT_TERMS_OPTIONS;
+const paymentMethods = PAYMENT_METHOD_OPTIONS;
 
 interface CarrierFormProps {
   initialData?: Carrier;
@@ -170,9 +141,15 @@ export function CarrierForm({
           insuranceExpiry: initialData.insuranceExpiry
             ? new Date(initialData.insuranceExpiry)
             : undefined,
-          insuranceAmount: initialData.insuranceAmount ? Number(initialData.insuranceAmount) : undefined,
-          cargoInsurance: initialData.cargoInsurance ? Number(initialData.cargoInsurance) : undefined,
-          liabilityInsurance: initialData.liabilityInsurance ? Number(initialData.liabilityInsurance) : undefined,
+          insuranceAmount: initialData.insuranceAmount
+            ? Number(initialData.insuranceAmount)
+            : undefined,
+          cargoInsurance: initialData.cargoInsurance
+            ? Number(initialData.cargoInsurance)
+            : undefined,
+          liabilityInsurance: initialData.liabilityInsurance
+            ? Number(initialData.liabilityInsurance)
+            : undefined,
           safetyRating: initialData.safetyRating || undefined,
           paymentTerms: initialData.paymentTerms || "NET30",
           paymentMethod: initialData.paymentMethod || "CHECK",

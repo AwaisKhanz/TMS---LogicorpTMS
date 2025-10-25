@@ -5,7 +5,6 @@ import {
   CarrierFiltersDto,
   CarrierContactDto,
   UpdateCarrierContactDto,
-  CarrierRatingDto,
   CarrierExportData,
 } from "../types/carrier.types.js";
 import {
@@ -13,12 +12,16 @@ import {
   CarrierFilters,
 } from "../repositories/carrier.repository.js";
 import { NotFoundError, ConflictError } from "../utils/errors.util.js";
+import { NotificationService } from "./notification.service.js";
+import { webSocketService } from "./websocket.service.js";
 
 export class CarrierService {
   private carrierRepo: CarrierRepository;
+  private notificationService: NotificationService;
 
   constructor() {
     this.carrierRepo = new CarrierRepository();
+    this.notificationService = new NotificationService();
   }
   async getCarriers(organizationId: string, filters: CarrierFiltersDto) {
     const {
@@ -72,7 +75,11 @@ export class CarrierService {
     return carrier;
   }
 
-  async createCarrier(data: CreateCarrierDto, organizationId: string) {
+  async createCarrier(
+    data: CreateCarrierDto,
+    organizationId: string,
+    _userId?: string
+  ) {
     // Check if MC number already exists
     const existingCarrier = await this.carrierRepo.findByMcNumber(
       data.mcNumber,
@@ -92,6 +99,27 @@ export class CarrierService {
       },
       organizationId
     );
+
+    // Send notification for carrier creation to all users in organization
+    try {
+      await this.notificationService.create({
+        recipientId: "all", // Send to all users in organization
+        type: "CARRIER_CREATED",
+        title: "New Carrier Added",
+        message: `Carrier ${carrier.companyName} (${carrier.mcNumber}) has been added`,
+        entityType: "CARRIER",
+        entityId: carrier.id,
+        organizationId,
+      });
+    } catch (error) {
+      console.error("Failed to send carrier creation notification:", error);
+    }
+
+    // Send WebSocket update
+    webSocketService.sendCarrierUpdate(organizationId, carrier.id, "created", {
+      companyName: carrier.companyName,
+      mcNumber: carrier.mcNumber,
+    });
 
     return carrier;
   }
@@ -135,6 +163,27 @@ export class CarrierService {
       throw new NotFoundError("Carrier");
     }
 
+    // Send notification for carrier update
+    try {
+      await this.notificationService.createNotification({
+        recipientId: "all", // Send to all users in organization
+        type: "CARRIER_UPDATED",
+        title: "Carrier Updated",
+        message: `Carrier ${carrier.companyName} has been updated`,
+        entityType: "CARRIER",
+        entityId: carrier.id,
+        organizationId,
+      });
+    } catch (error) {
+      console.error("Failed to send carrier update notification:", error);
+    }
+
+    // Send WebSocket update
+    webSocketService.sendCarrierUpdate(organizationId, carrier.id, "updated", {
+      companyName: carrier.companyName,
+      mcNumber: carrier.mcNumber,
+    });
+
     return carrier;
   }
 
@@ -153,11 +202,29 @@ export class CarrierService {
       throw new NotFoundError("Carrier");
     }
 
-    return carrier;
-  }
+    // Send notification for carrier approval
+    try {
+      await this.notificationService.create({
+        recipientId: userId,
+        type: "CARRIER_APPROVED",
+        title: "Carrier Approved",
+        message: `Carrier ${carrier.companyName} has been approved`,
+        entityType: "CARRIER",
+        entityId: carrier.id,
+        sendEmail: true,
+        organizationId,
+      });
+    } catch (error) {
+      console.error("Failed to send carrier approval notification:", error);
+    }
 
-  async updateCarrierPerformance(carrierId: string, organizationId: string) {
-    await this.carrierRepo.updatePerformanceMetrics(carrierId, organizationId);
+    // Send WebSocket update
+    webSocketService.sendCarrierUpdate(organizationId, carrier.id, "approved", {
+      companyName: carrier.companyName,
+      mcNumber: carrier.mcNumber,
+    });
+
+    return carrier;
   }
 
   async getCarrierStatistics(organizationId: string) {
@@ -402,9 +469,7 @@ export class CarrierService {
           : "",
       carrier.isActive ? "Yes" : "No",
       carrier.isApproved ? "Yes" : "No",
-      carrier.rating || "N/A",
       carrier.totalLoads || 0,
-      carrier.onTimeDelivery || "N/A",
     ]);
 
     return [headers, ...rows]
@@ -420,31 +485,5 @@ export class CarrierService {
 
   async getInsuranceAlerts(organizationId: string, days: number = 30) {
     return this.carrierRepo.getExpiringInsurance(organizationId, days);
-  }
-
-  async submitRating(
-    carrierId: string,
-    ratingData: CarrierRatingDto,
-    userId: string,
-    organizationId: string
-  ) {
-    const carrier = await this.carrierRepo.findById(carrierId, organizationId);
-    if (!carrier) {
-      throw new NotFoundError("Carrier");
-    }
-
-    // Update carrier rating
-    const newRating = await this.carrierRepo.addRating(
-      carrierId,
-      ratingData.rating,
-      ratingData.comment,
-      userId,
-      ratingData.loadId
-    );
-
-    // Recalculate average rating
-    await this.carrierRepo.recalculateAverageRating(carrierId);
-
-    return newRating;
   }
 }

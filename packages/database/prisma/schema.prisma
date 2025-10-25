@@ -40,6 +40,8 @@ model Organization {
   loads     Load[]
   carriers  Carrier[]
   customers Customer[]
+  shippers  Shipper[]
+  consignees Consignee[]
   invoices  Invoice[]
   documents Document[]
   documentTemplates DocumentTemplate[]
@@ -78,6 +80,7 @@ model User {
   // Relations
   organization       Organization        @relation(fields: [organizationId], references: [id])
   roles              UserRole[]
+  customers          UserCustomer[]
   sessions           Session[]
   auditLogs          AuditLog[]
   createdLoads       Load[]              @relation("CreatedLoads")
@@ -126,6 +129,16 @@ model UserRole {
   @@map("user_roles")
 }
 
+model UserCustomer {
+  userId     String
+  customerId String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@id([userId, customerId])
+  @@map("user_customers")
+}
+
 model Session {
   id           String   @id @default(cuid())
   userId       String
@@ -156,34 +169,38 @@ model Load {
   carrierId  String?
 
   // Locations
-  shipperName    String
-  shipperAddress Json
-  shipperPhone   String
-  shipperEmail   String?
-  pickupDate     DateTime
-  pickupStart    String
-  pickupEnd      String
+  shipperId    String
+  pickupDate   DateTime
+  pickupStart  String
+  pickupEnd    String
+  pickupType   String @default("FCFS") // FCFS or BY_APPOINTMENT
 
-  consigneeName    String
-  consigneeAddress Json
-  consigneePhone   String
-  consigneeEmail   String?
-  deliveryDate     DateTime
-  deliveryStart    String
-  deliveryEnd      String
+  consigneeId   String
+  deliveryDate  DateTime
+  deliveryStart String
+  deliveryEnd   String
+  deliveryType  String @default("FCFS") // FCFS or BY_APPOINTMENT
 
   // Load Details
-  commodity     String
-  weight        Int
-  pieces        Int?
-  dimensions    Json?
-  equipmentType EquipmentType
-  loadType      LoadType      @default(FULL_TRUCK)
+  commodity                    String
+  weight                       Int
+  pieces                       Int?
+  units                        Int?
+  multipleCommodityDescription String?
+  dimensions                   Json?
+  equipmentType                EquipmentType
+  loadType                     LoadType @default(FULL_TRUCK)
 
   // Rates & Costs
   customerRate Decimal  @db.Money
   carrierRate  Decimal? @db.Money
   margin       Decimal? @db.Money
+
+  // Rate Change Tracking
+  customerRateChangeReason String?
+  carrierRateChangeReason  String?
+  lastCustomerRateChange   DateTime?
+  lastCarrierRateChange    DateTime?
 
   // Additional Costs
   accessorials Json @default("[]")
@@ -217,6 +234,8 @@ model Load {
   organization Organization     @relation(fields: [organizationId], references: [id])
   customer     Customer         @relation(fields: [customerId], references: [id])
   carrier      Carrier?         @relation(fields: [carrierId], references: [id])
+  shipper      Shipper          @relation("ShipperLoads", fields: [shipperId], references: [id])
+  consignee    Consignee        @relation("ConsigneeLoads", fields: [consigneeId], references: [id])
   creator      User             @relation("CreatedLoads", fields: [createdBy], references: [id])
   assignee     User?            @relation("AssignedLoads", fields: [assignedTo], references: [id])
   events       LoadEvent[]
@@ -228,6 +247,8 @@ model Load {
   @@index([organizationId, pickupDate])
   @@index([organizationId, customerId])
   @@index([organizationId, carrierId])
+  @@index([organizationId, shipperId])
+  @@index([organizationId, consigneeId])
   @@index([organizationId, status, pickupDate])
   @@index([organizationId, createdBy, status])
   @@map("loads")
@@ -293,8 +314,6 @@ model Carrier {
 
   // Performance
   totalLoads     Int   @default(0)
-  onTimeDelivery Float @default(100)
-  rating         Float @default(5)
 
   // Preferences
   preferredLanes Json     @default("[]")
@@ -369,7 +388,6 @@ model Customer {
   averageMargin Float   @default(0)
 
   // Preferences
-  preferredCarriers Json     @default("[]")
   equipmentTypes    String[] @default([])
 
   // Status
@@ -386,6 +404,7 @@ model Customer {
   loads        Load[]
   invoices     Invoice[]
   contacts     CustomerContact[]
+  users        UserCustomer[]
   // Note: Documents use polymorphic relationship - query with entityType='CUSTOMER' and entityId
 
   @@unique([organizationId, companyName])
@@ -561,7 +580,7 @@ enum LoadStatus {
   IN_TRANSIT
   DELIVERED
   POD_RECEIVED
-  INVOICED
+  COMPLETED
   PAID
   CANCELLED
 }
@@ -603,7 +622,7 @@ enum EntityType {
   DOCUMENT
   INVOICE
   PAYMENT
-  USER
+  VIEWER
   ORGANIZATION
 }
 
@@ -616,6 +635,7 @@ enum DocumentType {
   INSURANCE
   AUTHORITY
   CONTRACT
+  AVATAR
   OTHER
 }
 
@@ -651,6 +671,86 @@ model EmailVerification {
   @@map("email_verifications")
 }
 
+
+// ==================== SHIPPERS & CONSIGNEES ====================
+model Shipper {
+  id             String @id @default(cuid())
+  organizationId String
+
+  // Company Information
+  companyName    String
+  phone          String
+  email          String?
+
+  // Address Information
+  streetAddress  String
+  city           String
+  state          String
+  zipCode        String
+  country        String @default("USA")
+
+  // Additional Information
+  contactPerson  String?
+  notes          String?
+
+  // Status
+  isActive       Boolean @default(true)
+
+  // Metadata
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  loads          Load[]       @relation("ShipperLoads")
+
+  @@unique([organizationId, companyName, streetAddress, city, state])
+  @@index([organizationId, isActive])
+  @@index([organizationId, companyName])
+  @@index([organizationId, state])
+  @@map("shippers")
+}
+
+model Consignee {
+  id             String @id @default(cuid())
+  organizationId String
+
+  // Company Information
+  companyName    String
+  phone          String
+  email          String?
+
+  // Address Information
+  streetAddress  String
+  city           String
+  state          String
+  zipCode        String
+  country        String @default("USA")
+
+  // Additional Information
+  contactPerson  String?
+  notes          String?
+
+  // Status
+  isActive       Boolean @default(true)
+
+  // Metadata
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  loads          Load[]       @relation("ConsigneeLoads")
+
+  @@unique([organizationId, companyName, streetAddress, city, state])
+  @@index([organizationId, isActive])
+  @@index([organizationId, companyName])
+  @@index([organizationId, state])
+  @@map("consignees")
+}
+
 // ==================== NOTIFICATIONS ====================
 enum NotificationType {
   LOAD_STATUS_CHANGE
@@ -658,6 +758,8 @@ enum NotificationType {
   DOCUMENT_GENERATED
   INVOICE_CREATED
   PAYMENT_RECEIVED
+  CARRIER_CREATED
+  CARRIER_UPDATED
   CARRIER_APPROVED
   CARRIER_SUSPENDED
   CUSTOMER_CREATED

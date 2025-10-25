@@ -33,8 +33,10 @@ import {
 } from "@/components/ui/dialog";
 import { useProfile, useUpdateProfile } from "@/hooks/use-settings";
 import { useAuth } from "@/contexts/auth-context";
+import { apiClient } from "@/lib/api-client";
 import { User, Mail, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { CanEdit } from "@/components/auth/can";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -96,6 +98,8 @@ export function ProfileSettings() {
   }, [profile, profileForm]);
 
   const onProfileSubmit = async (data: z.infer<typeof profileSchema>) => {
+    console.log("Form submitted with data:", data);
+    console.log("isEditing state:", isEditing);
     try {
       await updateProfile.mutateAsync(data);
       setIsEditing(false);
@@ -128,21 +132,36 @@ export function ProfileSettings() {
   };
 
   const handleConfirmUpload = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || !user) return;
 
     setIsUploading(true);
     try {
-      // Create FormData for file upload
+      // Use the existing document upload API
       const formData = new FormData();
-      formData.append("avatar", selectedFile);
+      formData.append("file", selectedFile);
+      formData.append("entityType", "VIEWER");
+      formData.append("entityId", user.id);
+      formData.append("type", "AVATAR");
+      formData.append("name", "avatar");
 
-      // Upload avatar
-      const response = await fetch("/api/settings/profile/avatar", {
-        method: "POST",
-        body: formData,
-      });
+      // Upload file using the existing upload API
+      const response = (await apiClient.post("/documents/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      })) as { success: boolean; data?: { fileUrl: string } };
 
-      if (response.ok) {
+      if (response.success && response.data?.fileUrl) {
+        // Use the existing profile update mechanism instead of direct API call
+        await updateProfile.mutateAsync({
+          firstName: profile?.firstName || "",
+          lastName: profile?.lastName || "",
+          phone: profile?.phone || "",
+          timezone: profile?.timezone || "America/New_York",
+          language: profile?.language || "en",
+          avatar: response.data.fileUrl,
+        });
+
         toast.success("Avatar updated successfully");
         // Close dialog and reset state
         setShowAvatarDialog(false);
@@ -151,12 +170,12 @@ export function ProfileSettings() {
           URL.revokeObjectURL(previewUrl);
           setPreviewUrl(null);
         }
-        // Refresh profile data
-        window.location.reload();
+        // No need to reload - the profile update hook will refresh the data
       } else {
         throw new Error("Failed to upload avatar");
       }
     } catch (error) {
+      console.error("Avatar upload error:", error);
       toast.error("Failed to upload avatar");
     } finally {
       setIsUploading(false);
@@ -209,10 +228,15 @@ export function ProfileSettings() {
           {/* Avatar Section */}
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={profile?.avatar || ""} alt="Profile" />
+              <AvatarImage
+                src={user?.avatar || profile?.avatar || ""}
+                alt="Profile"
+                crossOrigin="anonymous"
+                referrerPolicy="no-referrer"
+              />
               <AvatarFallback className="text-lg">
-                {profile?.firstName?.[0]}
-                {profile?.lastName?.[0]}
+                {user?.firstName?.[0] || profile?.firstName?.[0]}
+                {user?.lastName?.[0] || profile?.lastName?.[0]}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-2">
@@ -359,9 +383,19 @@ export function ProfileSettings() {
 
               <div className="flex gap-2">
                 {!isEditing ? (
-                  <Button type="button" onClick={() => setIsEditing(true)}>
-                    Edit Profile
-                  </Button>
+                  <CanEdit resource="settings">
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        console.log(
+                          "Edit button clicked, setting isEditing to true"
+                        );
+                        setIsEditing(true);
+                      }}
+                    >
+                      Edit Profile
+                    </Button>
+                  </CanEdit>
                 ) : (
                   <>
                     <Button type="submit" disabled={updateProfile.isPending}>
@@ -404,12 +438,14 @@ export function ProfileSettings() {
               </p>
               <Avatar className="h-20 w-20 mx-auto">
                 <AvatarImage
-                  src={profile?.avatar || ""}
+                  src={user?.avatar || profile?.avatar || ""}
                   alt="Current Profile"
+                  crossOrigin="anonymous"
+                  referrerPolicy="no-referrer"
                 />
                 <AvatarFallback className="text-lg">
-                  {profile?.firstName?.[0]}
-                  {profile?.lastName?.[0]}
+                  {user?.firstName?.[0] || profile?.firstName?.[0]}
+                  {user?.lastName?.[0] || profile?.lastName?.[0]}
                 </AvatarFallback>
               </Avatar>
             </div>
@@ -425,10 +461,15 @@ export function ProfileSettings() {
                 New Avatar
               </p>
               <Avatar className="h-20 w-20 mx-auto">
-                <AvatarImage src={previewUrl || ""} alt="New Profile" />
+                <AvatarImage
+                  src={previewUrl || ""}
+                  alt="New Profile"
+                  crossOrigin="anonymous"
+                  referrerPolicy="no-referrer"
+                />
                 <AvatarFallback className="text-lg">
-                  {profile?.firstName?.[0]}
-                  {profile?.lastName?.[0]}
+                  {user?.firstName?.[0] || profile?.firstName?.[0]}
+                  {user?.lastName?.[0] || profile?.lastName?.[0]}
                 </AvatarFallback>
               </Avatar>
             </div>

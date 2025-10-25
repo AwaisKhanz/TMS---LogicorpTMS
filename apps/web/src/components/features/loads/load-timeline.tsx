@@ -37,13 +37,13 @@ const eventIcons: Record<string, LucideIcon> = {
 };
 
 const eventColors: Record<string, string> = {
-  LOAD_CREATED: "bg-blue-500",
-  LOAD_UPDATED: "bg-yellow-500",
-  STATUS_CHANGE: "bg-purple-500",
-  CARRIER_ASSIGNED: "bg-green-500",
-  LOAD_DUPLICATED: "bg-blue-500",
-  DOCUMENT_UPLOADED: "bg-indigo-500",
-  DEFAULT: "bg-gray-500",
+  LOAD_CREATED: "bg-primary",
+  LOAD_UPDATED: "bg-warning",
+  STATUS_CHANGE: "bg-info",
+  CARRIER_ASSIGNED: "bg-success",
+  LOAD_DUPLICATED: "bg-primary",
+  DOCUMENT_UPLOADED: "bg-info",
+  DEFAULT: "bg-muted",
 };
 
 interface LoadTimelineProps {

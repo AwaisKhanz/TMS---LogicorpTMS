@@ -10,7 +10,6 @@ import { LoadActions } from "@/components/features/loads/load-actions";
 import { LoadAssignment } from "@/components/features/loads/load-assignment";
 import { LoadSummary } from "@/components/features/loads/load-summary";
 import { LoadActivity } from "@/components/features/loads/load-activity";
-import { LoadQuickStats } from "@/components/features/loads/load-quick-stats";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -49,11 +48,6 @@ export default function LoadDetailsPage({ params }: LoadDetailsPageProps) {
         </div>
         <LoadActions loadId={params.id} />
       </div>
-
-      {/* Quick Stats Cards */}
-      <Suspense fallback={<Skeleton className="h-24 w-full" />}>
-        <LoadQuickStats loadId={params.id} />
-      </Suspense>
 
       {/* Tabbed Interface */}
       <Tabs

@@ -109,7 +109,7 @@ export const requireAdmin = () => {
         throw new AuthorizationError("Authentication required");
       }
 
-      if (req.auth.role !== "ADMIN") {
+      if (req.auth.role !== "ADMINISTRATOR") {
         throw new AuthorizationError("Admin access required");
       }
 

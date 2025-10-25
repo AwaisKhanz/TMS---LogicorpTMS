@@ -21,43 +21,43 @@ const statusConfig = {
   QUOTE: {
     label: "Quote",
     variant: "secondary" as const,
-    color: "bg-gray-500",
+    color: "bg-muted",
   },
   BOOKED: {
     label: "Booked",
     variant: "default" as const,
-    color: "bg-blue-500",
+    color: "bg-primary",
   },
   DISPATCHED: {
     label: "Dispatched",
     variant: "default" as const,
-    color: "bg-yellow-500",
+    color: "bg-warning",
   },
   IN_TRANSIT: {
     label: "In Transit",
     variant: "default" as const,
-    color: "bg-purple-500",
+    color: "bg-info",
   },
   DELIVERED: {
     label: "Delivered",
     variant: "default" as const,
-    color: "bg-green-500",
+    color: "bg-success",
   },
   POD_RECEIVED: {
     label: "POD Received",
     variant: "default" as const,
-    color: "bg-green-600",
+    color: "bg-success",
   },
-  INVOICED: {
-    label: "Invoiced",
+  COMPLETED: {
+    label: "Completed",
     variant: "default" as const,
-    color: "bg-blue-600",
+    color: "bg-info",
   },
-  PAID: { label: "Paid", variant: "default" as const, color: "bg-green-700" },
+  PAID: { label: "Paid", variant: "default" as const, color: "bg-success" },
   CANCELLED: {
     label: "Cancelled",
     variant: "destructive" as const,
-    color: "bg-red-500",
+    color: "bg-destructive",
   },
 };
 
@@ -80,14 +80,14 @@ interface LoadOverviewProps {
 
 /**
  * LoadOverview Component
- * 
+ *
  * Displays comprehensive overview of a load including:
  * - Load number, status, and reference
  * - Customer and carrier information
  * - Pickup and delivery locations with dates
  * - Load details (commodity, weight, equipment)
  * - Notes and special instructions
- * 
+ *
  * @param loadId - The unique identifier of the load
  * @example
  * <LoadOverview loadId="clx123abc" />
@@ -168,16 +168,17 @@ export function LoadOverview({ loadId }: LoadOverviewProps) {
         <div className="space-y-4">
           <div className="flex items-start gap-3">
             <div className="mt-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-                <MapPin className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10">
+                <MapPin className="h-4 w-4 text-success" />
               </div>
             </div>
             <div className="flex-1 space-y-1">
               <p className="text-sm font-medium">Pickup</p>
-              <p className="text-sm font-semibold">{load.shipperName}</p>
+              <p className="text-sm font-semibold">
+                {load.shipper.companyName}
+              </p>
               <p className="text-sm text-muted-foreground">
-                {load.shipperAddress.city}, {load.shipperAddress.state}{" "}
-                {load.shipperAddress.zip}
+                {load.shipper.city}, {load.shipper.state} {load.shipper.zipCode}
               </p>
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="h-3 w-3" />
@@ -191,16 +192,18 @@ export function LoadOverview({ loadId }: LoadOverviewProps) {
 
           <div className="flex items-start gap-3">
             <div className="mt-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
-                <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-info/10">
+                <MapPin className="h-4 w-4 text-info" />
               </div>
             </div>
             <div className="flex-1 space-y-1">
               <p className="text-sm font-medium">Delivery</p>
-              <p className="text-sm font-semibold">{load.consigneeName}</p>
+              <p className="text-sm font-semibold">
+                {load.consignee.companyName}
+              </p>
               <p className="text-sm text-muted-foreground">
-                {load.consigneeAddress.city}, {load.consigneeAddress.state}{" "}
-                {load.consigneeAddress.zip}
+                {load.consignee.city}, {load.consignee.state}{" "}
+                {load.consignee.zipCode}
               </p>
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="h-3 w-3" />

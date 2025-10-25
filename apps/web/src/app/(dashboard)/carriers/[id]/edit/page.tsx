@@ -79,13 +79,15 @@ export default function CarrierEditPage({ params }: CarrierEditPageProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/carriers/${params.id}`}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Carrier
-          </Link>
-        </Button>
+      <div className="flex flex-col w-full gap-4">
+        <div>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/carriers/${params.id}`}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Carrier
+            </Link>
+          </Button>
+        </div>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             Edit Carrier - {carrier.companyName}
