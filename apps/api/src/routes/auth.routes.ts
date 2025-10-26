@@ -33,6 +33,11 @@ const resendVerificationSchema = z.object({
   email: z.string().email("Invalid email address"),
 });
 
+const acceptInvitationSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
 // Public routes
 router.post(
   "/register",
@@ -71,6 +76,18 @@ router.post(
   "/resend-verification",
   validateRequest(resendVerificationSchema),
   authController.resendVerification
+);
+
+router.post(
+  "/accept-invitation",
+  authRateLimiter,
+  validateRequest(acceptInvitationSchema),
+  authController.acceptInvitation
+);
+
+router.get(
+  "/validate-invitation",
+  authController.validateInvitation
 );
 
 // Protected routes

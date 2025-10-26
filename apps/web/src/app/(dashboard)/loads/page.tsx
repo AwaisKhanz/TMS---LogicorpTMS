@@ -24,7 +24,7 @@ export default function LoadsPage() {
           <Alert>
             <Lock className="h-4 w-4" />
             <AlertDescription>
-              You don't have permission to view loads. Please contact your
+              You don&apos;t have permission to view loads. Please contact your
               administrator.
             </AlertDescription>
           </Alert>

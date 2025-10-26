@@ -89,6 +89,61 @@ export class NotificationService {
   }
 
   /**
+   * Create notification for all users in an organization except a specific user
+   */
+  async createForAllExcept(
+    input: CreateNotificationInput & { excludeUserId?: string }
+  ): Promise<Notification> {
+    try {
+      // Get all users in the organization except the excluded user
+      const users = await prisma.user.findMany({
+        where: {
+          organizationId: input.organizationId,
+          ...(input.excludeUserId && { id: { not: input.excludeUserId } }),
+        },
+        select: { id: true, email: true, firstName: true, lastName: true },
+      });
+
+      if (users.length === 0) {
+        throw new Error("No users found in organization");
+      }
+
+      // Create notifications for all users except the excluded one
+      const notifications = await Promise.all(
+        users.map((user) =>
+          prisma.notification.create({
+            data: {
+              organizationId: input.organizationId,
+              recipientId: user.id,
+              type: input.type,
+              title: input.title,
+              message: input.message,
+              entityType: input.entityType,
+              entityId: input.entityId,
+            },
+          })
+        )
+      );
+
+      // Send WebSocket notifications to all users
+      notifications.forEach((notification) => {
+        webSocketService.sendNotificationToUser(
+          notification.recipientId,
+          notification
+        );
+      });
+
+      logger.info(
+        `Created ${notifications.length} notifications for organization ${input.organizationId}`
+      );
+      return notifications[0]; // Return first notification as representative
+    } catch (error) {
+      logger.error("Error creating notifications for all users except:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Create notification for all users in an organization
    */
   private async createForAllUsers(

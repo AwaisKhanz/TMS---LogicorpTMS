@@ -103,7 +103,7 @@ export default function VerifyEmailPage() {
       verificationAttempted.current = true;
       verifyEmail(token);
     }
-  }, [token, verificationStatus]); // Removed verifyEmail from dependencies
+  }, [token, verificationStatus, verifyEmail]);
 
   // Redirect if user is already verified
   useEffect(() => {

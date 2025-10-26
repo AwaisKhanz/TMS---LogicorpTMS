@@ -27,8 +27,8 @@ export default function ConsigneesPage() {
           <Alert>
             <Lock className="h-4 w-4" />
             <AlertDescription>
-              You don't have permission to view consignees. Please contact your
-              administrator.
+              You don&apos;t have permission to view consignees. Please contact
+              your administrator.
             </AlertDescription>
           </Alert>
         </div>

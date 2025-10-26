@@ -210,23 +210,22 @@ export class CustomerService {
       throw new NotFoundError("Customer");
     }
 
-    // Send notification for customer update
-    if (userId) {
-      try {
-        await this.notificationService.create({
-          recipientId: userId,
-          type: "CUSTOMER_UPDATED",
-          title: "Customer Updated",
-          message: `Customer ${customer.companyName} has been updated`,
-          entityType: "CUSTOMER",
-          entityId: customer.id,
-          organizationId,
-        });
-        logger.info(`Customer update notification sent for ${customer.id}`);
-      } catch (error) {
-        logger.error("Failed to send customer update notification:", error);
-        // Don't fail the customer update if notification fails
-      }
+    // Send notification for customer update to all OTHER users in organization
+    try {
+      await this.notificationService.createForAllExcept({
+        recipientId: "all", // Send to all users in organization
+        type: "CUSTOMER_UPDATED",
+        title: "Customer Updated",
+        message: `Customer ${customer.companyName} has been updated`,
+        entityType: "CUSTOMER",
+        entityId: customer.id,
+        organizationId,
+        excludeUserId: userId, // Exclude the user who made the change
+      });
+      logger.info(`Customer update notification sent for ${customer.id}`);
+    } catch (error) {
+      logger.error("Failed to send customer update notification:", error);
+      // Don't fail the customer update if notification fails
     }
 
     // Send WebSocket update

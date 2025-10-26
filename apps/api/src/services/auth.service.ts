@@ -5,8 +5,12 @@ import {
   UserWithRelations,
 } from "../repositories/user.repository.js";
 import { hashPassword, comparePassword } from "../utils/hash.util.js";
-import { generateAccessToken } from "../utils/jwt.util.js";
-import { AuthenticationError, ConflictError } from "../utils/errors.util.js";
+import { generateAccessToken, verifyAccessToken } from "../utils/jwt.util.js";
+import {
+  AuthenticationError,
+  ConflictError,
+  NotFoundError,
+} from "../utils/errors.util.js";
 import { emailService } from "./email.service.js";
 import { emailVerificationService } from "./email-verification.service.js";
 import { auditService } from "./audit.service.js";
@@ -677,6 +681,205 @@ export class AuthService {
       }
     } catch (error) {
       console.error("Failed to cleanup expired sessions:", error);
+    }
+  }
+
+  async acceptInvitation(token: string, password: string) {
+    try {
+      // Verify the invitation token
+      const decoded = verifyAccessToken(token);
+
+      if (!decoded || !decoded.sub || !decoded.email) {
+        throw new AuthenticationError("Invalid or expired invitation token");
+      }
+
+      // Check if user exists and is not yet verified
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.sub },
+        include: {
+          organization: true,
+          roles: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundError("User not found");
+      }
+
+      if (user.emailVerified) {
+        throw new ConflictError("User has already accepted the invitation");
+      }
+
+      // Validate user is active and organization is active
+      if (!user.isActive) {
+        throw new AuthenticationError("User account is not active");
+      }
+
+      if (!user.organization.isActive) {
+        throw new AuthenticationError("Organization is not active");
+      }
+
+      // Validate user has at least one role
+      if (!user.roles || user.roles.length === 0) {
+        throw new AuthenticationError("User has no assigned roles");
+      }
+
+      // Hash the new password
+      const hashedPassword = await hashPassword(password);
+
+      // Update user with new password and mark as verified
+      const updatedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash: hashedPassword,
+          emailVerified: true,
+          emailVerifiedAt: new Date(),
+        },
+        include: {
+          organization: true,
+          roles: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
+
+      // Generate session token
+      const sessionToken = generateAccessToken({
+        sub: updatedUser.id,
+        org: updatedUser.organizationId,
+        email: updatedUser.email,
+        role: updatedUser.roles[0]?.role?.name || "VIEWER",
+        permissions: [], // Will be populated by middleware
+      });
+
+      // Create session
+      await prisma.session.create({
+        data: {
+          userId: updatedUser.id,
+          token: sessionToken,
+          refreshToken: "", // Not needed for invitation acceptance
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          userAgent: "Invitation Acceptance",
+          ipAddress: "127.0.0.1", // Will be updated on next login
+        },
+      });
+
+      // Get user permissions
+      const userWithPermissions = await prisma.user.findUnique({
+        where: { id: updatedUser.id },
+        include: {
+          roles: {
+            include: {
+              role: {
+                include: {
+                  permissions: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const permissions = new Set<string>();
+      userWithPermissions?.roles.forEach((userRole) => {
+        userRole.role.permissions.forEach((permission) => {
+          permissions.add(permission.name);
+        });
+      });
+
+      // Log invitation acceptance
+      await auditService.log({
+        userId: updatedUser.id,
+        organizationId: updatedUser.organizationId,
+        action: "INVITATION_ACCEPTED",
+        entityType: "USER",
+        entityId: updatedUser.id,
+        changes: {
+          email: updatedUser.email,
+          roles: updatedUser.roles.map((ur) => ur.role.name),
+          organizationName: updatedUser.organization.name,
+        },
+        ipAddress: "127.0.0.1", // Will be updated with actual IP
+        userAgent: "Invitation Acceptance",
+      });
+
+      return {
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          firstName: updatedUser.firstName,
+          lastName: updatedUser.lastName,
+          avatar: updatedUser.avatar,
+          emailVerified: updatedUser.emailVerified,
+          emailVerifiedAt: updatedUser.emailVerifiedAt,
+          twoFactorEnabled: updatedUser.twoFactorEnabled,
+          isActive: updatedUser.isActive,
+          lastLoginAt: updatedUser.lastLoginAt,
+          createdAt: updatedUser.createdAt,
+          updatedAt: updatedUser.updatedAt,
+          organization: updatedUser.organization,
+          roles: updatedUser.roles.map((ur) => ur.role.name),
+          permissions: Array.from(permissions),
+        },
+        token: sessionToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      };
+    } catch (error) {
+      console.error("Failed to accept invitation:", error);
+      throw error;
+    }
+  }
+
+  async validateInvitation(token: string) {
+    try {
+      // Verify the invitation token
+      const decoded = verifyAccessToken(token);
+
+      if (!decoded || !decoded.sub || !decoded.email) {
+        throw new AuthenticationError("Invalid or expired invitation token");
+      }
+
+      // Get user details with organization and roles
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.sub },
+        include: {
+          organization: {
+            select: { name: true },
+          },
+          roles: {
+            include: {
+              role: {
+                select: { name: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundError("User not found");
+      }
+
+      // Get inviter details (the user who sent the invitation)
+      // For now, we'll use a generic name since we don't store inviter info
+      const inviterName = "Team Administrator";
+
+      return {
+        organizationName: user.organization.name,
+        inviterName,
+        roles: user.roles.map((ur) => ur.role.name),
+        userEmail: user.email,
+        userName: `${user.firstName} ${user.lastName}`,
+      };
+    } catch (error) {
+      console.error("Failed to validate invitation:", error);
+      throw error;
     }
   }
 }

@@ -33,6 +33,7 @@ import type {
   Shipper,
 } from "@tms/shared-types";
 import { Loader2 } from "lucide-react";
+import { CanCreate, CanEdit } from "@/components/auth/can";
 
 const shipperFormSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
@@ -345,18 +346,33 @@ export function ShipperForm({ shipper, mode = "create" }: ShipperFormProps) {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      {mode === "edit" ? "Updating..." : "Creating..."}
-                    </>
-                  ) : mode === "edit" ? (
-                    "Update Shipper"
-                  ) : (
-                    "Create Shipper"
-                  )}
-                </Button>
+                {mode === "edit" ? (
+                  <CanEdit resource="shipper">
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Updating...
+                        </>
+                      ) : (
+                        "Update Shipper"
+                      )}
+                    </Button>
+                  </CanEdit>
+                ) : (
+                  <CanCreate resource="shipper">
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Creating...
+                        </>
+                      ) : (
+                        "Create Shipper"
+                      )}
+                    </Button>
+                  </CanCreate>
+                )}
               </div>
             </form>
           </Form>

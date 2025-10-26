@@ -163,9 +163,26 @@ export function TeamDataTable() {
     }
   };
 
-  const onInviteSubmit = async (data: any) => {
+  const onInviteSubmit = async (data: {
+    email?: string;
+    firstName: string;
+    lastName: string;
+    roleIds: string[];
+    customerIds?: string[];
+  }) => {
     try {
-      await inviteTeamMember.mutateAsync(data);
+      if (!data.email) {
+        toast.error("Email is required to invite team member");
+        return;
+      }
+
+      await inviteTeamMember.mutateAsync({
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        roleIds: data.roleIds,
+        customerIds: data.customerIds,
+      });
       toast.success("Team member invited successfully!");
       setIsInviteDialogOpen(false);
     } catch (error) {
@@ -279,11 +296,11 @@ export function TeamDataTable() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="administrator">Administrator</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="dispatcher">Dispatcher</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                  <SelectItem value="invoices">Invoices</SelectItem>
+                  <SelectItem value="ADMINISTRATOR">Administrator</SelectItem>
+                  <SelectItem value="MANAGER">Manager</SelectItem>
+                  <SelectItem value="DISPATCHER">Dispatcher</SelectItem>
+                  <SelectItem value="VIEWER">Viewer</SelectItem>
+                  <SelectItem value="INVOICES">Invoices</SelectItem>
                 </SelectContent>
               </Select>
             </div>

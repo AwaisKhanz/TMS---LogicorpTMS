@@ -34,8 +34,8 @@ export default function UserDetailsPageWrapper() {
           <Alert>
             <Lock className="h-4 w-4" />
             <AlertDescription>
-              You don't have permission to view user details. Please contact
-              your administrator.
+              You don&apos;t have permission to view user details. Please
+              contact your administrator.
             </AlertDescription>
           </Alert>
         </div>
@@ -55,8 +55,8 @@ export default function UserDetailsPageWrapper() {
           <Alert>
             <Lock className="h-4 w-4" />
             <AlertDescription>
-              You don't have permission to view this user's details. Please
-              contact your administrator.
+              You don&apos;t have permission to view this user&apos;s details.
+              Please contact your administrator.
             </AlertDescription>
           </Alert>
         }

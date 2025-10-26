@@ -250,7 +250,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         socket.off(socketConfig.events.carrier.update, onCarrierUpdate);
       }
     };
-  }, [socket, queryClient]);
+  }, [socket, queryClient, user]);
 
   // Cleanup effect to disconnect socket on unmount
   useEffect(() => {

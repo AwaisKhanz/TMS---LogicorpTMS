@@ -27,8 +27,8 @@ export default function CarriersPage() {
           <Alert>
             <Lock className="h-4 w-4" />
             <AlertDescription>
-              You don't have permission to view carriers. Please contact your
-              administrator.
+              You don&apos;t have permission to view carriers. Please contact
+              your administrator.
             </AlertDescription>
           </Alert>
         </div>

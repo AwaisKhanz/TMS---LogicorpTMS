@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/multi-select";
 import { useCustomerOptions } from "@/hooks/use-customers";
 import type { TeamMember } from "@tms/shared-types";
+import { CanCreate, CanEdit } from "@/components/auth/can";
 
 const teamMemberSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -31,27 +32,27 @@ const teamMemberSchema = z.object({
 
 const roles: MultiSelectOption[] = [
   {
-    value: "administrator",
+    value: "ADMINISTRATOR",
     label: "Administrator",
     description: "Full access to all features",
   },
   {
-    value: "manager",
+    value: "MANAGER",
     label: "Manager",
     description: "Manage loads and carriers, see assigned customers",
   },
   {
-    value: "dispatcher",
+    value: "DISPATCHER",
     label: "Dispatcher",
     description: "Create and manage loads, see assigned customers",
   },
   {
-    value: "viewer",
+    value: "VIEWER",
     label: "Viewer",
     description: "View-only access",
   },
   {
-    value: "invoices",
+    value: "INVOICES",
     label: "Invoices (Accounting)",
     description: "Manage invoices and billing",
   },
@@ -211,9 +212,19 @@ export function TeamMemberForm({
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Saving..." : submitLabel}
-          </Button>
+          {member ? (
+            <CanEdit resource="user">
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Saving..." : submitLabel}
+              </Button>
+            </CanEdit>
+          ) : (
+            <CanCreate resource="user">
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Saving..." : submitLabel}
+              </Button>
+            </CanCreate>
+          )}
         </div>
       </form>
     </Form>

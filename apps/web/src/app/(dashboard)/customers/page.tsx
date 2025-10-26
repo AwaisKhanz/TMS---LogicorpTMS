@@ -23,8 +23,8 @@ export default function CustomersPage() {
           <Alert>
             <Lock className="h-4 w-4" />
             <AlertDescription>
-              You don't have permission to view customers. Please contact your
-              administrator.
+              You don&apos;t have permission to view customers. Please contact
+              your administrator.
             </AlertDescription>
           </Alert>
         </div>

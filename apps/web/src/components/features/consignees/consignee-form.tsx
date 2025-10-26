@@ -33,6 +33,7 @@ import type {
   Consignee,
 } from "@tms/shared-types";
 import { Loader2 } from "lucide-react";
+import { CanCreate, CanEdit } from "@/components/auth/can";
 
 const consigneeFormSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
@@ -348,18 +349,33 @@ export function ConsigneeForm({
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      {mode === "edit" ? "Updating..." : "Creating..."}
-                    </>
-                  ) : mode === "edit" ? (
-                    "Update Consignee"
-                  ) : (
-                    "Create Consignee"
-                  )}
-                </Button>
+                {mode === "edit" ? (
+                  <CanEdit resource="consignee">
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Updating...
+                        </>
+                      ) : (
+                        "Update Consignee"
+                      )}
+                    </Button>
+                  </CanEdit>
+                ) : (
+                  <CanCreate resource="consignee">
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Creating...
+                        </>
+                      ) : (
+                        "Create Consignee"
+                      )}
+                    </Button>
+                  </CanCreate>
+                )}
               </div>
             </form>
           </Form>

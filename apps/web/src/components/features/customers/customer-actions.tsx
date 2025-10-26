@@ -49,6 +49,7 @@ import {
   useBulkUpdateCustomers,
 } from "@/hooks/use-customer";
 import { Customer } from "@tms/shared-types";
+import { CanEdit } from "@/components/auth/can";
 // Local formatCurrency function
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("en-US", {
@@ -222,12 +223,14 @@ export function CustomerActions({ customer }: CustomerActionsProps) {
                 Manage Contacts
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={`/customers/${customer.id}/edit`}>
-                <Settings className="mr-2 h-4 w-4" />
-                Edit Customer
-              </Link>
-            </DropdownMenuItem>
+            <CanEdit resource="customer">
+              <DropdownMenuItem asChild>
+                <Link href={`/customers/${customer.id}/edit`}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Edit Customer
+                </Link>
+              </DropdownMenuItem>
+            </CanEdit>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleToggleStatus}>
               {customer.isActive ? (

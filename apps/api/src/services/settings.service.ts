@@ -512,14 +512,27 @@ export class SettingsService {
       emailVerified: false, // They need to verify email and set password
     });
 
-    // Assign roles
+    // Assign roles - handle both role names and IDs
     if (inviteData.roleIds.length > 0) {
-      await prisma.userRole.createMany({
-        data: inviteData.roleIds.map((roleId) => ({
-          userId: user.id,
-          roleId,
-        })),
+      // Get role IDs from role names
+      const roles = await prisma.role.findMany({
+        where: {
+          OR: [
+            { id: { in: inviteData.roleIds } }, // If IDs are provided
+            { name: { in: inviteData.roleIds } }, // If names are provided
+          ],
+        },
+        select: { id: true },
       });
+
+      if (roles.length > 0) {
+        await prisma.userRole.createMany({
+          data: roles.map((role) => ({
+            userId: user.id,
+            roleId: role.id,
+          })),
+        });
+      }
     }
 
     // Assign customers
@@ -545,9 +558,14 @@ export class SettingsService {
         throw new NotFoundError("Organization not found");
       }
 
-      // Get role names
+      // Get role names - handle both role names and IDs
       const roles = await prisma.role.findMany({
-        where: { id: { in: inviteData.roleIds } },
+        where: {
+          OR: [
+            { id: { in: inviteData.roleIds } }, // If IDs are provided
+            { name: { in: inviteData.roleIds } }, // If names are provided
+          ],
+        },
         select: { name: true },
       });
 

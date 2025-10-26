@@ -214,4 +214,32 @@ export class AuthController {
       next(error);
     }
   }
+
+  async acceptInvitation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { token, password } = req.body;
+      const result = await authService.acceptInvitation(token, password);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async validateInvitation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { token } = req.query;
+      const result = await authService.validateInvitation(token as string);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

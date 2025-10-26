@@ -39,6 +39,7 @@ import { Building, Upload } from "lucide-react";
 import { CanEdit } from "@/components/auth/can";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
+import Image from "next/image";
 
 const organizationSchema = z.object({
   name: z.string().min(1, "Organization name is required"),
@@ -921,9 +922,11 @@ export function OrganizationSettings() {
           <div className="space-y-4">
             {previewUrl && (
               <div className="flex justify-center">
-                <img
+                <Image
                   src={previewUrl}
                   alt="Logo preview"
+                  width={192}
+                  height={192}
                   className="max-w-48 max-h-48 object-contain rounded-lg border"
                 />
               </div>

@@ -26,7 +26,12 @@ export function EditTeamMemberDialog({
 }: EditTeamMemberDialogProps) {
   const updateTeamMember = useUpdateTeamMember();
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: {
+    firstName: string;
+    lastName: string;
+    roleIds: string[];
+    customerIds?: string[];
+  }) => {
     if (!member) return;
 
     try {
