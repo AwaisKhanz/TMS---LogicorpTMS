@@ -1,28 +1,56 @@
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import Link from "next/link";
 import { ShipperForm } from "@/components/features/shippers/shipper-form";
+import { PermissionGuard } from "@/components/auth/permission-guard";
+import { PERMISSIONS } from "@tms/shared-types";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function NewShipperPage() {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/shippers">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Shippers
-            </Link>
-          </Button>
+    <PermissionGuard
+      permission={PERMISSIONS.SHIPPER_CREATE}
+      fallback={
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Add New Shipper
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                You don&apos;t have permission to create shippers. Please
+                contact your administrator.
+              </p>
+            </div>
+          </div>
+          <Alert>
+            <Lock className="h-4 w-4" />
+            <AlertDescription>
+              Access denied. Required permission: shipper:create
+            </AlertDescription>
+          </Alert>
         </div>
-      </div>
+      }
+    >
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/shippers">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Shippers
+              </Link>
+            </Button>
+          </div>
+        </div>
 
-      {/* Form */}
-      <Suspense fallback={<div>Loading form...</div>}>
-        <ShipperForm />
-      </Suspense>
-    </div>
+        {/* Form */}
+        <Suspense fallback={<div>Loading form...</div>}>
+          <ShipperForm />
+        </Suspense>
+      </div>
+    </PermissionGuard>
   );
 }

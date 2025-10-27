@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Users, Plus, Mail, Phone, Trash2, Loader2 } from "lucide-react";
 import type { CreateCarrierContactInput } from "@/types/carrier.types";
+import { CanCreate, CanDelete } from "@/components/auth/can";
 
 interface CarrierContactsProps {
   carrierId: string;
@@ -89,109 +90,111 @@ export function CarrierContacts({ carrierId }: CarrierContactsProps) {
               <Users className="h-5 w-5" />
               Contacts
             </CardTitle>
-            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Contact
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Contact</DialogTitle>
-                  <DialogDescription>
-                    Add a new contact for this carrier
-                  </DialogDescription>
-                </DialogHeader>
+            <CanCreate resource="carrier">
+              <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Contact
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Contact</DialogTitle>
+                    <DialogDescription>
+                      Add a new contact for this carrier
+                    </DialogDescription>
+                  </DialogHeader>
 
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Name *</Label>
-                    <Input
-                      placeholder="John Doe"
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                    />
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Name *</Label>
+                      <Input
+                        placeholder="John Doe"
+                        value={formData.name}
+                        onChange={(e) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Email *</Label>
+                      <Input
+                        type="email"
+                        placeholder="john@carrier.com"
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Phone *</Label>
+                      <Input
+                        placeholder="(555) 123-4567"
+                        value={formData.phone}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Title</Label>
+                      <Input
+                        placeholder="Dispatcher, Manager, etc."
+                        value={formData.title || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, title: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="isPrimary"
+                        checked={formData.isPrimary}
+                        onCheckedChange={(checked) =>
+                          setFormData({
+                            ...formData,
+                            isPrimary: checked as boolean,
+                          })
+                        }
+                      />
+                      <Label
+                        htmlFor="isPrimary"
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        Set as primary contact
+                      </Label>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Email *</Label>
-                    <Input
-                      type="email"
-                      placeholder="john@carrier.com"
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Phone *</Label>
-                    <Input
-                      placeholder="(555) 123-4567"
-                      value={formData.phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Title</Label>
-                    <Input
-                      placeholder="Dispatcher, Manager, etc."
-                      value={formData.title || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, title: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="isPrimary"
-                      checked={formData.isPrimary}
-                      onCheckedChange={(checked) =>
-                        setFormData({
-                          ...formData,
-                          isPrimary: checked as boolean,
-                        })
-                      }
-                    />
-                    <Label
-                      htmlFor="isPrimary"
-                      className="text-sm font-normal cursor-pointer"
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setAddDialogOpen(false)}
+                      disabled={addContact.isPending}
                     >
-                      Set as primary contact
-                    </Label>
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setAddDialogOpen(false)}
-                    disabled={addContact.isPending}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleAdd}
-                    disabled={
-                      addContact.isPending ||
-                      !formData.name ||
-                      !formData.email ||
-                      !formData.phone
-                    }
-                  >
-                    {addContact.isPending ? "Adding..." : "Add Contact"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleAdd}
+                      disabled={
+                        addContact.isPending ||
+                        !formData.name ||
+                        !formData.email ||
+                        !formData.phone
+                      }
+                    >
+                      {addContact.isPending ? "Adding..." : "Add Contact"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CanCreate>
           </div>
         </CardHeader>
         <CardContent>
@@ -244,14 +247,16 @@ export function CarrierContacts({ carrierId }: CarrierContactsProps) {
                       </a>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive"
-                    onClick={() => setDeleteContactId(contact.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <CanDelete resource="carrier">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => setDeleteContactId(contact.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </CanDelete>
                 </div>
               ))}
             </div>

@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import Handlebars from "handlebars";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,35 +30,38 @@ export class TemplateService {
     template: string,
     variables: Record<string, any>
   ): string {
-    let rendered = template;
-
-    // Replace {{variable}} with actual values
-    for (const [key, value] of Object.entries(variables)) {
-      if (Array.isArray(value)) {
-        // Handle arrays (like attachments)
-        const arrayHtml = value
-          .map((item: any) => {
-            if (typeof item === "object") {
-              return `<div class="attachment-item">
-              <div class="attachment-icon">📄</div>
-              <div class="attachment-info">
-                <div class="attachment-name">${item.name}</div>
-                <div class="attachment-size">${item.size}</div>
-              </div>
-            </div>`;
-            }
-            return `<div>${item}</div>`;
-          })
-          .join("");
-        const regex = new RegExp(`{{${key}}}`, "g");
-        rendered = rendered.replace(regex, arrayHtml);
-      } else {
-        const regex = new RegExp(`{{${key}}}`, "g");
-        rendered = rendered.replace(regex, String(value || ""));
+    try {
+      const compiledTemplate = Handlebars.compile(template);
+      return compiledTemplate(variables);
+    } catch (error) {
+      console.error("Template rendering error:", error);
+      // Fallback to simple string replacement for basic templates
+      let rendered = template;
+      for (const [key, value] of Object.entries(variables)) {
+        if (Array.isArray(value)) {
+          const arrayHtml = value
+            .map((item: any) => {
+              if (typeof item === "object") {
+                return `<div class="attachment-item">
+                <div class="attachment-icon">📄</div>
+                <div class="attachment-info">
+                  <div class="attachment-name">${item.name}</div>
+                  <div class="attachment-size">${item.size}</div>
+                </div>
+              </div>`;
+              }
+              return `<div>${item}</div>`;
+            })
+            .join("");
+          const regex = new RegExp(`{{${key}}}`, "g");
+          rendered = rendered.replace(regex, arrayHtml);
+        } else {
+          const regex = new RegExp(`{{${key}}}`, "g");
+          rendered = rendered.replace(regex, String(value || ""));
+        }
       }
+      return rendered;
     }
-
-    return rendered;
   }
 
   getPasswordResetHtml(variables: {

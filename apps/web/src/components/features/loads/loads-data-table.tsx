@@ -62,6 +62,7 @@ import {
   CanEdit,
   CanDelete,
   CanDelete as CanBulkDelete,
+  CanCreate,
 } from "@/components/auth/can";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -230,9 +231,11 @@ export function LoadsDataTable() {
               <p className="text-muted-foreground text-center mb-4">
                 Get started by creating your first load or adjust your filters.
               </p>
-              <Button asChild>
-                <Link href="/loads/new">Create Load</Link>
-              </Button>
+              <CanCreate resource="load">
+                <Button asChild>
+                  <Link href="/loads/new">Create Load</Link>
+                </Button>
+              </CanCreate>
             </CardContent>
           </Card>
         ) : viewMode === "grid" ? (
@@ -460,6 +463,7 @@ export function LoadsDataTable() {
                       <TableHead>Carrier</TableHead>
                       <TableHead>Route</TableHead>
                       <TableHead>Pickup Date</TableHead>
+                      <TableHead>Delivery Date</TableHead>
                       <TableHead>Commodity</TableHead>
                       <TableHead>Rate</TableHead>
                       <TableHead>Margin</TableHead>
@@ -540,6 +544,9 @@ export function LoadsDataTable() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           {format(new Date(load.pickupDate), "MMM dd, yyyy")}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {format(new Date(load.deliveryDate), "MMM dd, yyyy")}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div className="text-sm">

@@ -246,23 +246,25 @@ export function OrganizationSettings() {
               </AvatarFallback>
             </Avatar>
             <div className="space-y-2">
-              <div>
-                <label htmlFor="logo-upload" className="cursor-pointer">
-                  <Button variant="outline" size="sm" asChild>
-                    <span>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Change Logo
-                    </span>
-                  </Button>
-                </label>
-                <input
-                  id="logo-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  className="hidden"
-                />
-              </div>
+              <CanEdit resource="settings">
+                <div>
+                  <label htmlFor="logo-upload" className="cursor-pointer">
+                    <Button variant="outline" size="sm" asChild>
+                      <span>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Change Logo
+                      </span>
+                    </Button>
+                  </label>
+                  <input
+                    id="logo-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                </div>
+              </CanEdit>
               <p className="text-sm text-muted-foreground">
                 JPG, PNG or GIF. Max size 5MB.
               </p>

@@ -467,6 +467,36 @@ export class SettingsService {
             role: true,
           },
         },
+        customers: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                organizationId: true,
+                companyName: true,
+                dba: true,
+                industry: true,
+                website: true,
+                ein: true,
+                billingAddress: true,
+                billingEmail: true,
+                billingPhone: true,
+                creditLimit: true,
+                creditUsed: true,
+                paymentTerms: true,
+                equipmentTypes: true,
+                isActive: true,
+                notes: true,
+                totalLoads: true,
+                totalRevenue: true,
+                averageMargin: true,
+                createdAt: true,
+                updatedAt: true,
+                deletedAt: true,
+              },
+            },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -481,6 +511,22 @@ export class SettingsService {
       lastLogin: user.lastLoginAt?.toISOString() || null,
       invitedAt: null, // Could track invitation date
       joinedAt: user.createdAt.toISOString(),
+      assignedCustomers: user.customers.map((uc) => ({
+        ...uc.customer,
+        dba: uc.customer.dba || undefined,
+        website: uc.customer.website || undefined,
+        industry: uc.customer.industry || undefined,
+        ein: uc.customer.ein || undefined,
+        notes: uc.customer.notes || undefined,
+        billingAddress: uc.customer.billingAddress as any,
+        creditLimit: Number(uc.customer.creditLimit),
+        creditUsed: Number(uc.customer.creditUsed),
+        totalRevenue: Number(uc.customer.totalRevenue),
+        averageMargin: Number(uc.customer.averageMargin),
+        deletedAt: uc.customer.deletedAt?.toISOString() || undefined,
+        createdAt: uc.customer.createdAt.toISOString(),
+        updatedAt: uc.customer.updatedAt.toISOString(),
+      })),
     }));
   }
 
@@ -647,13 +693,30 @@ export class SettingsService {
       });
       const oldRoleIds = currentRoles.map((ur) => ur.roleId);
 
+      // Convert role names to role IDs if needed
+      const roles = await prisma.role.findMany({
+        where: {
+          OR: [
+            { id: { in: updateData.roleIds } },
+            { name: { in: updateData.roleIds } },
+          ],
+        },
+        select: { id: true, name: true },
+      });
+
+      const roleIds = roles.map((role) => role.id);
+
+      if (roleIds.length !== updateData.roleIds.length) {
+        throw new Error("One or more roles not found");
+      }
+
       // Update roles
       await prisma.userRole.deleteMany({
         where: { userId: memberId },
       });
 
       await prisma.userRole.createMany({
-        data: updateData.roleIds.map((roleId) => ({
+        data: roleIds.map((roleId) => ({
           userId: memberId,
           roleId,
         })),
@@ -661,16 +724,20 @@ export class SettingsService {
 
       // Handle permission changes if roles changed
       if (
-        JSON.stringify(oldRoleIds.sort()) !==
-        JSON.stringify(updateData.roleIds.sort())
+        JSON.stringify(oldRoleIds.sort()) !== JSON.stringify(roleIds.sort())
       ) {
         await permissionUpdateService.handleRoleChanges(
           memberId,
           organizationId,
           oldRoleIds,
-          updateData.roleIds
+          roleIds
         );
       }
+    }
+
+    // Update customer assignments if provided
+    if (updateData.customerIds !== undefined) {
+      await this.userRepo.assignCustomers(memberId, updateData.customerIds);
     }
 
     // Fetch updated user with roles using repository

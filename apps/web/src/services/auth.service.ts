@@ -50,7 +50,7 @@ export interface AcceptInvitationResponse {
         street: string;
         country: string;
       };
-      settings: any;
+      settings: Record<string, unknown>;
       documentNumbering: {
         autoIncrement: boolean;
         loadNumberStart: number;
@@ -85,14 +85,14 @@ export const authService = {
   async setup2FA() {
     const response =
       await apiClient.post<ApiResponse<TwoFactorSetupResponse>>(
-        "/auth/2fa/setup"
+        "/two-factor/setup"
       );
     return response.data;
   },
 
   async enable2FA(token: string) {
     const response = await apiClient.post<ApiResponse<TwoFactorEnableResponse>>(
-      "/auth/2fa/enable",
+      "/two-factor/enable",
       { token }
     );
     return response.data;
@@ -101,13 +101,13 @@ export const authService = {
   async disable2FA(token: string) {
     const response = await apiClient.post<
       ApiResponse<TwoFactorDisableResponse>
-    >("/auth/2fa/disable", { token });
+    >("/two-factor/disable", { token });
     return response.data;
   },
 
   async verify2FA(token: string) {
     const response = await apiClient.post<ApiResponse<TwoFactorVerifyResponse>>(
-      "/auth/2fa/verify",
+      "/two-factor/verify",
       { token }
     );
     return response.data;

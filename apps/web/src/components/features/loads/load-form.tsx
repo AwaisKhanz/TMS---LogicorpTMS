@@ -111,7 +111,7 @@ export function LoadForm({
         <LoadSpecificationsSection control={form.control} />
 
         {/* Rates & Pricing Section */}
-        <RatesPricingSection control={form.control} />
+        <RatesPricingSection control={form.control} isEdit={!!initialData} />
 
         {/* Additional Information Section */}
         <AdditionalInformationSection control={form.control} />

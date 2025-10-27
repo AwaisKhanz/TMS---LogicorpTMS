@@ -112,23 +112,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     function onNotificationNew(message: WebSocketMessage) {
       try {
         if (message.type === "notification" && message.data) {
-          // Check if this notification is for the current user's own actions
-          // Skip showing toast notifications for actions performed by the current user
-          if (
-            message.data.recipientId &&
-            user &&
-            message.data.recipientId === user.id
-          ) {
-            // Still invalidate queries to update the UI, but don't show toast
-            queryClient.invalidateQueries({
-              queryKey: NOTIFICATION_KEYS.lists(),
-            });
-            queryClient.invalidateQueries({
-              queryKey: NOTIFICATION_KEYS.unreadCount(),
-            });
-            return;
-          }
-
           // Invalidate notification queries to refresh the UI
           queryClient.invalidateQueries({
             queryKey: NOTIFICATION_KEYS.lists(),

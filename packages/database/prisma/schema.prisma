@@ -47,6 +47,9 @@ model Organization {
   documentTemplates DocumentTemplate[]
   auditLogs AuditLog[]
   notifications Notification[]
+  reports   Report[]
+  reportSchedules ReportSchedule[]
+  reportTemplates ReportTemplate[]
 
   @@map("organizations")
 }
@@ -90,6 +93,8 @@ model User {
   emailVerifications EmailVerification[]
   events             LoadEvent[]
   receivedNotifications Notification[]   @relation("ReceivedNotifications")
+  reports            Report[]
+  reportTemplates    ReportTemplate[]
 
   @@index([organizationId])
   @@index([email])
@@ -624,6 +629,7 @@ enum EntityType {
   PAYMENT
   VIEWER
   ORGANIZATION
+  REPORT
 }
 
 enum DocumentType {
@@ -751,6 +757,160 @@ model Consignee {
   @@map("consignees")
 }
 
+// ==================== REPORTS ====================
+enum ReportType {
+  LOAD_ANALYTICS
+  CARRIER_PERFORMANCE
+  CUSTOMER_ANALYTICS
+  REVENUE_ANALYSIS
+  OPERATIONAL_METRICS
+  TEAM_PERFORMANCE
+  FINANCIAL_SUMMARY
+  CUSTOM
+}
+
+enum ReportStatus {
+  DRAFT
+  GENERATED
+  SCHEDULED
+  FAILED
+}
+
+enum ReportFormat {
+  PDF
+  EXCEL
+  CSV
+  JSON
+}
+
+enum TimeRange {
+  TODAY
+  YESTERDAY
+  THIS_WEEK
+  LAST_WEEK
+  THIS_MONTH
+  LAST_MONTH
+  THIS_QUARTER
+  LAST_QUARTER
+  THIS_YEAR
+  LAST_YEAR
+  CUSTOM
+}
+
+model Report {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  
+  // Report Details
+  name           String
+  description    String?
+  type           ReportType
+  status         ReportStatus @default(DRAFT)
+  format         ReportFormat @default(PDF)
+  timeRange      TimeRange
+  customDateFrom DateTime?
+  customDateTo   DateTime?
+  parameters     Json       @default("{}")
+  
+  // File Information
+  fileUrl        String?
+  fileSize       Int?
+  generatedAt    DateTime?
+  generatedBy    String?
+  
+  // Sharing
+  isPublic       Boolean   @default(false)
+  sharedWith     String[]  @default([])
+  tags           String[]  @default([])
+  
+  // Scheduling
+  scheduledAt    DateTime?
+  lastGeneratedAt DateTime?
+  nextGenerationAt DateTime?
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+  schedule       ReportSchedule?
+  templateId     String?
+  template       ReportTemplate? @relation(fields: [templateId], references: [id])
+  
+  @@index([organizationId, userId])
+  @@index([organizationId, type])
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@map("reports")
+}
+
+model ReportSchedule {
+  id             String   @id @default(cuid())
+  reportId       String   @unique
+  organizationId String
+  
+  // Schedule Details
+  frequency      String   // DAILY, WEEKLY, MONTHLY, QUARTERLY, YEARLY
+  dayOfWeek      Int?     // 0-6 (Sunday-Saturday)
+  dayOfMonth     Int?     // 1-31
+  time           String   // HH:MM format
+  timezone       String   @default("UTC")
+  
+  // Recipients
+  recipients     String[] // Array of email addresses
+  
+  // Status
+  isActive       Boolean  @default(true)
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  report         Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  
+  @@index([organizationId, isActive])
+  @@map("report_schedules")
+}
+
+model ReportTemplate {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  
+  // Template Details
+  name           String
+  description    String?
+  type           ReportType
+  format         ReportFormat
+  timeRange      TimeRange
+  parameters     Json     @default("{}")
+  
+  // Template Content
+  template       Json     // Template configuration/structure
+  
+  // Status
+  isActive       Boolean  @default(true)
+  isPublic       Boolean  @default(false)
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+  reports        Report[]
+  
+  @@index([organizationId, type])
+  @@index([organizationId, isActive])
+  @@map("report_templates")
+}
+
 // ==================== NOTIFICATIONS ====================
 enum NotificationType {
   LOAD_STATUS_CHANGE
@@ -765,6 +925,9 @@ enum NotificationType {
   CUSTOMER_CREATED
   CUSTOMER_UPDATED
   SYSTEM_ALERT
+  REPORT_GENERATED
+  REPORT_FAILED
+  REPORT_SCHEDULED
 }
 
 

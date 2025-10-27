@@ -36,7 +36,6 @@ import { useAuth } from "@/contexts/auth-context";
 import { apiClient } from "@/lib/api-client";
 import { User, Mail, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { CanEdit } from "@/components/auth/can";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -383,19 +382,14 @@ export function ProfileSettings() {
 
               <div className="flex gap-2">
                 {!isEditing ? (
-                  <CanEdit resource="settings">
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        console.log(
-                          "Edit button clicked, setting isEditing to true"
-                        );
-                        setIsEditing(true);
-                      }}
-                    >
-                      Edit Profile
-                    </Button>
-                  </CanEdit>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setIsEditing(true);
+                    }}
+                  >
+                    Edit Profile
+                  </Button>
                 ) : (
                   <>
                     <Button type="submit" disabled={updateProfile.isPending}>

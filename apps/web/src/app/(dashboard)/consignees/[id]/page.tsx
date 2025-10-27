@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { CanDelete, CanEdit } from "@/components/auth/can";
 
 export default function ConsigneeDetailsPage() {
   const params = useParams();
@@ -98,39 +99,44 @@ export default function ConsigneeDetailsPage() {
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/consignees/${id}/edit`}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Link>
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Consignee</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete &quot;{consignee.companyName}
-                  &quot;? This action cannot be undone and will remove all
-                  associated data.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
+          <CanEdit resource="consignee">
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/consignees/${id}/edit`}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Link>
+            </Button>
+          </CanEdit>
+          <CanDelete resource="consignee">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="h-4 w-4 mr-2" />
                   Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Consignee</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete &quot;
+                    {consignee.companyName}
+                    &quot;? This action cannot be undone and will remove all
+                    associated data.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CanDelete>
         </div>
       </div>
 

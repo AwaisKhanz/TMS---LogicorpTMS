@@ -163,4 +163,28 @@ export class UserRepository extends BaseRepository<User> {
       },
     });
   }
+
+  async findWithFilters(
+    organizationId: string,
+    filters: { page?: number; limit?: number } = {}
+  ): Promise<{ data: User[]; total: number }> {
+    const { page = 1, limit = 50 } = filters;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.UserWhereInput = {
+      organizationId,
+    };
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return { data: users, total };
+  }
 }

@@ -162,25 +162,25 @@ export function useOptimizedSocket(socket: Socket | null) {
   );
 
   // Debounced connection quality check
-  const checkConnectionQuality = useCallback(
-    debounce(() => {
+  const checkConnectionQuality = useCallback(() => {
+    const debouncedCheck = debounce(() => {
       if (qualityMonitorRef.current) {
         const quality = qualityMonitorRef.current.getQualityScore();
         debugLogger.debug("Connection quality check", { quality });
       }
-    }, 5000),
-    [qualityMonitorRef, debugLogger]
-  );
+    }, 5000);
+    debouncedCheck();
+  }, [qualityMonitorRef]);
 
   // Throttled ping
-  const ping = useCallback(
-    throttle(() => {
+  const ping = useCallback(() => {
+    const throttledPing = throttle(() => {
       if (qualityMonitorRef.current) {
         qualityMonitorRef.current.ping();
       }
-    }, 1000),
-    [qualityMonitorRef]
-  );
+    }, 1000);
+    throttledPing();
+  }, [qualityMonitorRef]);
 
   // Initialize quality monitor when socket changes
   useMemo(() => {

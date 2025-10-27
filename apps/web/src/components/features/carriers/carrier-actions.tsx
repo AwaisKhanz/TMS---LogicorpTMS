@@ -7,8 +7,8 @@ import {
   useApproveCarrier,
   useCarrier,
   useExportCarriers,
+  useCarrierDocuments,
 } from "@/hooks/use-carriers";
-import { useCarrierDocuments } from "@/hooks/use-carriers";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { CanEdit, CanDelete } from "@/components/auth/can";
 
 interface CarrierActionsProps {
   carrierId: string;
@@ -123,10 +124,12 @@ export function CarrierActions({ carrierId }: CarrierActionsProps) {
     <>
       <div className="flex items-center gap-2">
         {carrier && !carrier.isApproved && (
-          <Button onClick={handleApprove} disabled={approveCarrier.isPending}>
-            <UserCheck className="h-4 w-4 mr-2" />
-            {approveCarrier.isPending ? "Approving..." : "Approve Carrier"}
-          </Button>
+          <CanEdit resource="carrier">
+            <Button onClick={handleApprove} disabled={approveCarrier.isPending}>
+              <UserCheck className="h-4 w-4 mr-2" />
+              {approveCarrier.isPending ? "Approving..." : "Approve Carrier"}
+            </Button>
+          </CanEdit>
         )}
 
         <DropdownMenu>
@@ -136,27 +139,33 @@ export function CarrierActions({ carrierId }: CarrierActionsProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleEdit}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Carrier
-            </DropdownMenuItem>
+            <CanEdit resource="carrier">
+              <DropdownMenuItem onClick={handleEdit}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Carrier
+              </DropdownMenuItem>
+            </CanEdit>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSendDocuments}>
-              <Mail className="h-4 w-4 mr-2" />
-              Send Documents
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleExportCarrier}>
-              <Download className="h-4 w-4 mr-2" />
-              Export Carrier Info
-            </DropdownMenuItem>
+            <CanEdit resource="carrier">
+              <DropdownMenuItem onClick={handleSendDocuments}>
+                <Mail className="h-4 w-4 mr-2" />
+                Send Documents
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportCarrier}>
+                <Download className="h-4 w-4 mr-2" />
+                Export Carrier Info
+              </DropdownMenuItem>
+            </CanEdit>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => setShowDeleteDialog(true)}
-              className="text-destructive"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Carrier
-            </DropdownMenuItem>
+            <CanDelete resource="carrier">
+              <DropdownMenuItem
+                onClick={() => setShowDeleteDialog(true)}
+                className="text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Carrier
+              </DropdownMenuItem>
+            </CanDelete>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

@@ -17,7 +17,7 @@ interface CustomersResponse {
 
 export function useCustomers() {
   return useQuery({
-    queryKey: ["customers"],
+    queryKey: ["customers", "options"],
     queryFn: async () => {
       const response = await apiClient.get<CustomersResponse>("/customers");
       return response.data;

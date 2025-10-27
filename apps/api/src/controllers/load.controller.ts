@@ -114,7 +114,8 @@ export class LoadController {
       const result = await loadService.getLoads(
         req.auth.organizationId,
         filters,
-        req.auth.userId
+        req.auth.userId,
+        req.auth.permissions
       );
 
       res.status(200).json({
@@ -514,7 +515,8 @@ export class LoadController {
         req.auth.organizationId,
         page,
         limit,
-        req.auth.userId
+        req.auth.userId,
+        req.auth.permissions
       );
 
       res.status(200).json({

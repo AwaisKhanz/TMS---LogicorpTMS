@@ -178,7 +178,8 @@ export class CarrierController {
       const carrier = await carrierService.updateCarrier(
         id,
         req.body,
-        req.auth.organizationId
+        req.auth.organizationId,
+        req.auth.userId
       );
 
       res.status(200).json({

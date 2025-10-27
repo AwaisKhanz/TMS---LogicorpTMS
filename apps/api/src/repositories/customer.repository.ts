@@ -76,7 +76,8 @@ export class CustomerRepository extends BaseRepository<Customer> {
     filters: CustomerFilters,
     organizationId: string,
     page: number = 1,
-    limit: number = 50
+    limit: number = 50,
+    userId?: string
   ): Promise<{ data: CustomerWithMinimalRelations[]; total: number }> {
     const skip = (page - 1) * limit;
 
@@ -84,6 +85,39 @@ export class CustomerRepository extends BaseRepository<Customer> {
       organizationId,
       deletedAt: null,
     };
+
+    // If userId is provided, check if user should see all customers or only assigned ones
+    if (userId) {
+      // Check if user is administrator
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          roles: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Check if user has administrator role
+      const isAdmin = user.roles.some(
+        (userRole: any) => userRole.role.name === "ADMINISTRATOR"
+      );
+
+      // If not admin, filter by assigned customers
+      if (!isAdmin) {
+        where.users = {
+          some: {
+            userId,
+          },
+        };
+      }
+    }
 
     if (filters.isActive !== undefined) {
       where.isActive = filters.isActive;
@@ -907,5 +941,17 @@ export class CustomerRepository extends BaseRepository<Customer> {
       failed: customerIds.length - results.count,
       errors: [],
     };
+  }
+
+  async getStatsByStatus(
+    organizationId: string
+  ): Promise<{ id: string; isActive: boolean }[]> {
+    return this.prisma.customer.findMany({
+      where: { organizationId },
+      select: {
+        id: true,
+        isActive: true,
+      },
+    });
   }
 }

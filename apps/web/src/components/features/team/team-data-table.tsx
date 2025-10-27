@@ -7,7 +7,7 @@ import {
   useTeamMembers,
   useInviteTeamMember,
   useRemoveTeamMember,
-  useBulkDeleteTeamMembers,
+  // useBulkDeleteTeamMembers, // Commented out - selection disabled
 } from "@/hooks/use-settings";
 import type { TeamMember } from "@tms/shared-types";
 import {
@@ -21,7 +21,7 @@ import {
 import {
   CanEdit,
   CanDelete,
-  CanDelete as CanBulkDelete,
+  // CanDelete as CanBulkDelete, // Commented out - selection disabled
 } from "@/components/auth/can";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+// import { Checkbox } from "@/components/ui/checkbox"; // Commented out - selection disabled
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   MoreHorizontal,
@@ -70,7 +70,7 @@ import {
   Loader2,
   Trash2,
   Download,
-  X,
+  // X, // Commented out - selection disabled
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -85,7 +85,7 @@ export function TeamDataTable() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [deleteMemberId, setDeleteMemberId] = useState<string | null>(null);
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  // const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [editMember, setEditMember] = useState<TeamMember | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -93,7 +93,7 @@ export function TeamDataTable() {
   const { data: teamMembers, isLoading } = useTeamMembers();
   const inviteTeamMember = useInviteTeamMember();
   const removeTeamMember = useRemoveTeamMember();
-  const bulkDeleteMembers = useBulkDeleteTeamMembers();
+  // const bulkDeleteMembers = useBulkDeleteTeamMembers(); // Commented out - selection disabled
 
   // Filter team members based on search and filters
   const filteredMembers =
@@ -125,43 +125,44 @@ export function TeamDataTable() {
     }
   };
 
-  const handleSelectMember = (memberId: string) => {
-    setSelectedMembers((prev) =>
-      prev.includes(memberId)
-        ? prev.filter((id) => id !== memberId)
-        : [...prev, memberId]
-    );
-  };
+  // Selection functions commented out for now
+  // const handleSelectMember = (memberId: string) => {
+  //   setSelectedMembers((prev) =>
+  //     prev.includes(memberId)
+  //       ? prev.filter((id) => id !== memberId)
+  //       : [...prev, memberId]
+  //   );
+  // };
 
-  const handleSelectAll = () => {
-    if (selectedMembers.length === filteredMembers.length) {
-      setSelectedMembers([]);
-    } else {
-      setSelectedMembers(
-        filteredMembers.map((member: TeamMember) => member.id)
-      );
-    }
-  };
+  // const handleSelectAll = () => {
+  //   if (selectedMembers.length === filteredMembers.length) {
+  //     setSelectedMembers([]);
+  //   } else {
+  //     setSelectedMembers(
+  //       filteredMembers.map((member: TeamMember) => member.id)
+  //     );
+  //   }
+  // };
 
-  const handleBulkDelete = async () => {
-    if (selectedMembers.length === 0) return;
+  // const handleBulkDelete = async () => {
+  //   if (selectedMembers.length === 0) return;
 
-    if (
-      confirm(
-        `Are you sure you want to delete ${selectedMembers.length} team members?`
-      )
-    ) {
-      try {
-        await bulkDeleteMembers.mutateAsync(selectedMembers);
-        setSelectedMembers([]);
-        toast.success(
-          `${selectedMembers.length} team members deleted successfully!`
-        );
-      } catch (error) {
-        toast.error("Failed to delete team members");
-      }
-    }
-  };
+  //   if (
+  //     confirm(
+  //       `Are you sure you want to delete ${selectedMembers.length} team members?`
+  //     )
+  //   ) {
+  //     try {
+  //       await bulkDeleteMembers.mutateAsync(selectedMembers);
+  //       setSelectedMembers([]);
+  //       toast.success(
+  //         `${selectedMembers.length} team members deleted successfully!`
+  //       );
+  //     } catch (error) {
+  //       toast.error("Failed to delete team members");
+  //     }
+  //   }
+  // };
 
   const onInviteSubmit = async (data: {
     email?: string;
@@ -308,8 +309,8 @@ export function TeamDataTable() {
         </div>
       </Card>
 
-      {/* Bulk Actions */}
-      {selectedMembers.length > 0 && (
+      {/* Bulk Actions - Commented out for now */}
+      {/* {selectedMembers.length > 0 && (
         <CanBulkDelete resource="user">
           <Card className="border-destructive">
             <div className="flex items-center justify-between p-4">
@@ -345,7 +346,7 @@ export function TeamDataTable() {
             </div>
           </Card>
         </CanBulkDelete>
-      )}
+      )} */}
 
       {/* Data Table */}
       <Card>
@@ -353,7 +354,7 @@ export function TeamDataTable() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[50px]">
+                {/* <TableHead className="w-[50px]">
                   <CanBulkDelete resource="user">
                     <Checkbox
                       checked={
@@ -363,7 +364,7 @@ export function TeamDataTable() {
                       onCheckedChange={handleSelectAll}
                     />
                   </CanBulkDelete>
-                </TableHead>
+                </TableHead> */}
                 <TableHead>Member</TableHead>
                 <TableHead>Roles</TableHead>
                 <TableHead>Status</TableHead>
@@ -375,14 +376,14 @@ export function TeamDataTable() {
               {filteredMembers.length > 0 ? (
                 filteredMembers.map((member) => (
                   <TableRow key={member.id}>
-                    <TableCell>
+                    {/* <TableCell>
                       <CanBulkDelete resource="user">
                         <Checkbox
                           checked={selectedMembers.includes(member.id)}
                           onCheckedChange={() => handleSelectMember(member.id)}
                         />
                       </CanBulkDelete>
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell className="whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">

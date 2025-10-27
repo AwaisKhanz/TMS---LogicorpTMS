@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Search, Eye, FileText } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -53,9 +54,11 @@ export function CompletedLoadsDataTable() {
   if (error) {
     return (
       <Card className="p-6">
-        <div className="text-center text-red-600">
-          Failed to load completed loads. Please try again.
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>
+            Failed to load completed loads. Please try again.
+          </AlertDescription>
+        </Alert>
       </Card>
     );
   }
@@ -105,7 +108,7 @@ export function CompletedLoadsDataTable() {
         <Card className="p-6">
           <div className="text-center">
             <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-2 text-sm font-semibold text-gray-900">
+            <h3 className="mt-2 text-sm font-semibold text-foreground">
               No completed loads
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -165,9 +168,9 @@ export function CompletedLoadsDataTable() {
                         className={cn(
                           "font-medium",
                           load.margin && load.margin > 0
-                            ? "text-green-600"
+                            ? "text-success"
                             : load.margin && load.margin < 0
-                              ? "text-red-600"
+                              ? "text-destructive"
                               : "text-muted-foreground"
                         )}
                       >

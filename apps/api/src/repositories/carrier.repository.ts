@@ -600,4 +600,16 @@ export class CarrierRepository extends BaseRepository<Carrier> {
 
     return carriers;
   }
+
+  async getStatsByStatus(
+    organizationId: string
+  ): Promise<{ id: string; isActive: boolean }[]> {
+    return this.prisma.carrier.findMany({
+      where: { organizationId },
+      select: {
+        id: true,
+        isActive: true,
+      },
+    });
+  }
 }

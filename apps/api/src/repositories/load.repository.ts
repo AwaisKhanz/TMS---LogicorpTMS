@@ -127,7 +127,8 @@ export class LoadRepository extends BaseRepository<Load> {
     organizationId: string,
     page: number = 1,
     limit: number = 50,
-    userId?: string
+    userId?: string,
+    userPermissions?: string[]
   ): Promise<{ data: LoadWithMinimalRelations[]; total: number }> {
     const skip = (page - 1) * limit;
 
@@ -140,31 +141,13 @@ export class LoadRepository extends BaseRepository<Load> {
       },
     };
 
-    // If userId is provided, filter by assigned customers
-    if (userId) {
-      // Check if user is administrator
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          roles: {
-            include: {
-              role: true,
-            },
-          },
-        },
-      });
+    // If userId is provided, filter by assigned customers unless user has load:view:all permission
+    if (userId && userPermissions) {
+      // Check if user has load:view:all permission
+      const hasViewAllPermission = userPermissions.includes("load:view:all");
 
-      if (!user) {
-        throw new Error("User not found");
-      }
-
-      // Check if user has administrator role
-      const isAdmin = user.roles.some(
-        (userRole) => userRole.role.name === "ADMINISTRATOR"
-      );
-
-      // If not admin, filter by assigned customers
-      if (!isAdmin) {
+      // If user doesn't have view:all permission, filter by assigned customers
+      if (!hasViewAllPermission) {
         const userCustomers = await this.prisma.userCustomer.findMany({
           where: { userId },
           select: { customerId: true },
@@ -290,7 +273,8 @@ export class LoadRepository extends BaseRepository<Load> {
     organizationId: string,
     page: number = 1,
     limit: number = 50,
-    userId?: string
+    userId?: string,
+    userPermissions?: string[]
   ): Promise<{ data: LoadWithMinimalRelations[]; total: number }> {
     const skip = (page - 1) * limit;
 
@@ -300,31 +284,13 @@ export class LoadRepository extends BaseRepository<Load> {
       status: LoadStatus.COMPLETED,
     };
 
-    // If userId is provided, filter by assigned customers
-    if (userId) {
-      // Check if user is administrator
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          roles: {
-            include: {
-              role: true,
-            },
-          },
-        },
-      });
+    // If userId is provided, filter by assigned customers unless user has load:view:all permission
+    if (userId && userPermissions) {
+      // Check if user has load:view:all permission
+      const hasViewAllPermission = userPermissions.includes("load:view:all");
 
-      if (!user) {
-        throw new Error("User not found");
-      }
-
-      // Check if user has administrator role
-      const isAdmin = user.roles.some(
-        (userRole) => userRole.role.name === "ADMINISTRATOR"
-      );
-
-      // If not admin, filter by assigned customers
-      if (!isAdmin) {
+      // If user doesn't have view:all permission, filter by assigned customers
+      if (!hasViewAllPermission) {
         const userCustomers = await this.prisma.userCustomer.findMany({
           where: { userId },
           select: { customerId: true },
@@ -1030,5 +996,39 @@ export class LoadRepository extends BaseRepository<Load> {
       ...item,
       _count: typeof item._count === "object" ? item._count.id : item._count,
     }));
+  }
+
+  async groupByStatus(
+    organizationId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<Record<string, number>> {
+    const results = await this.prisma.load.groupBy({
+      by: ["status"],
+      where: {
+        organizationId,
+        createdAt: { gte: startDate, lte: endDate },
+      },
+      _count: { id: true },
+    });
+
+    return results.reduce(
+      (acc, item) => ({ ...acc, [item.status]: item._count.id }),
+      {}
+    );
+  }
+
+  async aggregate(organizationId: string, where: any) {
+    return this.prisma.load.aggregate({
+      where: {
+        organizationId,
+        ...where,
+      },
+      _sum: {
+        customerRate: true,
+        carrierRate: true,
+        margin: true,
+      },
+    });
   }
 }

@@ -160,7 +160,7 @@ export function useDeleteCarrier() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["carriers"] });
-      toast.success("Carrier deleted successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;

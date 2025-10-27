@@ -103,6 +103,21 @@ export function useLoad(id: string | undefined) {
     },
     enabled: !!id,
     staleTime: 60 * 1000, // 1 minute
+    retry: (failureCount, error) => {
+      // Don't retry on 4xx errors (404, 401, 403, etc.)
+      if (error && typeof error === "object" && "response" in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (
+          axiosError.response?.status &&
+          axiosError.response.status >= 400 &&
+          axiosError.response.status < 500
+        ) {
+          return false; // Don't retry client errors
+        }
+      }
+      // Retry up to 1 time for server errors (5xx) or network errors
+      return failureCount < 1;
+    },
   });
 }
 

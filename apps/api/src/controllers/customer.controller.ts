@@ -64,7 +64,8 @@ export class CustomerController {
 
       const result = await customerService.getCustomers(
         req.auth!.organizationId,
-        filters
+        filters,
+        req.auth!.userId
       );
 
       res.status(200).json({

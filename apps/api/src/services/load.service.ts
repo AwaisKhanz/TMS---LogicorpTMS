@@ -35,7 +35,8 @@ export class LoadService {
   async getLoads(
     organizationId: string,
     filters: LoadFiltersDto,
-    userId?: string
+    userId?: string,
+    userPermissions?: string[]
   ) {
     const {
       page = 1,
@@ -70,7 +71,8 @@ export class LoadService {
       organizationId,
       page,
       limit,
-      userId
+      userId,
+      userPermissions
     );
 
     return {
@@ -272,13 +274,15 @@ export class LoadService {
     organizationId: string,
     page: number = 1,
     limit: number = 50,
-    userId?: string
+    userId?: string,
+    userPermissions?: string[]
   ) {
     const { data: loads, total } = await this.loadRepo.findCompletedLoads(
       organizationId,
       page,
       limit,
-      userId
+      userId,
+      userPermissions
     );
 
     return {

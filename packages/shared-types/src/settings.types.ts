@@ -164,6 +164,7 @@ export interface UpdateTeamMemberRequest {
   lastName?: string;
   roleIds?: string[];
   isActive?: boolean;
+  customerIds?: string[];
 }
 
 // ==================== BILLING SETTINGS ====================

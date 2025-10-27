@@ -85,10 +85,7 @@ router.post(
   authController.acceptInvitation
 );
 
-router.get(
-  "/validate-invitation",
-  authController.validateInvitation
-);
+router.get("/validate-invitation", authController.validateInvitation);
 
 // Protected routes
 router.get("/me", authenticate, authController.getCurrentUser);

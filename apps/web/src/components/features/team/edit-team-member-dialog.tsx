@@ -41,6 +41,7 @@ export function EditTeamMemberDialog({
           firstName: data.firstName,
           lastName: data.lastName,
           roleIds: data.roleIds,
+          customerIds: data.customerIds,
         },
       });
       toast.success("Team member updated successfully!");

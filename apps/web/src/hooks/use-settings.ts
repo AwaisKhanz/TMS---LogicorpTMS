@@ -350,7 +350,7 @@ export function useInviteTeamMember() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: settingsKeys.team() });
-      toast.success("Team member invited successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -378,7 +378,7 @@ export function useUpdateTeamMember() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: settingsKeys.team() });
-      toast.success("Team member updated successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -399,7 +399,7 @@ export function useRemoveTeamMember() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: settingsKeys.team() });
-      toast.success("Team member removed successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;
@@ -422,7 +422,7 @@ export function useBulkDeleteTeamMembers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: settingsKeys.team() });
-      toast.success("Team members deleted successfully");
+      // Toast removed - WebSocket will handle the notification
     },
     onError: (error) => {
       const apiError = error as ApiErrorException;

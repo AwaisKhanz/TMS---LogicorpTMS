@@ -5,10 +5,12 @@ import { useCarrier, useUpdateCarrier } from "@/hooks/use-carriers";
 import type { UpdateCarrierInput } from "@/types/carrier.types";
 import { CarrierForm } from "@/components/features/carriers/carrier-form";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { PermissionGuard } from "@/components/auth/permission-guard";
+import { PERMISSIONS } from "@tms/shared-types";
 
 interface CarrierEditPageProps {
   params: {
@@ -17,6 +19,37 @@ interface CarrierEditPageProps {
 }
 
 export default function CarrierEditPage({ params }: CarrierEditPageProps) {
+  return (
+    <PermissionGuard
+      permission={PERMISSIONS.CARRIER_EDIT}
+      fallback={
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Edit Carrier
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                You don&apos;t have permission to edit carriers. Please contact
+                your administrator.
+              </p>
+            </div>
+          </div>
+          <Alert>
+            <Lock className="h-4 w-4" />
+            <AlertDescription>
+              Access denied. Required permission: carrier:edit
+            </AlertDescription>
+          </Alert>
+        </div>
+      }
+    >
+      <CarrierEditContent params={params} />
+    </PermissionGuard>
+  );
+}
+
+function CarrierEditContent({ params }: CarrierEditPageProps) {
   const router = useRouter();
   const { data: carrier, isLoading, error } = useCarrier(params.id);
   const updateCarrier = useUpdateCarrier();

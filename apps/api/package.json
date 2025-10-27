@@ -13,6 +13,7 @@
   "dependencies": {
     "@tms/database": "*",
     "@tms/shared-types": "*",
+    "@types/handlebars": "^4.0.40",
     "@types/nodemailer": "^7.0.3",
     "@types/pdfkit": "^0.17.3",
     "@types/socket.io": "^3.0.2",
@@ -24,6 +25,7 @@
     "dotenv": "^16.6.1",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
+    "handlebars": "^4.7.8",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^7.0.10",

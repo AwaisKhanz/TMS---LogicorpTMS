@@ -145,19 +145,13 @@ export function UserDetailsPage({ userId }: UserDetailsPageProps) {
                 {user.isActive ? "Active" : "Inactive"}
               </Badge>
               {user.twoFactorEnabled && (
-                <Badge
-                  variant="outline"
-                  className="text-green-600 border-green-600"
-                >
+                <Badge variant="success">
                   <Shield className="h-3 w-3 mr-1" />
                   2FA Enabled
                 </Badge>
               )}
               {user.emailVerified && (
-                <Badge
-                  variant="outline"
-                  className="text-blue-600 border-blue-600"
-                >
+                <Badge variant="info">
                   <CheckCircle className="h-3 w-3 mr-1" />
                   Email Verified
                 </Badge>
@@ -266,10 +260,7 @@ export function UserDetailsPage({ userId }: UserDetailsPageProps) {
                   {user.isActive ? "Active" : "Inactive"}
                 </Badge>
                 {user.twoFactorEnabled && (
-                  <Badge
-                    variant="outline"
-                    className="text-green-600 border-green-600"
-                  >
+                  <Badge variant="success">
                     <Shield className="h-3 w-3 mr-1" />
                     2FA
                   </Badge>
@@ -297,18 +288,12 @@ export function UserDetailsPage({ userId }: UserDetailsPageProps) {
               </label>
               <div className="flex items-center gap-2 mt-1">
                 {user.emailVerified ? (
-                  <Badge
-                    variant="outline"
-                    className="text-green-600 border-green-600"
-                  >
+                  <Badge variant="success">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Verified
                   </Badge>
                 ) : (
-                  <Badge
-                    variant="outline"
-                    className="text-red-600 border-red-600"
-                  >
+                  <Badge variant="destructive">
                     <XCircle className="h-3 w-3 mr-1" />
                     Not Verified
                   </Badge>
@@ -321,18 +306,12 @@ export function UserDetailsPage({ userId }: UserDetailsPageProps) {
               </label>
               <div className="flex items-center gap-2 mt-1">
                 {user.twoFactorEnabled ? (
-                  <Badge
-                    variant="outline"
-                    className="text-green-600 border-green-600"
-                  >
+                  <Badge variant="success">
                     <Shield className="h-3 w-3 mr-1" />
                     Enabled
                   </Badge>
                 ) : (
-                  <Badge
-                    variant="outline"
-                    className="text-gray-600 border-gray-600"
-                  >
+                  <Badge variant="secondary">
                     <XCircle className="h-3 w-3 mr-1" />
                     Disabled
                   </Badge>

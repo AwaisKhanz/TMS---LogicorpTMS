@@ -49,7 +49,7 @@ import {
   useBulkUpdateCustomers,
 } from "@/hooks/use-customer";
 import { Customer } from "@tms/shared-types";
-import { CanEdit } from "@/components/auth/can";
+import { CanEdit, CanCreate, CanView } from "@/components/auth/can";
 // Local formatCurrency function
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("en-US", {
@@ -182,10 +182,12 @@ export function CustomerActions({ customer }: CustomerActionsProps) {
     <>
       <div className="flex items-center gap-2">
         {/* Primary Actions */}
-        <Button onClick={handleCreateLoad} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Load
-        </Button>
+        <CanCreate resource="load">
+          <Button onClick={handleCreateLoad} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Load
+          </Button>
+        </CanCreate>
 
         <Button variant="outline" onClick={handleCreateInvoice} size="sm">
           <FileText className="h-4 w-4 mr-2" />
@@ -200,23 +202,29 @@ export function CustomerActions({ customer }: CustomerActionsProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={handleCreateLoad}>
-              <Package className="mr-2 h-4 w-4" />
-              Create Load
-            </DropdownMenuItem>
+            <CanCreate resource="load">
+              <DropdownMenuItem onClick={handleCreateLoad}>
+                <Package className="mr-2 h-4 w-4" />
+                Create Load
+              </DropdownMenuItem>
+            </CanCreate>
             <DropdownMenuItem onClick={handleCreateInvoice}>
               <FileText className="mr-2 h-4 w-4" />
               Create Invoice
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleSendStatement}>
-              <Send className="mr-2 h-4 w-4" />
-              Send Statement
-            </DropdownMenuItem>
+            <CanEdit resource="customer">
+              <DropdownMenuItem onClick={handleSendStatement}>
+                <Send className="mr-2 h-4 w-4" />
+                Send Statement
+              </DropdownMenuItem>
+            </CanEdit>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleExport}>
-              <Download className="mr-2 h-4 w-4" />
-              Export Data
-            </DropdownMenuItem>
+            <CanView resource="customer">
+              <DropdownMenuItem onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" />
+                Export Data
+              </DropdownMenuItem>
+            </CanView>
             <DropdownMenuItem asChild>
               <Link href={`/customers/${customer.id}/contacts`}>
                 <User className="mr-2 h-4 w-4" />

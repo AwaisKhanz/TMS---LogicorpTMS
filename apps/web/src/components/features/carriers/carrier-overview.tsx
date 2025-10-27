@@ -24,7 +24,7 @@ interface CarrierOverviewProps {
  * @param carrierId - The unique identifier of the carrier
  */
 export function CarrierOverview({ carrierId }: CarrierOverviewProps) {
-  const { data: carrier, isLoading } = useCarrier(carrierId);
+  const { data: carrier, isLoading, error } = useCarrier(carrierId);
 
   if (isLoading) {
     return (
@@ -36,8 +36,8 @@ export function CarrierOverview({ carrierId }: CarrierOverviewProps) {
     );
   }
 
-  if (!carrier) {
-    return null;
+  if (error || !carrier) {
+    return null; // Error handling is done at the page level
   }
 
   return (

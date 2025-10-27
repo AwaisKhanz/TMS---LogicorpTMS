@@ -93,7 +93,7 @@ interface LoadOverviewProps {
  * <LoadOverview loadId="clx123abc" />
  */
 export function LoadOverview({ loadId }: LoadOverviewProps) {
-  const { data: load, isLoading } = useLoad(loadId);
+  const { data: load, isLoading, error } = useLoad(loadId);
 
   if (isLoading) {
     return (
@@ -105,8 +105,8 @@ export function LoadOverview({ loadId }: LoadOverviewProps) {
     );
   }
 
-  if (!load) {
-    return null;
+  if (error || !load) {
+    return null; // Error handling is done at the page level
   }
 
   const statusInfo = statusConfig[load.status as keyof typeof statusConfig];

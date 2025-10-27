@@ -3,11 +3,45 @@
 import { useParams } from "next/navigation";
 import { useConsignee } from "@/hooks/use-consignee";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
 import { ConsigneeForm } from "@/components/features/consignees/consignee-form";
+import { PermissionGuard } from "@/components/auth/permission-guard";
+import { PERMISSIONS } from "@tms/shared-types";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function EditConsigneePage() {
+  return (
+    <PermissionGuard
+      permission={PERMISSIONS.CONSIGNEE_EDIT}
+      fallback={
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Edit Consignee
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                You don&apos;t have permission to edit consignees. Please
+                contact your administrator.
+              </p>
+            </div>
+          </div>
+          <Alert>
+            <Lock className="h-4 w-4" />
+            <AlertDescription>
+              Access denied. Required permission: consignee:edit
+            </AlertDescription>
+          </Alert>
+        </div>
+      }
+    >
+      <EditConsigneeContent />
+    </PermissionGuard>
+  );
+}
+
+function EditConsigneeContent() {
   const params = useParams();
   const id = params.id as string;
 

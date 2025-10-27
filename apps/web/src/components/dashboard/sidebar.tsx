@@ -31,6 +31,7 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { PermissionGuard } from "@/components/auth/permission-guard";
 import { PERMISSIONS, type Permission } from "@tms/shared-types";
+import { hasPermission } from "@tms/shared-types";
 
 interface NavItem {
   title: string;
@@ -45,6 +46,7 @@ const mainNavItems: NavItem[] = [
     title: "Dashboard",
     href: "/",
     icon: LayoutDashboard,
+    permission: PERMISSIONS.LOAD_VIEW_ALL, // Dashboard requires load permissions
   },
   {
     title: "Loads",
@@ -68,13 +70,13 @@ const mainNavItems: NavItem[] = [
     title: "Shippers",
     href: "/shippers",
     icon: Package,
-    permission: PERMISSIONS.CUSTOMER_VIEW, // Using customer permissions for now
+    permission: PERMISSIONS.SHIPPER_VIEW,
   },
   {
     title: "Consignees",
     href: "/consignees",
     icon: MapPin,
-    permission: PERMISSIONS.CUSTOMER_VIEW, // Using customer permissions for now
+    permission: PERMISSIONS.CONSIGNEE_VIEW,
   },
   {
     title: "Invoices",
@@ -116,7 +118,7 @@ interface SidebarProps {
 
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   // Professional expand button state
   const [showExpandButton, setShowExpandButton] = useState(false);
@@ -140,6 +142,23 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const handleMouseLeave = () => {
     setShowExpandButton(false);
   };
+
+  // Filter navigation items based on user permissions
+  const filterNavItems = (items: NavItem[]) => {
+    if (!user?.permissions) return items;
+
+    return items.filter((item) => {
+      // If no permission is specified, show the item
+      if (!item.permission) return true;
+
+      // Check if user has the required permission
+      return hasPermission(user.permissions, item.permission);
+    });
+  };
+
+  // Get filtered navigation items
+  const filteredMainNavItems = filterNavItems(mainNavItems);
+  const filteredBottomNavItems = filterNavItems(bottomNavItems);
 
   const NavLink = ({ item }: { item: NavItem }) => {
     const isActive = pathname === item.href;
@@ -260,7 +279,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               </div>
             )}
             <div className="space-y-1">
-              {mainNavItems.map((item) => (
+              {filteredMainNavItems.map((item) => (
                 <NavLink key={item.href} item={item} />
               ))}
             </div>
@@ -278,7 +297,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               </div>
             )}
             <div className="space-y-1">
-              {bottomNavItems.map((item) => (
+              {filteredBottomNavItems.map((item) => (
                 <NavLink key={item.href} item={item} />
               ))}
             </div>

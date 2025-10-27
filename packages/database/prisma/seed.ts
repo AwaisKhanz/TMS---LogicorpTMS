@@ -347,13 +347,17 @@ async function main() {
       OR: [
         { resource: "load" },
         { resource: "carrier" },
+        { resource: "consignee" },
+        { resource: "shipper" },
         { name: "customer:view" },
+        { name: "user:view" },
         {
           name: {
             in: [
               "report:view",
               "report:create",
               "report:edit",
+              "report:delete",
               "settings:view",
             ],
           },
@@ -371,11 +375,14 @@ async function main() {
     },
   });
 
-  // Assign dispatcher permissions (create and manage loads, see assigned customers)
+  // Assign dispatcher permissions (create and manage loads, see assigned customers, view carriers)
   const dispatcherPermissions = await prisma.permission.findMany({
     where: {
       OR: [
         { resource: "load" },
+        { resource: "carrier" },
+        { resource: "consignee" },
+        { resource: "shipper" },
         { name: "customer:view" },
         {
           name: {
@@ -414,13 +421,15 @@ async function main() {
     },
   });
 
-  // Assign invoices role permissions (full invoice permissions, view all customers/carriers/shippings/consignees)
+  // Assign invoices role permissions (full invoice permissions, view all customers/carriers/loads/shippings/consignees)
   const invoicesPermissions = await prisma.permission.findMany({
     where: {
       OR: [
         { resource: "invoice" },
         { name: "customer:view" },
         { name: "carrier:view" },
+        { name: "load:view" },
+        { name: "load:view:own" },
         {
           name: {
             in: ["report:view", "report:export", "settings:view"],

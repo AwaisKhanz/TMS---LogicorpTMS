@@ -92,13 +92,13 @@ export function LoadsHeader() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
-                  Pending
+                  Quote
                 </p>
                 <p className="text-2xl font-bold">
                   {isLoading ? (
                     <Loader2 className="h-6 w-6 animate-spin" />
                   ) : (
-                    (stats?.QUOTE?.count || 0) + (stats?.BOOKED?.count || 0)
+                    stats?.QUOTE?.count || 0
                   )}
                 </p>
               </div>
@@ -112,18 +112,13 @@ export function LoadsHeader() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
-                  This Month
+                  Delivered
                 </p>
                 <p className="text-2xl font-bold">
                   {isLoading ? (
                     <Loader2 className="h-6 w-6 animate-spin" />
                   ) : (
-                    `$${Object.values(stats || {})
-                      .reduce(
-                        (total, status) => total + (status.revenue || 0),
-                        0
-                      )
-                      .toLocaleString()}`
+                    stats?.COMPLETED?.count || 0
                   )}
                 </p>
               </div>

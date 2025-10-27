@@ -245,15 +245,17 @@ export function CarriersDataTable() {
                 </Button>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkApprove}
-                  disabled={bulkApproveCarriers.isPending}
-                >
-                  <UserCheck className="h-4 w-4 mr-2" />
-                  Approve Selected
-                </Button>
+                <CanEdit resource="carrier">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkApprove}
+                    disabled={bulkApproveCarriers.isPending}
+                  >
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Approve Selected
+                  </Button>
+                </CanEdit>
                 <Button
                   variant="destructive"
                   size="sm"
@@ -450,10 +452,12 @@ export function CarriersDataTable() {
                             </DropdownMenuItem>
                           </CanEdit>
                           {!carrier.isApproved && (
-                            <DropdownMenuItem>
-                              <UserCheck className="h-4 w-4 mr-2" />
-                              Approve Carrier
-                            </DropdownMenuItem>
+                            <CanEdit resource="carrier">
+                              <DropdownMenuItem>
+                                <UserCheck className="h-4 w-4 mr-2" />
+                                Approve Carrier
+                              </DropdownMenuItem>
+                            </CanEdit>
                           )}
                           <DropdownMenuSeparator />
                           <CanDelete resource="carrier">

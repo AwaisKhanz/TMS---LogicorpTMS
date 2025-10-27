@@ -127,7 +127,8 @@ export class CarrierService {
   async updateCarrier(
     id: string,
     data: UpdateCarrierDto,
-    organizationId: string
+    organizationId: string,
+    userId: string
   ) {
     const existingCarrier = await this.carrierRepo.findById(id, organizationId);
 
@@ -163,16 +164,17 @@ export class CarrierService {
       throw new NotFoundError("Carrier");
     }
 
-    // Send notification for carrier update
+    // Send notification for carrier update (excluding the user who performed the action)
     try {
-      await this.notificationService.createNotification({
-        recipientId: "all", // Send to all users in organization
+      await this.notificationService.createForAllExcept({
+        recipientId: "all", // This will be overridden by createForAllExcept
         type: "CARRIER_UPDATED",
         title: "Carrier Updated",
         message: `Carrier ${carrier.companyName} has been updated`,
         entityType: "CARRIER",
         entityId: carrier.id,
         organizationId,
+        excludeUserId: userId, // Exclude the user who performed the action
       });
     } catch (error) {
       console.error("Failed to send carrier update notification:", error);

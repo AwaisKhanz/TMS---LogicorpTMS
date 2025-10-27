@@ -10,13 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DollarSign, Receipt, Loader2, Edit, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CanEdit } from "@/components/auth/can";
 
 interface LoadFinancialsProps {
   loadId: string;
 }
 
 export function LoadFinancials({ loadId }: LoadFinancialsProps) {
-  const { data: load, isLoading } = useLoad(loadId);
+  const { data: load, isLoading, error } = useLoad(loadId);
   const updateLoad = useUpdateLoad();
   const [isEditing, setIsEditing] = useState(false);
   const [customerRate, setCustomerRate] = useState("");
@@ -32,8 +33,8 @@ export function LoadFinancials({ loadId }: LoadFinancialsProps) {
     );
   }
 
-  if (!load) {
-    return null;
+  if (error || !load) {
+    return null; // Error handling is done at the page level
   }
 
   const formatCurrency = (amount: number) => {
@@ -83,10 +84,12 @@ export function LoadFinancials({ loadId }: LoadFinancialsProps) {
             Financial Summary
           </CardTitle>
           {!isEditing && (
-            <Button variant="outline" size="sm" onClick={handleEdit}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Rates
-            </Button>
+            <CanEdit resource="load">
+              <Button variant="outline" size="sm" onClick={handleEdit}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Rates
+              </Button>
+            </CanEdit>
           )}
         </div>
       </CardHeader>

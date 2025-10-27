@@ -19,7 +19,11 @@ export class CustomerService {
     this.notificationService = new NotificationService();
   }
 
-  async getCustomers(organizationId: string, filters: CustomerFiltersDto) {
+  async getCustomers(
+    organizationId: string,
+    filters: CustomerFiltersDto,
+    userId?: string
+  ) {
     const {
       page = 1,
       limit = 50,
@@ -38,11 +42,13 @@ export class CustomerService {
       search,
     };
 
+    // Use the repository method that handles user filtering
     const { data: customers, total } = await this.customerRepo.findWithFilters(
       customerFilters,
       organizationId,
       page,
-      limit
+      limit,
+      userId // Pass userId to repository to handle filtering
     );
 
     return {

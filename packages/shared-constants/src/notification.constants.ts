@@ -15,6 +15,9 @@ export const NOTIFICATION_TYPES = {
   CUSTOMER_CREATED: "CUSTOMER_CREATED",
   CUSTOMER_UPDATED: "CUSTOMER_UPDATED",
   SYSTEM_ALERT: "SYSTEM_ALERT",
+  REPORT_GENERATED: "REPORT_GENERATED",
+  REPORT_FAILED: "REPORT_FAILED",
+  REPORT_SCHEDULED: "REPORT_SCHEDULED",
 } as const;
 
 // ==================== ENTITY TYPES ====================
@@ -28,6 +31,7 @@ export const ENTITY_TYPES = {
   PAYMENT: "PAYMENT",
   VIEWER: "VIEWER",
   ORGANIZATION: "ORGANIZATION",
+  REPORT: "REPORT",
 } as const;
 
 // ==================== NOTIFICATION ICONS ====================
@@ -45,6 +49,9 @@ export const NOTIFICATION_ICONS = {
   CUSTOMER_CREATED: "👥",
   CUSTOMER_UPDATED: "✏️",
   SYSTEM_ALERT: "🔧",
+  REPORT_GENERATED: "📊",
+  REPORT_FAILED: "❌",
+  REPORT_SCHEDULED: "⏰",
 } as const;
 
 // ==================== NOTIFICATION PRIORITIES ====================
@@ -71,6 +78,9 @@ export const EMAIL_TEMPLATES = {
   CUSTOMER_CREATED: "customer-created",
   CUSTOMER_UPDATED: "customer-updated",
   SYSTEM_ALERT: "system-alert",
+  REPORT_GENERATED: "report-generated",
+  REPORT_FAILED: "report-failed",
+  REPORT_SCHEDULED: "report-scheduled",
 } as const;
 
 // ==================== NOTIFICATION SETTINGS ====================

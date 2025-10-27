@@ -54,6 +54,7 @@ import { SelectTrigger } from "@/components/ui/select";
 import { SelectValue } from "@/components/ui/select";
 import { SelectContent } from "@/components/ui/select";
 import { SelectItem } from "@/components/ui/select";
+import { CanEdit, CanDelete, CanCreate, CanView } from "@/components/auth/can";
 
 interface LoadActionsProps {
   loadId: string;
@@ -73,10 +74,15 @@ export function LoadActions({ loadId }: LoadActionsProps) {
 
   const deleteLoad = useDeleteLoad();
   const duplicateLoad = useDuplicateLoad();
-  const { data: load } = useLoad(loadId);
+  const { data: load, error } = useLoad(loadId);
   const generateDocument = useGenerateDocument();
   const sendDocument = useSendDocument();
   const exportLoad = useExportLoad();
+
+  // Don't render actions if load is not found
+  if (error || !load) {
+    return null;
+  }
 
   const handleEdit = () => {
     router.push(`/loads/${loadId}/edit`);
@@ -158,38 +164,50 @@ export function LoadActions({ loadId }: LoadActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={handleEdit}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Load
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={handleDuplicate}
-            disabled={duplicateLoad.isPending}
-          >
-            <Copy className="h-4 w-4 mr-2" />
-            Duplicate Load
-          </DropdownMenuItem>
+          <CanEdit resource="load">
+            <DropdownMenuItem onClick={handleEdit}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Load
+            </DropdownMenuItem>
+          </CanEdit>
+          <CanCreate resource="load">
+            <DropdownMenuItem
+              onClick={handleDuplicate}
+              disabled={duplicateLoad.isPending}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Duplicate Load
+            </DropdownMenuItem>
+          </CanCreate>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setShowGenerateDialog(true)}>
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Documents
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setShowSendDialog(true)}>
-            <Mail className="h-4 w-4 mr-2" />
-            Send Documents
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </DropdownMenuItem>
+          <CanCreate resource="document">
+            <DropdownMenuItem onClick={() => setShowGenerateDialog(true)}>
+              <FileText className="h-4 w-4 mr-2" />
+              Generate Documents
+            </DropdownMenuItem>
+          </CanCreate>
+          <CanCreate resource="document">
+            <DropdownMenuItem onClick={() => setShowSendDialog(true)}>
+              <Mail className="h-4 w-4 mr-2" />
+              Send Documents
+            </DropdownMenuItem>
+          </CanCreate>
+          <CanView resource="load">
+            <DropdownMenuItem onClick={handleExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </DropdownMenuItem>
+          </CanView>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => setShowDeleteDialog(true)}
-            className="text-destructive"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete Load
-          </DropdownMenuItem>
+          <CanDelete resource="load">
+            <DropdownMenuItem
+              onClick={() => setShowDeleteDialog(true)}
+              className="text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Load
+            </DropdownMenuItem>
+          </CanDelete>
         </DropdownMenuContent>
       </DropdownMenu>
 

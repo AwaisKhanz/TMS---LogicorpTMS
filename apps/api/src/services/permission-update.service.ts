@@ -124,7 +124,12 @@ export class PermissionUpdateService {
       await this.invalidateUserSessions(userId);
 
       // Notify user about changes
-      if (addedPermissions.length > 0 || removedPermissions.length > 0) {
+      if (
+        addedPermissions.length > 0 ||
+        removedPermissions.length > 0 ||
+        oldRoles.length > 0 ||
+        newRoles.length > 0
+      ) {
         await this.notifyPermissionChanges(userId, organizationId, {
           addedPermissions,
           removedPermissions,
