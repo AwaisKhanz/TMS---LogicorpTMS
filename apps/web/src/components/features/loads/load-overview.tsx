@@ -166,53 +166,156 @@ export function LoadOverview({ loadId }: LoadOverviewProps) {
 
         {/* Route Information */}
         <div className="space-y-4">
-          <div className="flex items-start gap-3">
-            <div className="mt-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10">
-                <MapPin className="h-4 w-4 text-success" />
+          {/* Pickup Locations */}
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Pickup Locations</p>
+            {load.loadShippers && load.loadShippers.length > 0 ? (
+              load.loadShippers
+                .sort((a, b) => a.sequence - b.sequence)
+                .map((shipperRelation, index) => (
+                  <div key={shipperRelation.id} className="flex items-start gap-3">
+                    <div className="mt-1">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10">
+                        <MapPin className="h-4 w-4 text-success" />
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">
+                          {shipperRelation.isPrimary ? "Primary Pickup" : `Pickup ${index + 1}`}
+                        </p>
+                        {shipperRelation.isPrimary && (
+                          <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
+                            Primary
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold">
+                        {shipperRelation.shipper.companyName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {shipperRelation.shipper.city}, {shipperRelation.shipper.state} {shipperRelation.shipper.zipCode}
+                      </p>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-3 w-3" />
+                        <span>
+                          {shipperRelation.pickupDate 
+                            ? format(new Date(shipperRelation.pickupDate), "MMM dd, yyyy")
+                            : format(new Date(load.pickupDate), "MMM dd, yyyy")
+                          } •{" "}
+                          {shipperRelation.pickupStart || load.pickupStart} - {shipperRelation.pickupEnd || load.pickupEnd}
+                        </span>
+                      </div>
+                      {shipperRelation.pickupNotes && (
+                        <p className="text-xs text-muted-foreground">
+                          {shipperRelation.pickupNotes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))
+            ) : (
+              // Fallback for backward compatibility
+              <div className="flex items-start gap-3">
+                <div className="mt-1">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10">
+                    <MapPin className="h-4 w-4 text-success" />
+                  </div>
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-medium">Pickup</p>
+                  <p className="text-sm font-semibold">
+                    No shipper selected
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    No pickup location available
+                  </p>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-3 w-3" />
+                    <span>
+                      {format(new Date(load.pickupDate), "MMM dd, yyyy")} •{" "}
+                      {load.pickupStart} - {load.pickupEnd}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex-1 space-y-1">
-              <p className="text-sm font-medium">Pickup</p>
-              <p className="text-sm font-semibold">
-                {load.shipper.companyName}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {load.shipper.city}, {load.shipper.state} {load.shipper.zipCode}
-              </p>
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-3 w-3" />
-                <span>
-                  {format(new Date(load.pickupDate), "MMM dd, yyyy")} •{" "}
-                  {load.pickupStart} - {load.pickupEnd}
-                </span>
-              </div>
-            </div>
+            )}
           </div>
 
-          <div className="flex items-start gap-3">
-            <div className="mt-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-info/10">
-                <MapPin className="h-4 w-4 text-info" />
+          {/* Delivery Locations */}
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Delivery Locations</p>
+            {load.loadConsignees && load.loadConsignees.length > 0 ? (
+              load.loadConsignees
+                .sort((a, b) => a.sequence - b.sequence)
+                .map((consigneeRelation, index) => (
+                  <div key={consigneeRelation.id} className="flex items-start gap-3">
+                    <div className="mt-1">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-info/10">
+                        <MapPin className="h-4 w-4 text-info" />
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">
+                          {consigneeRelation.isPrimary ? "Primary Delivery" : `Delivery ${index + 1}`}
+                        </p>
+                        {consigneeRelation.isPrimary && (
+                          <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
+                            Primary
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold">
+                        {consigneeRelation.consignee.companyName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {consigneeRelation.consignee.city}, {consigneeRelation.consignee.state} {consigneeRelation.consignee.zipCode}
+                      </p>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-3 w-3" />
+                        <span>
+                          {consigneeRelation.deliveryDate 
+                            ? format(new Date(consigneeRelation.deliveryDate), "MMM dd, yyyy")
+                            : format(new Date(load.deliveryDate), "MMM dd, yyyy")
+                          } •{" "}
+                          {consigneeRelation.deliveryStart || load.deliveryStart} - {consigneeRelation.deliveryEnd || load.deliveryEnd}
+                        </span>
+                      </div>
+                      {consigneeRelation.deliveryNotes && (
+                        <p className="text-xs text-muted-foreground">
+                          {consigneeRelation.deliveryNotes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))
+            ) : (
+              // Fallback for backward compatibility
+              <div className="flex items-start gap-3">
+                <div className="mt-1">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-info/10">
+                    <MapPin className="h-4 w-4 text-info" />
+                  </div>
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-medium">Delivery</p>
+                  <p className="text-sm font-semibold">
+                    No consignee selected
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    No delivery location available
+                  </p>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-3 w-3" />
+                    <span>
+                      {format(new Date(load.deliveryDate), "MMM dd, yyyy")} •{" "}
+                      {load.deliveryStart} - {load.deliveryEnd}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex-1 space-y-1">
-              <p className="text-sm font-medium">Delivery</p>
-              <p className="text-sm font-semibold">
-                {load.consignee.companyName}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {load.consignee.city}, {load.consignee.state}{" "}
-                {load.consignee.zipCode}
-              </p>
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-3 w-3" />
-                <span>
-                  {format(new Date(load.deliveryDate), "MMM dd, yyyy")} •{" "}
-                  {load.deliveryStart} - {load.deliveryEnd}
-                </span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -256,34 +359,16 @@ export function LoadOverview({ loadId }: LoadOverviewProps) {
         </div>
 
         {/* Notes */}
-        {(load.pickupNotes || load.deliveryNotes || load.internalNotes) && (
+        {load.internalNotes && (
           <>
             <Separator />
             <div className="space-y-3">
-              {load.pickupNotes && (
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Pickup Notes</p>
-                  <p className="text-sm text-muted-foreground">
-                    {load.pickupNotes}
-                  </p>
-                </div>
-              )}
-              {load.deliveryNotes && (
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Delivery Notes</p>
-                  <p className="text-sm text-muted-foreground">
-                    {load.deliveryNotes}
-                  </p>
-                </div>
-              )}
-              {load.internalNotes && (
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Internal Notes</p>
-                  <p className="text-sm text-muted-foreground">
-                    {load.internalNotes}
-                  </p>
-                </div>
-              )}
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Internal Notes</p>
+                <p className="text-sm text-muted-foreground">
+                  {load.internalNotes}
+                </p>
+              </div>
             </div>
           </>
         )}

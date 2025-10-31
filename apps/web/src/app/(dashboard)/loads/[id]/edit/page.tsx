@@ -42,8 +42,27 @@ export default function LoadEditPage({ params }: LoadEditPageProps) {
         ...load,
         pickupDate: new Date(load.pickupDate),
         deliveryDate: new Date(load.deliveryDate),
-        shipperId: load.shipperId,
-        consigneeId: load.consigneeId,
+        // Handle new many-to-many structure
+        shippers: load.loadShippers?.map(relation => ({
+          shipperId: relation.shipperId,
+          isPrimary: relation.isPrimary,
+          sequence: relation.sequence,
+          pickupDate: relation.pickupDate ? new Date(relation.pickupDate) : undefined,
+          pickupStart: relation.pickupStart,
+          pickupEnd: relation.pickupEnd,
+          pickupType: relation.pickupType,
+          pickupNotes: relation.pickupNotes,
+        })) || [],
+        consignees: load.loadConsignees?.map(relation => ({
+          consigneeId: relation.consigneeId,
+          isPrimary: relation.isPrimary,
+          sequence: relation.sequence,
+          deliveryDate: relation.deliveryDate ? new Date(relation.deliveryDate) : undefined,
+          deliveryStart: relation.deliveryStart,
+          deliveryEnd: relation.deliveryEnd,
+          deliveryType: relation.deliveryType,
+          deliveryNotes: relation.deliveryNotes,
+        })) || [],
       }
     : undefined;
 

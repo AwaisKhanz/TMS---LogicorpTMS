@@ -12,6 +12,7 @@ import type {
   LoadStatisticsByStatus,
 } from "@tms/shared-types";
 import type { Load } from "@tms/shared-types";
+import type { FinancialAdjustment } from "@tms/shared-types";
 
 interface PaginatedLoadsResponse {
   success: boolean;
@@ -186,6 +187,37 @@ export function useUpdateLoad() {
       const apiError = error as ApiErrorException;
       toast.error(
         apiError.response?.data?.error?.message || "Failed to update load"
+      );
+    },
+  });
+}
+
+// Update financial adjustments
+export function useUpdateFinancialAdjustments() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      adjustments,
+    }: {
+      id: string;
+      adjustments: FinancialAdjustment[];
+    }) => {
+      const response = await apiClient.put<{ success: boolean; data: Load }>(
+        `/loads/${id}/financial-adjustments`,
+        { adjustments }
+      );
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: loadKeys.detail(data.id) });
+    },
+    onError: (error) => {
+      const apiError = error as ApiErrorException;
+      toast.error(
+        apiError.response?.data?.error?.message ||
+          "Failed to update financial adjustments"
       );
     },
   });

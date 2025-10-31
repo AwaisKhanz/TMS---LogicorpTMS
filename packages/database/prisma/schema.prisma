@@ -50,6 +50,7 @@ model Organization {
   reports   Report[]
   reportSchedules ReportSchedule[]
   reportTemplates ReportTemplate[]
+  payments  Payment[]
 
   @@map("organizations")
 }
@@ -173,18 +174,9 @@ model Load {
   customerId String
   carrierId  String?
 
-  // Locations
-  shipperId    String
-  pickupDate   DateTime
-  pickupStart  String
-  pickupEnd    String
-  pickupType   String @default("FCFS") // FCFS or BY_APPOINTMENT
-
-  consigneeId   String
-  deliveryDate  DateTime
-  deliveryStart String
-  deliveryEnd   String
-  deliveryType  String @default("FCFS") // FCFS or BY_APPOINTMENT
+  // Removed root-level pickup/delivery fields for many-to-many
+  // Now handled in related LoadShipper and LoadConsignee
+  internalNotes String?
 
   // Load Details
   commodity                    String
@@ -195,11 +187,19 @@ model Load {
   dimensions                   Json?
   equipmentType                EquipmentType
   loadType                     LoadType @default(FULL_TRUCK)
+  
+  // Temperature (for REEFER equipment)
+  minTemperature               Int?
+  maxTemperature               Int?
+  temperatureUnit              TemperatureUnit?
+  continuousTemperature        Boolean @default(false)
 
   // Rates & Costs
   customerRate Decimal  @db.Money
   carrierRate  Decimal? @db.Money
   margin       Decimal? @db.Money
+  // Financial adjustments (array of structured changes stored as JSON)
+  financialAdjustments Json @default("[]")
 
   // Rate Change Tracking
   customerRateChangeReason String?
@@ -214,11 +214,6 @@ model Load {
   currentLocation Json?
   eta             DateTime?
   trackingMethod  String?
-
-  // Instructions
-  pickupNotes   String?
-  deliveryNotes String?
-  internalNotes String?
 
   // Status Timestamps
   bookedAt     DateTime?
@@ -239,22 +234,21 @@ model Load {
   organization Organization     @relation(fields: [organizationId], references: [id])
   customer     Customer         @relation(fields: [customerId], references: [id])
   carrier      Carrier?         @relation(fields: [carrierId], references: [id])
-  shipper      Shipper          @relation("ShipperLoads", fields: [shipperId], references: [id])
-  consignee    Consignee        @relation("ConsigneeLoads", fields: [consigneeId], references: [id])
   creator      User             @relation("CreatedLoads", fields: [createdBy], references: [id])
   assignee     User?            @relation("AssignedLoads", fields: [assignedTo], references: [id])
   events       LoadEvent[]
   invoice      InvoiceLineItem?
+  
+  // New many-to-many relationships
+  loadShippers   LoadShipper[]
+  loadConsignees LoadConsignee[]
+  
   // Note: Documents use polymorphic relationship - query with entityType='LOAD' and entityId
 
   @@unique([organizationId, loadNumber])
   @@index([organizationId, status])
-  @@index([organizationId, pickupDate])
   @@index([organizationId, customerId])
   @@index([organizationId, carrierId])
-  @@index([organizationId, shipperId])
-  @@index([organizationId, consigneeId])
-  @@index([organizationId, status, pickupDate])
   @@index([organizationId, createdBy, status])
   @@map("loads")
 }
@@ -271,6 +265,63 @@ model LoadEvent {
   user User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@map("load_events")
+}
+
+// ==================== LOAD SHIPPERS & CONSIGNEES ====================
+model LoadShipper {
+  id        String @id @default(cuid())
+  loadId    String
+  shipperId String
+  
+  // Additional fields for load-shipper relationship
+  isPrimary     Boolean @default(false)
+  sequence      Int     @default(1) // Order of pickup
+  pickupDate    DateTime?
+  pickupStart   String?
+  pickupEnd     String?
+  pickupType    String  @default("FCFS")
+  pickupNotes   String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  load    Load    @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  shipper Shipper @relation(fields: [shipperId], references: [id], onDelete: Cascade)
+  
+  @@unique([loadId, shipperId])
+  @@index([loadId])
+  @@index([shipperId])
+  @@map("load_shippers")
+}
+
+model LoadConsignee {
+  id          String @id @default(cuid())
+  loadId      String
+  consigneeId String
+  
+  // Additional fields for load-consignee relationship
+  isPrimary      Boolean @default(false)
+  sequence       Int     @default(1) // Order of delivery
+  deliveryDate   DateTime?
+  deliveryStart  String?
+  deliveryEnd    String?
+  deliveryType   String  @default("FCFS")
+  deliveryNotes  String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  load      Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  consignee Consignee @relation(fields: [consigneeId], references: [id], onDelete: Cascade)
+  
+  @@unique([loadId, consigneeId])
+  @@index([loadId])
+  @@index([consigneeId])
+  @@map("load_consignees")
 }
 
 // ==================== CARRIERS ====================
@@ -340,6 +391,7 @@ model Carrier {
   organization Organization     @relation(fields: [organizationId], references: [id])
   loads        Load[]
   contacts     CarrierContact[]
+  invoices     Invoice[]
   // Note: Documents use polymorphic relationship - query with entityType='CARRIER' and entityId
 
   @@unique([organizationId, mcNumber])
@@ -440,34 +492,24 @@ model Invoice {
   organizationId String
   invoiceNumber  String
   customerId     String
+  carrierId      String?
 
   // Dates
   invoiceDate DateTime @default(now())
   dueDate     DateTime
 
   // Amounts
-  subtotal Decimal @db.Money
-  tax      Decimal @default(0) @db.Money
-  discount Decimal @default(0) @db.Money
   total    Decimal @db.Money
 
   // Payment
   status           InvoiceStatus @default(DRAFT)
   paidAmount       Decimal       @default(0) @db.Money
-  paymentMethod    String?
-  paymentDate      DateTime?
-  paymentReference String?
 
-  // Email Tracking
+  // Email Tracking (minimal)
   sentAt         DateTime?
-  sentTo         String[]  @default([])
-  viewedAt       DateTime?
-  remindersSent  Int       @default(0)
-  lastReminderAt DateTime?
 
   // Metadata
   notes     String?
-  terms     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   createdBy String
@@ -475,7 +517,9 @@ model Invoice {
   // Relations
   organization Organization      @relation(fields: [organizationId], references: [id])
   customer     Customer          @relation(fields: [customerId], references: [id])
+  carrier      Carrier?          @relation(fields: [carrierId], references: [id])
   lineItems    InvoiceLineItem[]
+  payments     Payment[]
 
   @@unique([organizationId, invoiceNumber])
   @@index([organizationId, status])
@@ -499,6 +543,43 @@ model InvoiceLineItem {
 
   @@index([invoiceId])
   @@map("invoice_line_items")
+}
+
+// ==================== PAYMENTS ====================
+enum PaymentType {
+  CUSTOMER
+  CARRIER
+}
+
+enum PaymentMethod {
+  CASH
+  CHECK
+  ACH
+  WIRE
+  CREDIT_CARD
+  OTHER
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  organizationId String
+  invoiceId      String
+  type           PaymentType
+  amount         Decimal       @db.Money
+  method         PaymentMethod
+  date           DateTime      @default(now())
+  reference      String?
+  notes          String?
+  createdAt      DateTime      @default(now())
+  createdBy      String
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id])
+  invoice      Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, invoiceId, type])
+  @@index([organizationId, date])
+  @@map("payments")
 }
 
 // ==================== DOCUMENTS ====================
@@ -632,6 +713,11 @@ enum EntityType {
   REPORT
 }
 
+enum TemperatureUnit {
+  FAHRENHEIT
+  CELSIUS
+}
+
 enum DocumentType {
   RATE_CONFIRMATION
   BOL
@@ -709,7 +795,7 @@ model Shipper {
 
   // Relations
   organization   Organization @relation(fields: [organizationId], references: [id])
-  loads          Load[]       @relation("ShipperLoads")
+  loadShippers   LoadShipper[]
 
   @@unique([organizationId, companyName, streetAddress, city, state])
   @@index([organizationId, isActive])
@@ -748,7 +834,7 @@ model Consignee {
 
   // Relations
   organization   Organization @relation(fields: [organizationId], references: [id])
-  loads          Load[]       @relation("ConsigneeLoads")
+  loadConsignees LoadConsignee[]
 
   @@unique([organizationId, companyName, streetAddress, city, state])
   @@index([organizationId, isActive])

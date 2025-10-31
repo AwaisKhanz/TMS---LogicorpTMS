@@ -1,14 +1,16 @@
 "use client";
 
-import { Control } from "react-hook-form";
+import { Control, useWatch } from "react-hook-form";
 import {
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -26,6 +28,13 @@ interface LoadSpecificationsSectionProps {
 export function LoadSpecificationsSection({
   control,
 }: LoadSpecificationsSectionProps) {
+  const equipmentType = useWatch({
+    control,
+    name: "equipmentType",
+  });
+
+  const isReefer = equipmentType === "REEFER";
+
   return (
     <div className="bg-card rounded-xl border border-border shadow-sm p-6 sm:p-8">
       <div className="mb-6">
@@ -197,6 +206,124 @@ export function LoadSpecificationsSection({
             )}
           />
         </div>
+
+        {isReefer && (
+          <div className="space-y-4 pt-4 border-t">
+            <h4 className="text-sm font-medium text-foreground">
+              Temperature Requirements
+            </h4>
+            <div className="grid gap-6 sm:grid-cols-2">
+              <FormField
+                control={control}
+                name="minTemperature"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Minimum Temperature</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="32"
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === ""
+                              ? undefined
+                              : parseInt(e.target.value, 10)
+                          )
+                        }
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Minimum temperature required (°F or °C)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="maxTemperature"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Maximum Temperature</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="40"
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === ""
+                              ? undefined
+                              : parseInt(e.target.value, 10)
+                          )
+                        }
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Maximum temperature required (°F or °C)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2">
+              <FormField
+                control={control}
+                name="temperatureUnit"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Temperature Unit</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select unit" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="FAHRENHEIT">°F (Fahrenheit)</SelectItem>
+                        <SelectItem value="CELSIUS">°C (Celsius)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Unit of measurement for temperature
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="continuousTemperature"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value ?? false}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Continuous Temperature</FormLabel>
+                      <FormDescription>
+                        Temperature must be maintained continuously throughout transit
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

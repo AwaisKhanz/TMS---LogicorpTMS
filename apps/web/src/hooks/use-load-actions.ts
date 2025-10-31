@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
 import type { ApiErrorException } from "@/types/api.types";
+import { loadKeys } from "./use-loads";
 
 // ==================== QUERY KEYS ====================
 export const loadActionKeys = {
@@ -35,9 +36,8 @@ export function useGenerateDocument() {
       return apiClient.post(endpoint);
     },
     onSuccess: (_, { documentType, loadId }) => {
-      queryClient.invalidateQueries({
-        queryKey: loadActionKeys.documents(loadId),
-      });
+      // Invalidate the documents list used by the UI
+      queryClient.invalidateQueries({ queryKey: loadKeys.documents(loadId) });
       toast.success(`${documentType} generated successfully`);
     },
     onError: (error, { documentType }) => {

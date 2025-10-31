@@ -81,6 +81,7 @@ export interface OrganizationSettings {
   planExpiresAt?: string | null;
   documentNumbering: DocumentNumberingSettings;
   businessSettings: BusinessSettings;
+  documentTerms?: DocumentTermsSettings;
   teamMembers: TeamMember[];
 }
 
@@ -149,6 +150,18 @@ export interface UpdateDocumentNumberingRequest {
   invoiceNumberPrefix?: string;
   invoiceNumberStart?: number;
   autoIncrement?: boolean;
+}
+
+export interface DocumentTermsSettings {
+  bolTerms?: string;
+  rateConfirmationTerms?: string;
+  invoiceTerms?: string;
+}
+
+export interface UpdateDocumentTermsRequest {
+  bolTerms?: string;
+  rateConfirmationTerms?: string;
+  invoiceTerms?: string;
 }
 
 export interface InviteTeamMemberRequest {

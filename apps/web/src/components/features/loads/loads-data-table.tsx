@@ -275,13 +275,52 @@ export function LoadsDataTable() {
                   <div className="flex items-center gap-2 text-sm">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     <div className="flex-1">
-                      <div className="font-medium">
-                        {load.shipper.city}, {load.shipper.state}
-                      </div>
-                      <div className="text-muted-foreground">→</div>
-                      <div className="font-medium">
-                        {load.consignee.city}, {load.consignee.state}
-                      </div>
+                      {load.loadShippers && load.loadShippers.length > 0 ? (
+                        <div className="space-y-1">
+                          {load.loadShippers
+                            .filter(s => s.isPrimary)
+                            .map(shipperRelation => (
+                              <div key={shipperRelation.id} className="font-medium">
+                                {shipperRelation.shipper.city}, {shipperRelation.shipper.state}
+                                {load.loadShippers!.length > 1 && (
+                                  <span className="text-xs text-muted-foreground ml-1">
+                                    (+{load.loadShippers!.length - 1} more)
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          <div className="text-muted-foreground">→</div>
+                          {load.loadConsignees && load.loadConsignees.length > 0 ? (
+                            load.loadConsignees
+                              .filter(c => c.isPrimary)
+                              .map(consigneeRelation => (
+                                <div key={consigneeRelation.id} className="font-medium">
+                                  {consigneeRelation.consignee.city}, {consigneeRelation.consignee.state}
+                                  {load.loadConsignees!.length > 1 && (
+                                    <span className="text-xs text-muted-foreground ml-1">
+                                      (+{load.loadConsignees!.length - 1} more)
+                                    </span>
+                                  )}
+                                </div>
+                              ))
+                          ) : (
+                            <div className="font-medium text-muted-foreground">
+                              No delivery location
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        // Fallback for backward compatibility
+                        <div>
+                          <div className="font-medium text-muted-foreground">
+                            No pickup location
+                          </div>
+                          <div className="text-muted-foreground">→</div>
+                          <div className="font-medium text-muted-foreground">
+                            No delivery location
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -289,7 +328,12 @@ export function LoadsDataTable() {
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span>
-                      {format(new Date(load.pickupDate), "MMM dd, yyyy")}
+                      {(() => {
+                        const ps = load.loadShippers?.find(s => s.isPrimary) || load.loadShippers?.[0];
+                        return ps?.pickupDate
+                          ? format(new Date(ps.pickupDate), "MMM dd, yyyy")
+                          : "-";
+                      })()}
                     </span>
                   </div>
 
@@ -533,20 +577,67 @@ export function LoadsDataTable() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div className="text-sm">
-                            <div>
-                              {load.shipper.city}, {load.shipper.state}
-                            </div>
-                            <div className="text-muted-foreground">→</div>
-                            <div>
-                              {load.consignee.city}, {load.consignee.state}
-                            </div>
+                            {load.loadShippers && load.loadShippers.length > 0 ? (
+                              <>
+                                {load.loadShippers
+                                  .filter(s => s.isPrimary)
+                                  .map(shipperRelation => (
+                                    <div key={shipperRelation.id}>
+                                      {shipperRelation.shipper.city}, {shipperRelation.shipper.state}
+                                      {load.loadShippers!.length > 1 && (
+                                        <span className="text-xs text-muted-foreground ml-1">
+                                          (+{load.loadShippers!.length - 1})
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                <div className="text-muted-foreground">→</div>
+                                {load.loadConsignees && load.loadConsignees.length > 0 ? (
+                                  load.loadConsignees
+                                    .filter(c => c.isPrimary)
+                                    .map(consigneeRelation => (
+                                      <div key={consigneeRelation.id}>
+                                        {consigneeRelation.consignee.city}, {consigneeRelation.consignee.state}
+                                        {load.loadConsignees!.length > 1 && (
+                                          <span className="text-xs text-muted-foreground ml-1">
+                                            (+{load.loadConsignees!.length - 1})
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))
+                                ) : (
+                                  <div className="text-muted-foreground">No delivery location</div>
+                                )}
+                              </>
+                            ) : (
+                              // Fallback for backward compatibility
+                              <>
+                                <div className="text-muted-foreground">
+                                  No pickup location
+                                </div>
+                                <div className="text-muted-foreground">→</div>
+                                <div className="text-muted-foreground">
+                                  No delivery location
+                                </div>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
-                          {format(new Date(load.pickupDate), "MMM dd, yyyy")}
+                          {(() => {
+                            const ps = load.loadShippers?.find(s => s.isPrimary) || load.loadShippers?.[0];
+                            return ps?.pickupDate
+                              ? format(new Date(ps.pickupDate), "MMM dd, yyyy")
+                              : "-";
+                          })()}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
-                          {format(new Date(load.deliveryDate), "MMM dd, yyyy")}
+                          {(() => {
+                            const pc = load.loadConsignees?.find(c => c.isPrimary) || load.loadConsignees?.[0];
+                            return pc?.deliveryDate
+                              ? format(new Date(pc.deliveryDate), "MMM dd, yyyy")
+                              : "-";
+                          })()}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div className="text-sm">

@@ -11,8 +11,6 @@ export type CarrierWithRelations = Prisma.CarrierGetPayload<{
         id: true;
         loadNumber: true;
         status: true;
-        pickupDate: true;
-        deliveryDate: true;
         customerRate: true;
         carrierRate: true;
         customer: {
@@ -153,8 +151,6 @@ export class CarrierRepository extends BaseRepository<Carrier> {
             id: true,
             loadNumber: true,
             status: true,
-            pickupDate: true,
-            deliveryDate: true,
             customerRate: true,
             carrierRate: true,
             customer: {

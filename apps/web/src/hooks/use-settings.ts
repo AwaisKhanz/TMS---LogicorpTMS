@@ -326,6 +326,31 @@ export function useUpdateDocumentNumbering() {
   });
 }
 
+export function useUpdateDocumentTerms() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: import("@tms/shared-types").UpdateDocumentTermsRequest) => {
+      const response = await apiClient.put<OrganizationSettingsResponse>(
+        "/settings/organization/document-terms",
+        data
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: settingsKeys.organization() });
+      toast.success("Document terms updated successfully");
+    },
+    onError: (error) => {
+      const apiError = error as ApiErrorException;
+      toast.error(
+        apiError.response?.data?.error?.message ||
+          "Failed to update document terms"
+      );
+    },
+  });
+}
+
 // ==================== TEAM MANAGEMENT ====================
 
 export function useTeamMembers() {

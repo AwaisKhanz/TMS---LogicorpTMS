@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { AuthorizationError } from "../utils/errors.util.js";
 import { LoadService } from "../services/load.service.js";
 import { z } from "zod";
 import {
@@ -10,17 +11,41 @@ import {
 
 const loadService = new LoadService();
 
+const shipperRelationSchema = z.object({
+  shipperId: z.string().min(1, "Shipper ID is required"),
+  isPrimary: z.boolean().optional(),
+  sequence: z.number().int().min(1).optional(),
+  pickupDate: z.string().optional(),
+  pickupStart: z.string().optional(),
+  pickupEnd: z.string().optional(),
+  pickupType: z.enum(["FCFS", "BY_APPOINTMENT"]).optional(),
+  pickupNotes: z.string().optional(),
+});
+
+const consigneeRelationSchema = z.object({
+  consigneeId: z.string().min(1, "Consignee ID is required"),
+  isPrimary: z.boolean().optional(),
+  sequence: z.number().int().min(1).optional(),
+  deliveryDate: z.string().optional(),
+  deliveryStart: z.string().optional(),
+  deliveryEnd: z.string().optional(),
+  deliveryType: z.enum(["FCFS", "BY_APPOINTMENT"]).optional(),
+  deliveryNotes: z.string().optional(),
+});
+
 export const createLoadSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
   carrierId: z.string().optional(),
-  shipperId: z.string().min(1, "Shipper is required"),
-  pickupDate: z.string(),
-  pickupStart: z.string().min(1, "Pickup start time is required"),
-  pickupEnd: z.string().min(1, "Pickup end time is required"),
-  consigneeId: z.string().min(1, "Consignee is required"),
-  deliveryDate: z.string(),
-  deliveryStart: z.string().min(1, "Delivery start time is required"),
-  deliveryEnd: z.string().min(1, "Delivery end time is required"),
+  // Root-level pickup/delivery fields removed in favor of per-shipper/consignee
+
+  // Multiple shippers and consignees
+  shippers: z
+    .array(shipperRelationSchema)
+    .min(1, "At least one shipper is required"),
+  consignees: z
+    .array(consigneeRelationSchema)
+    .min(1, "At least one consignee is required"),
+
   commodity: z.string().min(1, "Commodity is required"),
   weight: z.number().min(0, "Weight must be positive"),
   pieces: z.number().optional(),
@@ -33,6 +58,10 @@ export const createLoadSchema = z.object({
     .optional(),
   equipmentType: z.nativeEnum(EquipmentType),
   loadType: z.nativeEnum(LoadType).optional(),
+  minTemperature: z.number().int().optional(),
+  maxTemperature: z.number().int().optional(),
+  temperatureUnit: z.enum(["FAHRENHEIT", "CELSIUS"]).optional(),
+  continuousTemperature: z.boolean().optional(),
   customerRate: z.number().min(0, "Customer rate must be positive"),
   carrierRate: z.number().min(0).optional(),
   accessorials: z
@@ -44,8 +73,6 @@ export const createLoadSchema = z.object({
       })
     )
     .optional(),
-  pickupNotes: z.string().optional(),
-  deliveryNotes: z.string().optional(),
   internalNotes: z.string().optional(),
   referenceNumber: z.string().optional(),
   assignedTo: z.string().optional(),
@@ -54,14 +81,12 @@ export const createLoadSchema = z.object({
 export const updateLoadSchema = z.object({
   customerId: z.string().optional(),
   carrierId: z.string().optional(),
-  shipperId: z.string().optional(),
-  pickupDate: z.string().optional(),
-  pickupStart: z.string().optional(),
-  pickupEnd: z.string().optional(),
-  consigneeId: z.string().optional(),
-  deliveryDate: z.string().optional(),
-  deliveryStart: z.string().optional(),
-  deliveryEnd: z.string().optional(),
+  // Root-level pickup/delivery fields removed; managed per-shipper/consignee
+
+  // Multiple shippers and consignees
+  shippers: z.array(shipperRelationSchema).optional(),
+  consignees: z.array(consigneeRelationSchema).optional(),
+
   commodity: z.string().optional(),
   weight: z.number().min(0).optional(),
   pieces: z.number().optional(),
@@ -74,6 +99,10 @@ export const updateLoadSchema = z.object({
     .optional(),
   equipmentType: z.nativeEnum(EquipmentType).optional(),
   loadType: z.nativeEnum(LoadType).optional(),
+  minTemperature: z.number().int().optional(),
+  maxTemperature: z.number().int().optional(),
+  temperatureUnit: z.enum(["FAHRENHEIT", "CELSIUS"]).optional(),
+  continuousTemperature: z.boolean().optional(),
   customerRate: z.number().min(0).optional(),
   carrierRate: z.number().min(0).optional(),
   accessorials: z
@@ -85,8 +114,6 @@ export const updateLoadSchema = z.object({
       })
     )
     .optional(),
-  pickupNotes: z.string().optional(),
-  deliveryNotes: z.string().optional(),
   internalNotes: z.string().optional(),
   referenceNumber: z.string().optional(),
   assignedTo: z.string().optional(),
@@ -178,6 +205,20 @@ export class LoadController {
       }
 
       const { id } = req.params;
+      // If load is COMPLETED, only accounting/invoice users can modify
+      const existing = await loadService.getLoadById(
+        id,
+        req.auth.organizationId,
+        req.auth.userId
+      );
+      if (
+        existing?.status === LoadStatus.COMPLETED &&
+        !req.auth.permissions.includes("invoice:edit")
+      ) {
+        throw new AuthorizationError(
+          "Completed loads can only be modified by accounting users"
+        );
+      }
       const load = await loadService.updateLoad(
         id,
         req.body,
@@ -416,6 +457,46 @@ export class LoadController {
         success: true,
         data: result,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateFinancialAdjustments(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      if (!req.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const { id } = req.params;
+      const adjustments = req.body?.adjustments ?? [];
+
+      // Restrict financial edits on completed loads to accounting users
+      const existing = await loadService.getLoadById(
+        id,
+        req.auth.organizationId,
+        req.auth.userId
+      );
+      if (
+        existing?.status === LoadStatus.COMPLETED &&
+        !req.auth.permissions.includes("invoice:edit")
+      ) {
+        throw new AuthorizationError(
+          "Completed loads' financials can only be modified by accounting users"
+        );
+      }
+
+      const load = await loadService.updateFinancialAdjustments(
+        id,
+        req.auth.organizationId,
+        adjustments
+      );
+
+      res.status(200).json({ success: true, data: load });
     } catch (error) {
       next(error);
     }

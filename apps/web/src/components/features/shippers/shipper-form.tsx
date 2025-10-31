@@ -42,7 +42,7 @@ const shipperFormSchema = z.object({
   streetAddress: z.string().min(1, "Street address is required"),
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
-  zipCode: z.string().min(1, "ZIP code is required"),
+  zipCode: z.string().min(5, "ZIP code must be at least 5 characters"),
   country: z.string().min(1, "Country is required"),
   contactPerson: z.string().optional(),
   notes: z.string().optional(),

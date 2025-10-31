@@ -5,6 +5,8 @@ import { DocumentDeliveryService } from "../services/document-delivery.service.j
 import { z } from "zod";
 import type { EntityType, Document } from "@tms/shared-types";
 import { DocumentType } from "@tms/shared-types";
+import { LoadStatus } from "@tms/shared-types";
+import { LoadService } from "../services/load.service.js";
 import { DOCUMENT_TYPES } from "@tms/shared-constants";
 import { ENTITY_TYPES } from "@tms/shared-constants";
 
@@ -22,6 +24,7 @@ interface BusboyRequest extends Request {
 const documentService = new DocumentService();
 const documentGenService = new DocumentGenerationService();
 const documentDeliveryService = new DocumentDeliveryService();
+const loadService = new LoadService();
 
 // Transform Prisma document to shared-types Document
 function transformDocument(prismaDoc: any): Document {
@@ -361,15 +364,25 @@ export class DocumentController {
 
       const { loadId } = req.params;
 
-      const document = await documentGenService.generateRateConfirmation(
+      // Generate and persist a placeholder PDF so it appears in the list
+      const pdfBuffer = await documentGenService.generateRateConfirmation(
         loadId,
         req.auth.organizationId,
+        req.auth.userId
+      );
+      const saved = await documentService.saveGeneratedDocument(
+        req.auth.organizationId,
+        "LOAD",
+        loadId,
+        DocumentType.RATE_CONFIRMATION,
+        `Rate-Confirmation-${loadId}`,
+        pdfBuffer,
         req.auth.userId
       );
 
       res.status(201).json({
         success: true,
-        data: document as any,
+        data: saved as any,
       });
     } catch (error) {
       next(error);
@@ -384,15 +397,24 @@ export class DocumentController {
 
       const { loadId } = req.params;
 
-      const document = await documentGenService.generateBOL(
+      const pdfBuffer = await documentGenService.generateBOL(
         loadId,
         req.auth.organizationId,
+        req.auth.userId
+      );
+      const saved = await documentService.saveGeneratedDocument(
+        req.auth.organizationId,
+        "LOAD",
+        loadId,
+        DocumentType.BOL,
+        `BOL-${loadId}`,
+        pdfBuffer,
         req.auth.userId
       );
 
       res.status(201).json({
         success: true,
-        data: document as any,
+        data: saved as any,
       });
     } catch (error) {
       next(error);
@@ -407,15 +429,24 @@ export class DocumentController {
 
       const { loadId } = req.params;
 
-      const document = await documentGenService.generateInvoice(
+      const pdfBuffer = await documentGenService.generateInvoice(
         loadId,
         req.auth.organizationId,
+        req.auth.userId
+      );
+      const saved = await documentService.saveGeneratedDocument(
+        req.auth.organizationId,
+        "LOAD",
+        loadId,
+        DocumentType.INVOICE,
+        `Invoice-${loadId}`,
+        pdfBuffer,
         req.auth.userId
       );
 
       res.status(201).json({
         success: true,
-        data: document as any,
+        data: saved as any,
       });
     } catch (error) {
       next(error);
@@ -430,15 +461,24 @@ export class DocumentController {
 
       const { loadId } = req.params;
 
-      const document = await documentGenService.generatePOD(
+      const pdfBuffer = await documentGenService.generatePOD(
         loadId,
         req.auth.organizationId,
+        req.auth.userId
+      );
+      const saved = await documentService.saveGeneratedDocument(
+        req.auth.organizationId,
+        "LOAD",
+        loadId,
+        DocumentType.POD,
+        `POD-${loadId}`,
+        pdfBuffer,
         req.auth.userId
       );
 
       res.status(201).json({
         success: true,
-        data: document as any,
+        data: saved as any,
       });
     } catch (error) {
       next(error);
@@ -642,11 +682,8 @@ export class DocumentController {
       }
 
       const { loadId } = req.params;
-      const { carrierEmail, carrierName } = req.body;
-
-      if (!carrierEmail || !carrierName) {
-        throw new Error("Carrier email and name are required");
-      }
+      const { carrierEmail, carrierName, recipients, subject, message } =
+        req.body as any;
 
       // Get load and organization info
       const { default: prisma } = await import("../config/database.js");
@@ -668,27 +705,62 @@ export class DocumentController {
       }
 
       // Generate rate confirmation if not exists
-      let document;
-      try {
-        document = await documentGenService.generateRateConfirmation(
+      // First try to find existing document record
+      let document = (
+        await documentService.getDocumentsByEntity(
+          "LOAD",
+          loadId,
+          req.auth.organizationId
+        )
+      ).find((doc) => doc.type === "RATE_CONFIRMATION");
+
+      // If not found, generate buffer and persist document
+      if (!document) {
+        const pdfBuffer = await documentGenService.generateRateConfirmation(
           loadId,
           req.auth.organizationId,
           req.auth.userId
         );
-      } catch (error) {
-        // Document might already exist, try to find it
-        const existingDocs = await documentService.getDocumentsByEntity(
+        document = await documentService.saveGeneratedDocument(
+          req.auth.organizationId,
           "LOAD",
           loadId,
-          req.auth.organizationId
+          DocumentType.RATE_CONFIRMATION,
+          `Rate-Confirmation-${loadId}`,
+          pdfBuffer,
+          req.auth.userId
         );
-        document = existingDocs.find((doc) => doc.type === "RATE_CONFIRMATION");
-
-        if (!document) {
-          throw new Error("Failed to generate or find rate confirmation");
-        }
       }
 
+      // If recipients array provided, use generic multi-recipient flow
+      if (Array.isArray(recipients) && recipients.length > 0) {
+        const result = await documentDeliveryService.sendDocumentToRecipients({
+          document: transformDocument(document),
+          recipients,
+          subject: subject || `Rate Confirmation - Load ${load.loadNumber}`,
+          message:
+            message ||
+            `Please find attached rate confirmation document for load ${load.loadNumber}.`,
+          loadNumber: load.loadNumber,
+          organizationName: load.organization.name,
+        });
+        try {
+          await loadService.updateLoadStatus(
+            loadId,
+            LoadStatus.DISPATCHED,
+            req.auth.userId,
+            req.auth.organizationId
+          );
+        } catch (e) {
+          // non-blocking
+        }
+        return res.status(200).json({ success: true, data: result });
+      }
+
+      // Legacy single-recipient path
+      if (!carrierEmail || !carrierName) {
+        throw new Error("Carrier email and name are required");
+      }
       const result = await documentDeliveryService.sendRateConfirmation(
         transformDocument(document),
         carrierEmail,
@@ -696,6 +768,17 @@ export class DocumentController {
         load.loadNumber,
         load.organization.name
       );
+
+      try {
+        await loadService.updateLoadStatus(
+          loadId,
+          LoadStatus.DISPATCHED,
+          req.auth.userId,
+          req.auth.organizationId
+        );
+      } catch (e) {
+        // non-blocking
+      }
 
       res.status(200).json({
         success: true,

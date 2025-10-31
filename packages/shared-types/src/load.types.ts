@@ -83,6 +83,62 @@ export interface LoadConsignee {
   contactPerson?: string;
 }
 
+// Junction table types for many-to-many relationships
+export interface LoadShipperRelation {
+  id: string;
+  loadId: string;
+  shipperId: string;
+  isPrimary: boolean;
+  sequence: number;
+  pickupDate?: string;
+  pickupStart?: string;
+  pickupEnd?: string;
+  pickupType: "FCFS" | "BY_APPOINTMENT";
+  pickupNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+  shipper: LoadShipper;
+}
+
+export interface LoadConsigneeRelation {
+  id: string;
+  loadId: string;
+  consigneeId: string;
+  isPrimary: boolean;
+  sequence: number;
+  deliveryDate?: string;
+  deliveryStart?: string;
+  deliveryEnd?: string;
+  deliveryType: "FCFS" | "BY_APPOINTMENT";
+  deliveryNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+  consignee: LoadConsignee;
+}
+
+// Request types for shipper/consignee relationships
+export interface CreateLoadShipperRequest {
+  shipperId: string;
+  isPrimary?: boolean;
+  sequence?: number;
+  pickupDate?: string;
+  pickupStart?: string;
+  pickupEnd?: string;
+  pickupType?: "FCFS" | "BY_APPOINTMENT";
+  pickupNotes?: string;
+}
+
+export interface CreateLoadConsigneeRequest {
+  consigneeId: string;
+  isPrimary?: boolean;
+  sequence?: number;
+  deliveryDate?: string;
+  deliveryStart?: string;
+  deliveryEnd?: string;
+  deliveryType?: "FCFS" | "BY_APPOINTMENT";
+  deliveryNotes?: string;
+}
+
 export interface LoadCreator {
   id: string;
   firstName: string;
@@ -138,23 +194,20 @@ export interface Load {
   carrierId?: string;
   carrier?: LoadCarrier;
 
-  // Shipper
-  shipperId: string;
-  shipper: LoadShipper;
+  // Pickup/Delivery Times (moved to load level for backward compatibility)
   pickupDate: string;
   pickupStart: string;
   pickupEnd: string;
-  pickupNotes?: string;
   pickupType: "FCFS" | "BY_APPOINTMENT";
 
-  // Consignee
-  consigneeId: string;
-  consignee: LoadConsignee;
   deliveryDate: string;
   deliveryStart: string;
   deliveryEnd: string;
-  deliveryNotes?: string;
   deliveryType: "FCFS" | "BY_APPOINTMENT";
+
+  // Multiple Shippers and Consignees
+  loadShippers: LoadShipperRelation[];
+  loadConsignees: LoadConsigneeRelation[];
 
   // Load Details
   commodity: string;
@@ -165,6 +218,12 @@ export interface Load {
   dimensions?: Dimensions;
   equipmentType: EquipmentType;
   loadType: LoadType;
+  
+  // Temperature (for REEFER equipment)
+  minTemperature?: number;
+  maxTemperature?: number;
+  temperatureUnit?: "FAHRENHEIT" | "CELSIUS";
+  continuousTemperature?: boolean;
 
   // Rates & Costs
   customerRate: number;
@@ -212,21 +271,20 @@ export interface CreateLoadRequest {
   customerId: string;
   carrierId?: string;
 
-  // Shipper
-  shipperId: string;
+  // Pickup/Delivery Times (load level)
   pickupDate: string; // Always string in requests
   pickupStart: string;
   pickupEnd: string;
-  pickupNotes?: string;
   pickupType: "FCFS" | "BY_APPOINTMENT";
 
-  // Consignee
-  consigneeId: string;
   deliveryDate: string; // Always string in requests
   deliveryStart: string;
   deliveryEnd: string;
-  deliveryNotes?: string;
   deliveryType: "FCFS" | "BY_APPOINTMENT";
+
+  // Multiple Shippers and Consignees
+  shippers: CreateLoadShipperRequest[];
+  consignees: CreateLoadConsigneeRequest[];
 
   // Load Details
   commodity: string;
@@ -237,6 +295,12 @@ export interface CreateLoadRequest {
   dimensions?: Dimensions;
   equipmentType: EquipmentType;
   loadType?: LoadType;
+  
+  // Temperature (for REEFER equipment)
+  minTemperature?: number;
+  maxTemperature?: number;
+  temperatureUnit?: "FAHRENHEIT" | "CELSIUS";
+  continuousTemperature?: boolean;
 
   // Rates
   customerRate: number;
@@ -257,6 +321,8 @@ export interface UpdateLoadRequest extends Partial<CreateLoadRequest> {
   status?: LoadStatus;
   pickupDate?: string; // Always string in requests
   deliveryDate?: string; // Always string in requests
+  shippers?: CreateLoadShipperRequest[];
+  consignees?: CreateLoadConsigneeRequest[];
 }
 
 export interface LoadFilters {

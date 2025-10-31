@@ -47,42 +47,8 @@ export function AdditionalInformationSection({
           )}
         />
 
-        <div className="grid gap-6 sm:grid-cols-2">
-          <FormField
-            control={control}
-            name="pickupNotes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Pickup Instructions</FormLabel>
-                <FormControl>
-                  <Textarea
-                    {...field}
-                    placeholder="Special pickup instructions..."
-                    className="min-h-[80px]"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={control}
-            name="deliveryNotes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Delivery Instructions</FormLabel>
-                <FormControl>
-                  <Textarea
-                    {...field}
-                    placeholder="Special delivery instructions..."
-                    className="min-h-[80px]"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <div className="text-sm text-muted-foreground">
+          <p>Pickup and delivery instructions are now managed within the individual shipper and consignee sections above.</p>
         </div>
       </div>
     </div>

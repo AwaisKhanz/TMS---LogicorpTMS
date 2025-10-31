@@ -67,8 +67,9 @@ export function useConsigneeOptions(): {
   }>;
   isLoading: boolean;
   error: Error | null;
+  refetch: () => void;
 } {
-  const { data, isLoading, error } = useConsignees({
+  const { data, isLoading, error, refetch } = useConsignees({
     limit: 1000, // Get all active consignees for options
     isActive: true,
   });
@@ -87,6 +88,7 @@ export function useConsigneeOptions(): {
     consignees,
     isLoading,
     error: error as Error | null,
+    refetch,
   };
 }
 

@@ -170,28 +170,45 @@ export default function LoadDetailsPage({ params }: LoadDetailsPageProps) {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Overview</span>
-          </TabsTrigger>
-          <TabsTrigger value="financials" className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4" />
-            <span className="hidden sm:inline">Financials</span>
-          </TabsTrigger>
-          <TabsTrigger value="assignment" className="flex items-center gap-2">
-            <Truck className="h-4 w-4" />
-            <span className="hidden sm:inline">Assignment</span>
-          </TabsTrigger>
-          <TabsTrigger value="documents" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Documents</span>
-          </TabsTrigger>
-          <TabsTrigger value="timeline" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            <span className="hidden sm:inline">Timeline</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto">
+          <TabsList className="inline-flex md:w-full md:flex min-w-full md:min-w-0">
+            <TabsTrigger
+              value="overview"
+              className="flex-shrink-0 md:flex-1 whitespace-nowrap flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="financials"
+              className="flex-shrink-0 md:flex-1 whitespace-nowrap flex items-center gap-2"
+            >
+              <DollarSign className="h-4 w-4" />
+              <span className="hidden sm:inline">Financials</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="assignment"
+              className="flex-shrink-0 md:flex-1 whitespace-nowrap flex items-center gap-2"
+            >
+              <Truck className="h-4 w-4" />
+              <span className="hidden sm:inline">Assignment</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="documents"
+              className="flex-shrink-0 md:flex-1 whitespace-nowrap flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Documents</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="timeline"
+              className="flex-shrink-0 md:flex-1 whitespace-nowrap flex items-center gap-2"
+            >
+              <Clock className="h-4 w-4" />
+              <span className="hidden sm:inline">Timeline</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="space-y-6">
           {/* Mobile-first responsive grid */}

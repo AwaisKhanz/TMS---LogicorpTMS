@@ -91,6 +91,12 @@ const updateDocumentNumberingSchema = z.object({
   autoIncrement: z.boolean().optional(),
 });
 
+const updateDocumentTermsSchema = z.object({
+  bolTerms: z.string().optional(),
+  rateConfirmationTerms: z.string().optional(),
+  invoiceTerms: z.string().optional(),
+});
+
 const inviteTeamMemberSchema = z.object({
   email: z.string().email(),
   firstName: z.string().min(1).max(50),
@@ -182,6 +188,12 @@ router.put(
   authorize(PERMISSIONS.SETTINGS_EDIT),
   validateRequest(updateDocumentNumberingSchema),
   settingsController.updateDocumentNumbering
+);
+router.put(
+  "/organization/document-terms",
+  authorize(PERMISSIONS.SETTINGS_EDIT),
+  validateRequest(updateDocumentTermsSchema),
+  settingsController.updateDocumentTerms
 );
 
 // ==================== TEAM MANAGEMENT ====================

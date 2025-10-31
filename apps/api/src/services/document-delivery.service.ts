@@ -1,6 +1,10 @@
 import { logger } from "../config/logger.js";
 import { SMTPService } from "./smtp.service.js";
 import type { Document } from "@tms/shared-types";
+import { storageService } from "./storage.service.js";
+import { config } from "../config/env.js";
+import fs from "fs/promises";
+import path from "path";
 
 interface DocumentRecipient {
   email: string;
@@ -25,6 +29,66 @@ export class DocumentDeliveryService {
 
   constructor() {
     this.smtpService = new SMTPService();
+  }
+
+  private extractKeyFromUrl(fileUrl: string): string {
+    if (fileUrl.includes("amazonaws.com/")) {
+      const parts = fileUrl.split("amazonaws.com/");
+      return parts[1] || "";
+    }
+    if (fileUrl.includes("/uploads/")) {
+      const parts = fileUrl.split("/uploads/");
+      return parts[1] || "";
+    }
+    // Fallback: try to treat entire URL as key
+    return fileUrl;
+  }
+
+  private async loadDocumentAttachment(document: Document): Promise<{
+    filename: string;
+    content: Buffer;
+    contentType: string;
+  } | null> {
+    try {
+      const filename = document.name.endsWith(".pdf")
+        ? document.name
+        : `${document.name}.pdf`;
+      const contentType = document.mimeType || "application/pdf";
+
+      // Local storage: read from disk directly
+      if (document.fileUrl.includes("/uploads/")) {
+        const relativeKey = this.extractKeyFromUrl(document.fileUrl);
+        const filePath = path.resolve(
+          config.storage.local.uploadDir,
+          relativeKey
+        );
+        const buf = await fs.readFile(filePath);
+        return { filename, content: buf, contentType };
+      }
+
+      // S3 or other: try to fetch via signed URL
+      if (document.fileUrl.includes("amazonaws.com/")) {
+        const key = this.extractKeyFromUrl(document.fileUrl);
+        const exists = await storageService.exists(key);
+        if (!exists) return null;
+        // Generate signed URL and fetch
+        const signedUrl = storageService.getSignedUrl(key, 3600);
+        const resp = await fetch(signedUrl);
+        if (!resp.ok) return null;
+        const arrayBuf = await resp.arrayBuffer();
+        return {
+          filename,
+          content: Buffer.from(arrayBuf),
+          contentType,
+        };
+      }
+
+      // Unknown storage; skip attachment gracefully
+      return null;
+    } catch (error) {
+      logger.warn("Failed to load document attachment:", error);
+      return null;
+    }
   }
 
   /**
@@ -61,15 +125,26 @@ export class DocumentDeliveryService {
         organizationName,
       });
 
+      // Prepare attachment
+      const attachment = await this.loadDocumentAttachment(document);
+
       // Send to each recipient
       const results = await Promise.allSettled(
         recipients.map(async (recipient) => {
-          const result = await this.smtpService.sendEmail(
-            recipient.email,
-            emailSubject,
-            htmlContent,
-            textContent
-          );
+          const result = attachment
+            ? await this.smtpService.sendEmailWithAttachments(
+                recipient.email,
+                emailSubject,
+                htmlContent,
+                [attachment],
+                textContent
+              )
+            : await this.smtpService.sendEmail(
+                recipient.email,
+                emailSubject,
+                htmlContent,
+                textContent
+              );
 
           if (result.sent) {
             logger.info(
@@ -144,12 +219,21 @@ export class DocumentDeliveryService {
         organizationName,
       });
 
-      const result = await this.smtpService.sendEmail(
-        recipient.email,
-        emailSubject,
-        htmlContent,
-        textContent
-      );
+      const attachment = await this.loadDocumentAttachment(document);
+      const result = attachment
+        ? await this.smtpService.sendEmailWithAttachments(
+            recipient.email,
+            emailSubject,
+            htmlContent,
+            [attachment],
+            textContent
+          )
+        : await this.smtpService.sendEmail(
+            recipient.email,
+            emailSubject,
+            htmlContent,
+            textContent
+          );
 
       if (result.sent) {
         logger.info(`Document sent to ${recipient.email}: ${document.name}`);
@@ -327,9 +411,7 @@ export class DocumentDeliveryService {
     organizationName?: string
   ): Promise<{ sent: boolean; message: string }> {
     try {
-      // For now, send each document separately
-      // TODO: Implement batch sending
-      const results = [];
+      const results = [] as { sent: boolean; message: string }[];
       for (const document of documents) {
         const result = await this.sendDocumentToRecipients({
           document,
@@ -350,15 +432,12 @@ export class DocumentDeliveryService {
       };
     } catch (error) {
       logger.error("Failed to send multiple documents:", error);
-      return {
-        sent: false,
-        message: "Failed to send documents",
-      };
+      return { sent: false, message: "Failed to send documents" };
     }
   }
 
   /**
-   * Send rate confirmation document
+   * Convenience wrappers for domain-specific sends
    */
   async sendRateConfirmation(
     document: Document,
@@ -366,7 +445,7 @@ export class DocumentDeliveryService {
     carrierName: string,
     loadNumber: string,
     organizationName: string
-  ): Promise<{ sent: boolean; message: string }> {
+  ) {
     return this.sendDocumentToRecipients({
       document,
       recipients: [{ email: carrierEmail, name: carrierName }],
@@ -377,16 +456,13 @@ export class DocumentDeliveryService {
     });
   }
 
-  /**
-   * Send BOL (Bill of Lading) document
-   */
   async sendBOL(
     document: Document,
     carrierEmail: string,
     carrierName: string,
     loadNumber: string,
     organizationName: string
-  ): Promise<{ sent: boolean; message: string }> {
+  ) {
     return this.sendDocumentToRecipients({
       document,
       recipients: [{ email: carrierEmail, name: carrierName }],
@@ -397,16 +473,13 @@ export class DocumentDeliveryService {
     });
   }
 
-  /**
-   * Send invoice document
-   */
   async sendInvoice(
     document: Document,
     customerEmail: string,
     customerName: string,
     loadNumber: string,
     organizationName: string
-  ): Promise<{ sent: boolean; message: string }> {
+  ) {
     return this.sendDocumentToRecipients({
       document,
       recipients: [{ email: customerEmail, name: customerName }],
@@ -417,5 +490,3 @@ export class DocumentDeliveryService {
     });
   }
 }
-
-export type { DocumentRecipient, DocumentDeliveryData };

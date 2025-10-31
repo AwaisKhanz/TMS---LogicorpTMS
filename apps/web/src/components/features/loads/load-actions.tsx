@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useDeleteLoad, useDuplicateLoad, useLoad } from "@/hooks/use-loads";
+import { useDeleteLoad, useDuplicateLoad, useLoad, useLoadDocuments } from "@/hooks/use-loads";
+import { useEffect } from "react";
 import {
   useGenerateDocument,
   useSendDocument,
@@ -78,6 +79,31 @@ export function LoadActions({ loadId }: LoadActionsProps) {
   const generateDocument = useGenerateDocument();
   const sendDocument = useSendDocument();
   const exportLoad = useExportLoad();
+
+  // Fetch existing documents to filter available send types
+  const { data: loadDocs } = useLoadDocuments(loadId);
+  const availableTypesSet = new Set(
+    (loadDocs || []).map((d) => String(d.type))
+  );
+  const typeOptions = [
+    { value: "rate-confirmation", label: "Rate Confirmation", enum: "RATE_CONFIRMATION" },
+    { value: "bol", label: "Bill of Lading", enum: "BOL" },
+    { value: "invoice", label: "Invoice", enum: "INVOICE" },
+    { value: "pod", label: "Proof of Delivery", enum: "POD" },
+  ];
+  const filteredTypeOptions = typeOptions.filter((opt) =>
+    availableTypesSet.has(opt.enum)
+  );
+
+  // When dialog opens, preselect first available type
+  useEffect(() => {
+    if (showSendDialog) {
+      setSelectedDocumentType(
+        filteredTypeOptions.length > 0 ? filteredTypeOptions[0].value : ""
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSendDialog, availableTypesSet.size]);
 
   // Don't render actions if load is not found
   if (error || !load) {
@@ -315,12 +341,17 @@ export function LoadActions({ loadId }: LoadActionsProps) {
                   <SelectValue placeholder="Select document type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="rate-confirmation">
-                    Rate Confirmation
-                  </SelectItem>
-                  <SelectItem value="bol">Bill of Lading</SelectItem>
-                  <SelectItem value="invoice">Invoice</SelectItem>
-                  <SelectItem value="pod">Proof of Delivery</SelectItem>
+                  {filteredTypeOptions.length === 0 ? (
+                    <SelectItem value="" disabled>
+                      No documents available
+                    </SelectItem>
+                  ) : (
+                    filteredTypeOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -395,6 +426,7 @@ export function LoadActions({ loadId }: LoadActionsProps) {
               onClick={handleSendDocument}
               disabled={
                 !selectedDocumentType ||
+                filteredTypeOptions.findIndex((o) => o.value === selectedDocumentType) === -1 ||
                 recipients.length === 0 ||
                 sendDocument.isPending
               }

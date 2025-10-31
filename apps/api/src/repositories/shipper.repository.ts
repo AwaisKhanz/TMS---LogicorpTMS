@@ -5,31 +5,9 @@ import type { WhereClause } from "../types/common.types.js";
 // Type for Shipper with included relations
 export type ShipperWithRelations = Prisma.ShipperGetPayload<{
   include: {
-    loads: {
-      select: {
-        id: true;
-        loadNumber: true;
-        status: true;
-        pickupDate: true;
-        deliveryDate: true;
-        customerRate: true;
-        carrierRate: true;
-        customer: {
-          select: {
-            companyName: true;
-          };
-        };
-        carrier: {
-          select: {
-            companyName: true;
-            mcNumber: true;
-          };
-        };
-      };
-    };
     _count: {
       select: {
-        loads: true;
+        loadShippers: true;
       };
     };
   };
@@ -39,7 +17,7 @@ export type ShipperWithMinimalRelations = Prisma.ShipperGetPayload<{
   include: {
     _count: {
       select: {
-        loads: true;
+        loadShippers: true;
       };
     };
   };
@@ -91,7 +69,7 @@ export class ShipperRepository extends BaseRepository<Shipper> {
         include: {
           _count: {
             select: {
-              loads: true,
+              loadShippers: true,
             },
           },
         },
@@ -116,34 +94,9 @@ export class ShipperRepository extends BaseRepository<Shipper> {
         deletedAt: null,
       },
       include: {
-        loads: {
-          where: { deletedAt: null },
-          orderBy: { createdAt: "desc" },
-          take: 10,
-          select: {
-            id: true,
-            loadNumber: true,
-            status: true,
-            pickupDate: true,
-            deliveryDate: true,
-            customerRate: true,
-            carrierRate: true,
-            customer: {
-              select: {
-                companyName: true,
-              },
-            },
-            carrier: {
-              select: {
-                companyName: true,
-                mcNumber: true,
-              },
-            },
-          },
-        },
         _count: {
           select: {
-            loads: true,
+            loadShippers: true,
           },
         },
       },
@@ -211,7 +164,11 @@ export class ShipperRepository extends BaseRepository<Shipper> {
     // Check if shipper has active loads
     const activeLoads = await this.prisma.load.count({
       where: {
-        shipperId: id,
+        loadShippers: {
+          some: {
+            shipperId: id,
+          },
+        },
         deletedAt: null,
         status: {
           notIn: ["DELIVERED", "PAID", "CANCELLED"],
@@ -286,12 +243,12 @@ export class ShipperRepository extends BaseRepository<Shipper> {
       include: {
         _count: {
           select: {
-            loads: true,
+            loadShippers: true,
           },
         },
       },
       orderBy: {
-        loads: {
+        loadShippers: {
           _count: "desc",
         },
       },
@@ -328,7 +285,7 @@ export class ShipperRepository extends BaseRepository<Shipper> {
       include: {
         _count: {
           select: {
-            loads: true,
+            loadShippers: true,
           },
         },
       },

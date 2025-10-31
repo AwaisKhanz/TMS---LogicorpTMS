@@ -58,9 +58,8 @@ export function RatesPricingSection({
                     type="number"
                     step="0.01"
                     placeholder="2500.00"
-                    onChange={(e) =>
-                      field.onChange(parseFloat(e.target.value) || 0)
-                    }
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -71,21 +70,25 @@ export function RatesPricingSection({
           <FormField
             control={control}
             name="carrierRate"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
-                <FormLabel>Carrier Rate ($)</FormLabel>
+                <FormLabel>Carrier Rate ($) *</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
                     type="number"
                     step="0.01"
                     placeholder="2200.00"
-                    onChange={(e) =>
-                      field.onChange(parseFloat(e.target.value) || undefined)
-                    }
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value)}
                   />
                 </FormControl>
                 <FormMessage />
+                {fieldState.error && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {fieldState.error.message}
+                  </p>
+                )}
               </FormItem>
             )}
           />

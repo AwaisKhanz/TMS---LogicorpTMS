@@ -51,7 +51,7 @@ import { toast } from "sonner";
 import type { ApiErrorException } from "@/types/api.types";
 
 import { DOCUMENT_TYPE_OPTIONS } from "@tms/shared-constants";
-import { CanCreate, CanDelete } from "@/components/auth/can";
+import { CanDelete } from "@/components/auth/can";
 
 const documentTypeLabels: Record<string, string> = Object.fromEntries(
   DOCUMENT_TYPE_OPTIONS.map((option) => [option.value, option.label])
@@ -279,101 +279,98 @@ export function LoadDocuments({ loadId }: LoadDocumentsProps) {
               <FileText className="h-5 w-5" />
               Documents
             </CardTitle>
-            <CanCreate resource="document">
-              <Dialog
-                open={uploadDialogOpen}
-                onOpenChange={setUploadDialogOpen}
-              >
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Upload Document</DialogTitle>
-                    <DialogDescription>
-                      Upload a document for this load
-                    </DialogDescription>
-                  </DialogHeader>
+            {/* <CanCreate resource="document"> */}
+            <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Upload Document</DialogTitle>
+                  <DialogDescription>
+                    Upload a document for this load
+                  </DialogDescription>
+                </DialogHeader>
 
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Document Type</Label>
-                      <Select
-                        value={documentType}
-                        onValueChange={setDocumentType}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select document type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(documentTypeLabels).map(
-                            ([value, label]) => (
-                              <SelectItem key={value} value={value}>
-                                {label}
-                              </SelectItem>
-                            )
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>File</Label>
-                      <Input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                        onChange={handleFileSelect}
-                      />
-                      {selectedFile && (
-                        <p className="text-xs text-muted-foreground">
-                          Selected: {selectedFile.name} (
-                          {formatFileSize(selectedFile.size)})
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Document Name</Label>
-                      <Input
-                        placeholder="Enter document name"
-                        value={documentName}
-                        onChange={(e) => setDocumentName(e.target.value)}
-                      />
-                    </div>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Document Type</Label>
+                    <Select
+                      value={documentType}
+                      onValueChange={setDocumentType}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select document type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(documentTypeLabels).map(
+                          ([value, label]) => (
+                            <SelectItem key={value} value={value}>
+                              {label}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setUploadDialogOpen(false)}
-                      disabled={uploading}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleUpload}
-                      disabled={uploading || !selectedFile}
-                    >
-                      {uploading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload
-                        </>
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </CanCreate>
+                  <div className="space-y-2">
+                    <Label>File</Label>
+                    <Input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                      onChange={handleFileSelect}
+                    />
+                    {selectedFile && (
+                      <p className="text-xs text-muted-foreground">
+                        Selected: {selectedFile.name} (
+                        {formatFileSize(selectedFile.size)})
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Document Name</Label>
+                    <Input
+                      placeholder="Enter document name"
+                      value={documentName}
+                      onChange={(e) => setDocumentName(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setUploadDialogOpen(false)}
+                    disabled={uploading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleUpload}
+                    disabled={uploading || !selectedFile}
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            {/* </CanCreate> */}
           </div>
         </CardHeader>
         <CardContent>

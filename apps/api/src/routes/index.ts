@@ -13,6 +13,7 @@ import dashboardRoutes from "./dashboard.routes.js";
 import settingsRoutes from "./settings.routes.js";
 import notificationRoutes from "./notification.routes.js";
 import reportRoutes from "./report.routes.js";
+import invoiceRoutes from "./invoice.routes.js";
 
 const router: Router = Router();
 
@@ -31,6 +32,7 @@ router.use("/dashboard", dashboardRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/reports", reportRoutes);
+router.use("/invoices", invoiceRoutes);
 
 // Health check
 router.get("/health", (_req, res) => {

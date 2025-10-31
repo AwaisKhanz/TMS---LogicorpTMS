@@ -271,7 +271,7 @@ export class ShipperService {
       country: shipper.country,
       contactPerson: shipper.contactPerson || undefined,
       isActive: shipper.isActive,
-      totalLoads: shipper._count?.loads || 0,
+      totalLoads: shipper._count?.loadShippers || 0,
       createdAt: shipper.createdAt.toISOString(),
     }));
 

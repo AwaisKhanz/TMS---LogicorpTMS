@@ -16,6 +16,7 @@ export * from "./load-form.types";
 export * from "./form-option.types";
 export * from "./notification.types";
 export * from "./report.types";
+export * from "./financial.types";
 
 // Note: Prisma types are not exported from shared-types to avoid dependency issues
 // Import Prisma types directly in apps that need them

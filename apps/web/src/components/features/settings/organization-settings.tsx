@@ -22,6 +22,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import {
   Dialog,
@@ -34,6 +36,7 @@ import {
 import {
   useOrganizationSettings,
   useUpdateOrganization,
+  useUpdateDocumentTerms,
 } from "@/hooks/use-settings";
 import { Building, Upload } from "lucide-react";
 import { CanEdit } from "@/components/auth/can";
@@ -55,6 +58,152 @@ const organizationSchema = z.object({
     country: z.string().min(1, "Country is required"),
   }),
 });
+
+const documentTermsSchema = z.object({
+  bolTerms: z.string().optional(),
+  rateConfirmationTerms: z.string().optional(),
+  invoiceTerms: z.string().optional(),
+});
+
+function DocumentTermsForm({ organization }: { organization: any }) {
+  const updateDocumentTerms = useUpdateDocumentTerms();
+  const [isEditing, setIsEditing] = useState(false);
+
+  const form = useForm<z.infer<typeof documentTermsSchema>>({
+    resolver: zodResolver(documentTermsSchema),
+    defaultValues: {
+      bolTerms: organization?.documentTerms?.bolTerms || "",
+      rateConfirmationTerms: organization?.documentTerms?.rateConfirmationTerms || "",
+      invoiceTerms: organization?.documentTerms?.invoiceTerms || "",
+    },
+  });
+
+  React.useEffect(() => {
+    if (organization) {
+      form.reset({
+        bolTerms: organization.documentTerms?.bolTerms || "",
+        rateConfirmationTerms: organization.documentTerms?.rateConfirmationTerms || "",
+        invoiceTerms: organization.documentTerms?.invoiceTerms || "",
+      });
+    }
+  }, [organization, form]);
+
+  const onSubmit = async (data: z.infer<typeof documentTermsSchema>) => {
+    if (!isEditing) return;
+    try {
+      await updateDocumentTerms.mutateAsync(data);
+      setIsEditing(false);
+    } catch (error) {
+      // Error is handled by the hook
+    }
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <Tabs defaultValue="bol" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="bol">BOL Terms</TabsTrigger>
+            <TabsTrigger value="rc">Rate Confirmation</TabsTrigger>
+            <TabsTrigger value="invoice">Invoice Terms</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="bol" className="space-y-2">
+            <FormField
+              control={form.control}
+              name="bolTerms"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>BOL Terms & Conditions</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      disabled={!isEditing}
+                      placeholder="Enter terms and conditions for Bill of Lading documents..."
+                      className="min-h-[200px]"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </TabsContent>
+
+          <TabsContent value="rc" className="space-y-2">
+            <FormField
+              control={form.control}
+              name="rateConfirmationTerms"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rate Confirmation Terms & Conditions</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      disabled={!isEditing}
+                      placeholder="Enter terms and conditions for Rate Confirmation documents..."
+                      className="min-h-[200px]"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </TabsContent>
+
+          <TabsContent value="invoice" className="space-y-2">
+            <FormField
+              control={form.control}
+              name="invoiceTerms"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Invoice Terms & Conditions</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      disabled={!isEditing}
+                      placeholder="Enter terms and conditions for Invoice documents..."
+                      className="min-h-[200px]"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </TabsContent>
+        </Tabs>
+
+        <div className="flex gap-2">
+          {!isEditing ? (
+            <CanEdit resource="settings">
+              <Button type="button" onClick={() => setIsEditing(true)}>
+                Edit Terms
+              </Button>
+            </CanEdit>
+          ) : (
+            <>
+              <Button
+                type="submit"
+                disabled={updateDocumentTerms.isPending}
+              >
+                {updateDocumentTerms.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditing(false);
+                  form.reset();
+                }}
+              >
+                Cancel
+              </Button>
+            </>
+          )}
+        </div>
+      </form>
+    </Form>
+  );
+}
 
 export function OrganizationSettings() {
   const { data: organization, isLoading } = useOrganizationSettings();
@@ -490,6 +639,22 @@ export function OrganizationSettings() {
               </div>
             </form>
           </Form>
+        </CardContent>
+      </Card>
+
+      {/* Document Terms & Conditions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building className="h-5 w-5" />
+            Document Terms & Conditions
+          </CardTitle>
+          <CardDescription>
+            Configure terms and conditions that will appear at the end of generated documents (BOL, Rate Confirmation, Invoice)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DocumentTermsForm organization={organization} />
         </CardContent>
       </Card>
 

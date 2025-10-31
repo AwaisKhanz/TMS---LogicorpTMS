@@ -150,12 +150,54 @@ export function CompletedLoadsDataTable() {
                     <TableCell>{load.carrier?.companyName || "-"}</TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div className="font-medium">
-                          {load.shipper?.city}, {load.shipper?.state}
-                        </div>
-                        <div className="text-muted-foreground">
-                          {load.consignee?.city}, {load.consignee?.state}
-                        </div>
+                        {load.loadShippers && load.loadShippers.length > 0 ? (
+                          <>
+                            {load.loadShippers
+                              .filter((s) => s.isPrimary)
+                              .map((shipperRelation) => (
+                                <div
+                                  key={shipperRelation.id}
+                                  className="font-medium"
+                                >
+                                  {shipperRelation.shipper.city},{" "}
+                                  {shipperRelation.shipper.state}
+                                  {load.loadShippers!.length > 1 && (
+                                    <span className="text-xs text-muted-foreground ml-1">
+                                      (+{load.loadShippers!.length - 1})
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            <div className="text-muted-foreground">
+                              {load.loadConsignees &&
+                              load.loadConsignees.length > 0
+                                ? load.loadConsignees
+                                    .filter((c) => c.isPrimary)
+                                    .map((consigneeRelation) => (
+                                      <div key={consigneeRelation.id}>
+                                        {consigneeRelation.consignee.city},{" "}
+                                        {consigneeRelation.consignee.state}
+                                        {load.loadConsignees!.length > 1 && (
+                                          <span className="text-xs text-muted-foreground ml-1">
+                                            (+{load.loadConsignees!.length - 1})
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))
+                                : "No delivery location"}
+                            </div>
+                          </>
+                        ) : (
+                          // Fallback for backward compatibility
+                          <>
+                            <div className="font-medium text-muted-foreground">
+                              No pickup location
+                            </div>
+                            <div className="text-muted-foreground">
+                              No delivery location
+                            </div>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>{formatWeight(load.weight)}</TableCell>

@@ -68,8 +68,9 @@ export function useShipperOptions(): {
   }>;
   isLoading: boolean;
   error: Error | null;
+  refetch: () => void;
 } {
-  const { data, isLoading, error } = useShippers({
+  const { data, isLoading, error, refetch } = useShippers({
     limit: 1000, // Get all active shippers for options
     isActive: true,
   });
@@ -88,6 +89,7 @@ export function useShipperOptions(): {
     shippers,
     isLoading,
     error: error as Error | null,
+    refetch,
   };
 }
 

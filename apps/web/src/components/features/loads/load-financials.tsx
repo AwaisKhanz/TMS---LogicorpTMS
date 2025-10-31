@@ -1,16 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { useLoad, useUpdateLoad } from "@/hooks/use-loads";
+import { useLoad, useUpdateLoad, useUpdateFinancialAdjustments } from "@/hooks/use-loads";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DollarSign, Receipt, Loader2, Edit, Save, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { DollarSign, Receipt, Loader2, Edit, Save, X, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CanEdit } from "@/components/auth/can";
+import type { FinancialAdjustment, FinancialAdjustmentCategory, FinancialAdjustmentRateSide } from "@tms/shared-types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface LoadFinancialsProps {
   loadId: string;
@@ -19,9 +23,15 @@ interface LoadFinancialsProps {
 export function LoadFinancials({ loadId }: LoadFinancialsProps) {
   const { data: load, isLoading, error } = useLoad(loadId);
   const updateLoad = useUpdateLoad();
+  const updateAdjustments = useUpdateFinancialAdjustments();
   const [isEditing, setIsEditing] = useState(false);
   const [customerRate, setCustomerRate] = useState("");
   const [carrierRate, setCarrierRate] = useState("");
+  const [isAdjDialogOpen, setIsAdjDialogOpen] = useState(false);
+  const [adjCategory, setAdjCategory] = useState<FinancialAdjustmentCategory | "">("");
+  const [adjSide, setAdjSide] = useState<FinancialAdjustmentRateSide | "">("");
+  const [adjAmount, setAdjAmount] = useState("");
+  const [adjDescription, setAdjDescription] = useState("");
 
   if (isLoading) {
     return (
@@ -75,6 +85,41 @@ export function LoadFinancials({ loadId }: LoadFinancialsProps) {
     }
   };
 
+  const categories: FinancialAdjustmentCategory[] = [
+    "Advance","Bonus","Breakdown","Damage","Deadhead","Detention","Discount","Disposal","Extra Stop","Freeze Protect","Fuel Advance","Gate Fee","General","Handling","Hazmat","Late Fee","Layover","Lumper","Maintenance","Missing Paperwork","On-Time Delivery","Other","Pallets","Permit","Permit Fees","Pilot Car","QuickPay","QuickPay Fee","Redelivery","Reimbursement","Revenue Share","Scale Ticket","Standard Fee","Storage","Team","Temperature Control","Tolls","Trailer Detention",
+  ];
+
+  const handleAddAdjustment = async () => {
+    if (!adjCategory || !adjSide || !adjAmount) return;
+    const newAdjustment: FinancialAdjustment = {
+      id: crypto.randomUUID(),
+      date: new Date().toISOString(),
+      category: adjCategory,
+      side: adjSide,
+      amount: parseFloat(adjAmount),
+      description: adjDescription || undefined,
+    };
+
+    const next = Array.isArray((load as any).financialAdjustments)
+      ? ([...(load as any).financialAdjustments, newAdjustment] as FinancialAdjustment[])
+      : ([newAdjustment] as FinancialAdjustment[]);
+
+    await updateAdjustments.mutateAsync({ id: loadId, adjustments: next });
+    setIsAdjDialogOpen(false);
+    setAdjCategory("");
+    setAdjSide("");
+    setAdjAmount("");
+    setAdjDescription("");
+  };
+
+  const handleRemoveAdjustment = async (adjId: string) => {
+    const current: FinancialAdjustment[] = Array.isArray((load as any).financialAdjustments)
+      ? (load as any).financialAdjustments
+      : [];
+    const next = current.filter((a) => a.id !== adjId);
+    await updateAdjustments.mutateAsync({ id: loadId, adjustments: next });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -85,10 +130,16 @@ export function LoadFinancials({ loadId }: LoadFinancialsProps) {
           </CardTitle>
           {!isEditing && (
             <CanEdit resource="load">
-              <Button variant="outline" size="sm" onClick={handleEdit}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Rates
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsAdjDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Change
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleEdit}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Rates
+                </Button>
+              </div>
             </CanEdit>
           )}
         </div>
@@ -232,6 +283,52 @@ export function LoadFinancials({ loadId }: LoadFinancialsProps) {
           </>
         )}
 
+        {/* Financial Adjustments */}
+        <Separator />
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Receipt className="h-4 w-4" />
+              Changes
+            </div>
+            <CanEdit resource="load">
+              <Button variant="outline" size="sm" onClick={() => setIsAdjDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" /> Add Change
+              </Button>
+            </CanEdit>
+          </div>
+
+          {Array.isArray((load as any).financialAdjustments) && (load as any).financialAdjustments.length > 0 ? (
+            <div className="space-y-2">
+              {(load as any).financialAdjustments.map((adj: FinancialAdjustment) => (
+                <div key={adj.id} className="flex items-center justify-between text-sm">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{adj.category}</Badge>
+                      <Badge variant={adj.side === "customer" ? "default" : "outline"}>
+                        {adj.side === "customer" ? "Customer" : "Carrier"}
+                      </Badge>
+                    </div>
+                    {adj.description && (
+                      <p className="text-xs text-muted-foreground">{adj.description}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">${adj.amount.toFixed(2)}</span>
+                    <CanEdit resource="load">
+                      <Button variant="ghost" size="icon" onClick={() => handleRemoveAdjustment(adj.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </CanEdit>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No changes added yet.</p>
+          )}
+        </div>
+
         {/* Metrics */}
         <Separator />
         <div className="grid grid-cols-2 gap-4">
@@ -275,6 +372,68 @@ export function LoadFinancials({ loadId }: LoadFinancialsProps) {
           </>
         )}
       </CardContent>
+
+      {/* Add Change Dialog */}
+      <Dialog open={isAdjDialogOpen} onOpenChange={setIsAdjDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Financial Change</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select value={adjCategory} onValueChange={(v) => setAdjCategory(v as FinancialAdjustmentCategory)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    {categories.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Applies To</Label>
+                <Select value={adjSide} onValueChange={(v) => setAdjSide(v as FinancialAdjustmentRateSide)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select side" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="customer">Customer</SelectItem>
+                    <SelectItem value="carrier">Carrier</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Amount</Label>
+              <Input type="number" step="0.01" value={adjAmount} onChange={(e) => setAdjAmount(e.target.value)} placeholder="0.00" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description (optional)</Label>
+              <Textarea
+                value={adjDescription}
+                onChange={(e) => setAdjDescription(e.target.value)}
+                placeholder="Enter description"
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAdjDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddAdjustment} disabled={!adjCategory || !adjSide || !adjAmount || updateAdjustments.isPending}>
+              {updateAdjustments.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+              Add Change
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

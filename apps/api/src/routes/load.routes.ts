@@ -114,6 +114,11 @@ router.put(
   authorize(PERMISSIONS.LOAD_EDIT),
   loadController.updateLoadStatus
 );
+router.put(
+  "/:id/financial-adjustments",
+  authorize(PERMISSIONS.LOAD_EDIT),
+  loadController.updateFinancialAdjustments.bind(loadController)
+);
 router.patch(
   "/:id/status",
   authorize(PERMISSIONS.LOAD_EDIT),

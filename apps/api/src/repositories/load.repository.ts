@@ -20,32 +20,40 @@ export type LoadWithRelations = Prisma.LoadGetPayload<{
         mcNumber: true;
       };
     };
-    shipper: {
-      select: {
-        id: true;
-        companyName: true;
-        phone: true;
-        email: true;
-        streetAddress: true;
-        city: true;
-        state: true;
-        zipCode: true;
-        country: true;
-        contactPerson: true;
+    loadShippers: {
+      include: {
+        shipper: {
+          select: {
+            id: true;
+            companyName: true;
+            phone: true;
+            email: true;
+            streetAddress: true;
+            city: true;
+            state: true;
+            zipCode: true;
+            country: true;
+            contactPerson: true;
+          };
+        };
       };
     };
-    consignee: {
-      select: {
-        id: true;
-        companyName: true;
-        phone: true;
-        email: true;
-        streetAddress: true;
-        city: true;
-        state: true;
-        zipCode: true;
-        country: true;
-        contactPerson: true;
+    loadConsignees: {
+      include: {
+        consignee: {
+          select: {
+            id: true;
+            companyName: true;
+            phone: true;
+            email: true;
+            streetAddress: true;
+            city: true;
+            state: true;
+            zipCode: true;
+            country: true;
+            contactPerson: true;
+          };
+        };
       };
     };
     creator: {
@@ -81,35 +89,50 @@ export type LoadWithMinimalRelations = Prisma.LoadGetPayload<{
         mcNumber: true;
       };
     };
-    shipper: {
-      select: {
-        id: true;
-        companyName: true;
-        phone: true;
-        email: true;
-        streetAddress: true;
-        city: true;
-        state: true;
-        zipCode: true;
-        country: true;
-        contactPerson: true;
+    loadShippers: {
+      include: {
+        shipper: {
+          select: {
+            id: true;
+            companyName: true;
+            phone: true;
+            email: true;
+            streetAddress: true;
+            city: true;
+            state: true;
+            zipCode: true;
+            country: true;
+            contactPerson: true;
+          };
+        };
       };
     };
-    consignee: {
-      select: {
-        id: true;
-        companyName: true;
-        phone: true;
-        email: true;
-        streetAddress: true;
-        city: true;
-        state: true;
-        zipCode: true;
-        country: true;
-        contactPerson: true;
+    loadConsignees: {
+      include: {
+        consignee: {
+          select: {
+            id: true;
+            companyName: true;
+            phone: true;
+            email: true;
+            streetAddress: true;
+            city: true;
+            state: true;
+            zipCode: true;
+            country: true;
+            contactPerson: true;
+          };
+        };
       };
     };
     creator: {
+      select: {
+        id: true;
+        firstName: true;
+        lastName: true;
+      };
+    };
+    assignee: {
       select: {
         id: true;
         firstName: true;
@@ -177,13 +200,15 @@ export class LoadRepository extends BaseRepository<Load> {
     }
 
     if (filters.pickupDateFrom || filters.pickupDateTo) {
-      where.pickupDate = {};
-      if (filters.pickupDateFrom) {
-        where.pickupDate.gte = filters.pickupDateFrom;
-      }
-      if (filters.pickupDateTo) {
-        where.pickupDate.lte = filters.pickupDateTo;
-      }
+      // Filter by related pickup dates via LoadShipper
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (filters.pickupDateFrom) dateFilter.gte = filters.pickupDateFrom;
+      if (filters.pickupDateTo) dateFilter.lte = filters.pickupDateTo;
+      where.loadShippers = {
+        some: {
+          pickupDate: dateFilter,
+        },
+      };
     }
 
     if (filters.search) {
@@ -192,13 +217,21 @@ export class LoadRepository extends BaseRepository<Load> {
         { referenceNumber: { contains: filters.search, mode: "insensitive" } },
         { commodity: { contains: filters.search, mode: "insensitive" } },
         {
-          shipper: {
-            companyName: { contains: filters.search, mode: "insensitive" },
+          loadShippers: {
+            some: {
+              shipper: {
+                companyName: { contains: filters.search, mode: "insensitive" },
+              },
+            },
           },
         },
         {
-          consignee: {
-            companyName: { contains: filters.search, mode: "insensitive" },
+          loadConsignees: {
+            some: {
+              consignee: {
+                companyName: { contains: filters.search, mode: "insensitive" },
+              },
+            },
           },
         },
       ];
@@ -221,35 +254,50 @@ export class LoadRepository extends BaseRepository<Load> {
               mcNumber: true,
             },
           },
-          shipper: {
-            select: {
-              id: true,
-              companyName: true,
-              phone: true,
-              email: true,
-              streetAddress: true,
-              city: true,
-              state: true,
-              zipCode: true,
-              country: true,
-              contactPerson: true,
+          loadShippers: {
+            include: {
+              shipper: {
+                select: {
+                  id: true,
+                  companyName: true,
+                  phone: true,
+                  email: true,
+                  streetAddress: true,
+                  city: true,
+                  state: true,
+                  zipCode: true,
+                  country: true,
+                  contactPerson: true,
+                },
+              },
             },
           },
-          consignee: {
-            select: {
-              id: true,
-              companyName: true,
-              phone: true,
-              email: true,
-              streetAddress: true,
-              city: true,
-              state: true,
-              zipCode: true,
-              country: true,
-              contactPerson: true,
+          loadConsignees: {
+            include: {
+              consignee: {
+                select: {
+                  id: true,
+                  companyName: true,
+                  phone: true,
+                  email: true,
+                  streetAddress: true,
+                  city: true,
+                  state: true,
+                  zipCode: true,
+                  country: true,
+                  contactPerson: true,
+                },
+              },
             },
           },
           creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          assignee: {
             select: {
               id: true,
               firstName: true,
@@ -324,35 +372,50 @@ export class LoadRepository extends BaseRepository<Load> {
               mcNumber: true,
             },
           },
-          shipper: {
-            select: {
-              id: true,
-              companyName: true,
-              phone: true,
-              email: true,
-              streetAddress: true,
-              city: true,
-              state: true,
-              zipCode: true,
-              country: true,
-              contactPerson: true,
+          loadShippers: {
+            include: {
+              shipper: {
+                select: {
+                  id: true,
+                  companyName: true,
+                  phone: true,
+                  email: true,
+                  streetAddress: true,
+                  city: true,
+                  state: true,
+                  zipCode: true,
+                  country: true,
+                  contactPerson: true,
+                },
+              },
             },
           },
-          consignee: {
-            select: {
-              id: true,
-              companyName: true,
-              phone: true,
-              email: true,
-              streetAddress: true,
-              city: true,
-              state: true,
-              zipCode: true,
-              country: true,
-              contactPerson: true,
+          loadConsignees: {
+            include: {
+              consignee: {
+                select: {
+                  id: true,
+                  companyName: true,
+                  phone: true,
+                  email: true,
+                  streetAddress: true,
+                  city: true,
+                  state: true,
+                  zipCode: true,
+                  country: true,
+                  contactPerson: true,
+                },
+              },
             },
           },
           creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          assignee: {
             select: {
               id: true,
               firstName: true,
@@ -429,8 +492,16 @@ export class LoadRepository extends BaseRepository<Load> {
       include: {
         customer: true,
         carrier: true,
-        shipper: true,
-        consignee: true,
+        loadShippers: {
+          include: {
+            shipper: true,
+          },
+        },
+        loadConsignees: {
+          include: {
+            consignee: true,
+          },
+        },
         creator: {
           select: {
             id: true,
@@ -467,9 +538,24 @@ export class LoadRepository extends BaseRepository<Load> {
       include: {
         customer: true,
         carrier: true,
-        shipper: true,
-        consignee: true,
+        loadShippers: {
+          include: {
+            shipper: true,
+          },
+        },
+        loadConsignees: {
+          include: {
+            consignee: true,
+          },
+        },
         creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        assignee: {
           select: {
             id: true,
             firstName: true,
@@ -498,8 +584,16 @@ export class LoadRepository extends BaseRepository<Load> {
       include: {
         customer: true,
         carrier: true,
-        shipper: true,
-        consignee: true,
+        loadShippers: {
+          include: {
+            shipper: true,
+          },
+        },
+        loadConsignees: {
+          include: {
+            consignee: true,
+          },
+        },
         creator: {
           select: {
             id: true,
@@ -507,6 +601,39 @@ export class LoadRepository extends BaseRepository<Load> {
             lastName: true,
           },
         },
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    return load;
+  }
+
+  async updateFinancialAdjustments(
+    id: string,
+    organizationId: string,
+    adjustments: unknown
+  ): Promise<LoadWithMinimalRelations | null> {
+    const existingLoad = await this.findById(id, organizationId);
+    if (!existingLoad) return null;
+
+    const load = await this.prisma.load.update({
+      where: { id },
+      data: {
+        financialAdjustments: adjustments as unknown as Prisma.InputJsonValue,
+      },
+      include: {
+        customer: true,
+        carrier: true,
+        loadShippers: { include: { shipper: true } },
+        loadConsignees: { include: { consignee: true } },
+        creator: { select: { id: true, firstName: true, lastName: true } },
+        assignee: { select: { id: true, firstName: true, lastName: true } },
       },
     });
 
@@ -527,6 +654,159 @@ export class LoadRepository extends BaseRepository<Load> {
     });
 
     return true;
+  }
+
+  // Methods for managing many-to-many relationships
+  async addShipperToLoad(
+    loadId: string,
+    shipperId: string,
+    data: {
+      isPrimary?: boolean;
+      sequence?: number;
+      pickupDate?: Date;
+      pickupStart?: string;
+      pickupEnd?: string;
+      pickupType?: string;
+      pickupNotes?: string;
+    }
+  ): Promise<void> {
+    await this.prisma.loadShipper.create({
+      data: {
+        loadId,
+        shipperId,
+        isPrimary: data.isPrimary ?? false,
+        sequence: data.sequence ?? 1,
+        pickupDate: data.pickupDate,
+        pickupStart: data.pickupStart,
+        pickupEnd: data.pickupEnd,
+        pickupType: data.pickupType ?? "FCFS",
+        pickupNotes: data.pickupNotes,
+      },
+    });
+  }
+
+  async addConsigneeToLoad(
+    loadId: string,
+    consigneeId: string,
+    data: {
+      isPrimary?: boolean;
+      sequence?: number;
+      deliveryDate?: Date;
+      deliveryStart?: string;
+      deliveryEnd?: string;
+      deliveryType?: string;
+      deliveryNotes?: string;
+    }
+  ): Promise<void> {
+    await this.prisma.loadConsignee.create({
+      data: {
+        loadId,
+        consigneeId,
+        isPrimary: data.isPrimary ?? false,
+        sequence: data.sequence ?? 1,
+        deliveryDate: data.deliveryDate,
+        deliveryStart: data.deliveryStart,
+        deliveryEnd: data.deliveryEnd,
+        deliveryType: data.deliveryType ?? "FCFS",
+        deliveryNotes: data.deliveryNotes,
+      },
+    });
+  }
+
+  async removeShipperFromLoad(
+    loadId: string,
+    shipperId: string
+  ): Promise<void> {
+    await this.prisma.loadShipper.deleteMany({
+      where: {
+        loadId,
+        shipperId,
+      },
+    });
+  }
+
+  async removeConsigneeFromLoad(
+    loadId: string,
+    consigneeId: string
+  ): Promise<void> {
+    await this.prisma.loadConsignee.deleteMany({
+      where: {
+        loadId,
+        consigneeId,
+      },
+    });
+  }
+
+  async updateLoadShippers(
+    loadId: string,
+    shippers: Array<{
+      shipperId: string;
+      isPrimary?: boolean;
+      sequence?: number;
+      pickupDate?: Date;
+      pickupStart?: string;
+      pickupEnd?: string;
+      pickupType?: string;
+      pickupNotes?: string;
+    }>
+  ): Promise<void> {
+    // Delete existing shippers
+    await this.prisma.loadShipper.deleteMany({
+      where: { loadId },
+    });
+
+    // Add new shippers
+    if (shippers.length > 0) {
+      await this.prisma.loadShipper.createMany({
+        data: shippers.map((shipper, index) => ({
+          loadId,
+          shipperId: shipper.shipperId,
+          isPrimary: shipper.isPrimary ?? index === 0,
+          sequence: shipper.sequence ?? index + 1,
+          pickupDate: shipper.pickupDate,
+          pickupStart: shipper.pickupStart,
+          pickupEnd: shipper.pickupEnd,
+          pickupType: shipper.pickupType ?? "FCFS",
+          pickupNotes: shipper.pickupNotes,
+        })),
+      });
+    }
+  }
+
+  async updateLoadConsignees(
+    loadId: string,
+    consignees: Array<{
+      consigneeId: string;
+      isPrimary?: boolean;
+      sequence?: number;
+      deliveryDate?: Date;
+      deliveryStart?: string;
+      deliveryEnd?: string;
+      deliveryType?: string;
+      deliveryNotes?: string;
+    }>
+  ): Promise<void> {
+    // Delete existing consignees
+    await this.prisma.loadConsignee.deleteMany({
+      where: { loadId },
+    });
+
+    // Add new consignees
+    if (consignees.length > 0) {
+      await this.prisma.loadConsignee.createMany({
+        data: consignees.map((consignee, index) => ({
+          loadId,
+          consigneeId: consignee.consigneeId,
+          isPrimary: consignee.isPrimary ?? index === 0,
+          sequence: consignee.sequence ?? index + 1,
+          deliveryDate: consignee.deliveryDate,
+          deliveryStart: consignee.deliveryStart,
+          deliveryEnd: consignee.deliveryEnd,
+          deliveryType: consignee.deliveryType ?? "FCFS",
+          deliveryNotes: consignee.deliveryNotes,
+        })),
+      });
+    }
   }
 
   async findByLoadNumber(
@@ -767,27 +1047,19 @@ export class LoadRepository extends BaseRepository<Load> {
         },
       }),
 
-      // Today's pickups
-      this.prisma.load.count({
+      // Today's pickups via LoadShipper
+      this.prisma.loadShipper.count({
         where: {
-          organizationId,
-          pickupDate: {
-            gte: startOfToday,
-            lt: endOfToday,
-          },
-          deletedAt: null,
+          pickupDate: { gte: startOfToday, lt: endOfToday },
+          load: { organizationId, deletedAt: null },
         },
       }),
 
-      // Today's deliveries
-      this.prisma.load.count({
+      // Today's deliveries via LoadConsignee
+      this.prisma.loadConsignee.count({
         where: {
-          organizationId,
-          deliveryDate: {
-            gte: startOfToday,
-            lt: endOfToday,
-          },
-          deletedAt: null,
+          deliveryDate: { gte: startOfToday, lt: endOfToday },
+          load: { organizationId, deletedAt: null },
         },
       }),
 
@@ -935,24 +1207,16 @@ export class LoadRepository extends BaseRepository<Load> {
       weekEnd.setDate(weekStart.getDate() + 6);
 
       const [pickups, deliveries] = await Promise.all([
-        this.prisma.load.count({
+        this.prisma.loadShipper.count({
           where: {
-            organizationId,
-            pickupDate: {
-              gte: weekStart,
-              lte: weekEnd,
-            },
-            deletedAt: null,
+            pickupDate: { gte: weekStart, lte: weekEnd },
+            load: { organizationId, deletedAt: null },
           },
         }),
-        this.prisma.load.count({
+        this.prisma.loadConsignee.count({
           where: {
-            organizationId,
-            deliveryDate: {
-              gte: weekStart,
-              lte: weekEnd,
-            },
-            deletedAt: null,
+            deliveryDate: { gte: weekStart, lte: weekEnd },
+            load: { organizationId, deletedAt: null },
           },
         }),
       ]);

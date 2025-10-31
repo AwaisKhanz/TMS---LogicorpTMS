@@ -20,6 +20,7 @@ import { NotFoundError } from "../utils/errors.util.js";
 import type { OrganizationDocumentNumbering } from "../types/common.types.js";
 import { DocumentGenerationService } from "./document-generation.service.js";
 import { NotificationService } from "./notification.service.js";
+import prisma from "../config/database.js";
 
 export class LoadService {
   private loadRepo: LoadRepository;
@@ -97,38 +98,76 @@ export class LoadService {
       throw new NotFoundError("Load");
     }
 
+    // Hide completed loads from detail page as per requirement
+    if (load.status === LoadStatus.COMPLETED) {
+      throw new NotFoundError("Load");
+    }
+
     return this.transformLoadForApi(load);
+  }
+
+  async updateFinancialAdjustments(
+    id: string,
+    organizationId: string,
+    adjustments: unknown
+  ) {
+    const updated = await this.loadRepo.updateFinancialAdjustments(
+      id,
+      organizationId,
+      adjustments
+    );
+    if (!updated) throw new NotFoundError("Load");
+    return this.transformLoadForApi(updated);
   }
 
   private transformLoadForApi(
     load: LoadWithRelations | LoadWithMinimalRelations
   ) {
+    // Get primary shipper and consignee for backward compatibility
+    const primaryShipper =
+      load.loadShippers?.find((ls) => ls.isPrimary) || load.loadShippers?.[0];
+    const primaryConsignee =
+      load.loadConsignees?.find((lc) => lc.isPrimary) ||
+      load.loadConsignees?.[0];
+
     const baseTransform = {
       ...load,
       createdAt: load.createdAt.toISOString(),
       updatedAt: load.updatedAt.toISOString(),
-      pickupDate: load.pickupDate.toISOString(),
-      deliveryDate: load.deliveryDate.toISOString(),
+      // Derive top-level pickup/delivery dates from primary relations for backward compatibility
+      pickupDate: primaryShipper?.pickupDate
+        ? primaryShipper.pickupDate
+        : undefined,
+      deliveryDate: primaryConsignee?.deliveryDate
+        ? primaryConsignee.deliveryDate
+        : undefined,
       bookedAt: load.bookedAt?.toISOString(),
       dispatchedAt: load.dispatchedAt?.toISOString(),
       pickedUpAt: load.pickedUpAt?.toISOString(),
       deliveredAt: load.deliveredAt?.toISOString(),
       invoicedAt: load.invoicedAt?.toISOString(),
       paidAt: load.paidAt?.toISOString(),
-      shipperAddress: {
-        street: load.shipper.streetAddress,
-        city: load.shipper.city,
-        state: load.shipper.state,
-        zip: load.shipper.zipCode,
-        country: load.shipper.country,
-      } as Address,
-      consigneeAddress: {
-        street: load.consignee.streetAddress,
-        city: load.consignee.city,
-        state: load.consignee.state,
-        zip: load.consignee.zipCode,
-        country: load.consignee.country,
-      } as Address,
+      // Backward compatibility - use primary shipper/consignee
+      shipper: primaryShipper?.shipper,
+      consignee: primaryConsignee?.consignee,
+      shipperAddress: primaryShipper?.shipper
+        ? ({
+            street: primaryShipper.shipper.streetAddress,
+            city: primaryShipper.shipper.city,
+            state: primaryShipper.shipper.state,
+            zip: primaryShipper.shipper.zipCode,
+            country: primaryShipper.shipper.country,
+          } as Address)
+        : null,
+      consigneeAddress: primaryConsignee?.consignee
+        ? ({
+            street: primaryConsignee.consignee.streetAddress,
+            city: primaryConsignee.consignee.city,
+            state: primaryConsignee.consignee.state,
+            zip: primaryConsignee.consignee.zipCode,
+            country: primaryConsignee.consignee.country,
+          } as Address)
+        : null,
       customer: {
         id: load.customer.id,
         companyName: load.customer.companyName,
@@ -153,6 +192,23 @@ export class LoadService {
               lastName: load.assignee.lastName,
             }
           : null,
+      // Transform the many-to-many relationships
+      loadShippers:
+        load.loadShippers?.map((ls) => ({
+          ...ls,
+          createdAt: ls.createdAt.toISOString(),
+          updatedAt: ls.updatedAt.toISOString(),
+          pickupDate: ls.pickupDate?.toISOString(),
+          shipper: ls.shipper,
+        })) || [],
+      loadConsignees:
+        load.loadConsignees?.map((lc) => ({
+          ...lc,
+          createdAt: lc.createdAt.toISOString(),
+          updatedAt: lc.updatedAt.toISOString(),
+          deliveryDate: lc.deliveryDate?.toISOString(),
+          consignee: lc.consignee,
+        })) || [],
     };
 
     // Handle optional fields that only exist in LoadWithRelations
@@ -186,21 +242,79 @@ export class LoadService {
       initialStatus = LoadStatus.BOOKED;
     }
 
-    const loadData = {
-      loadNumber,
-      createdBy: userId,
-      status: initialStatus,
-      ...data,
-      margin:
-        data.customerRate && data.carrierRate
-          ? Number(data.customerRate) - Number(data.carrierRate)
-          : null,
-    };
+    // Extract shippers and consignees from the data
+    const { shippers, consignees, ...loadData } = data;
+
+    // Remove any legacy root-level pickup/delivery fields if present
+    // Only fields valid on Load model should be persisted here
+    const {
+      pickupDate: _pd,
+      pickupStart: _ps,
+      pickupEnd: _pe,
+      pickupType: _pt,
+      deliveryDate: _dd,
+      deliveryStart: _ds,
+      deliveryEnd: _de,
+      deliveryType: _dt,
+      pickupNotes: _pn,
+      deliveryNotes: _dn,
+      ...cleanLoadData
+    } = loadData as any;
 
     const load = await this.loadRepo.createWithRelations(
-      loadData,
+      {
+        loadNumber,
+        createdBy: userId,
+        status: initialStatus,
+        ...(cleanLoadData as Omit<
+          Prisma.LoadUncheckedCreateInput,
+          "organizationId" | "loadNumber" | "createdBy"
+        >),
+        margin:
+          data.customerRate && data.carrierRate
+            ? Number(data.customerRate) - Number(data.carrierRate)
+            : null,
+      },
       organizationId
     );
+
+    // Add shippers to the load
+    if (shippers && shippers.length > 0) {
+      await this.loadRepo.updateLoadShippers(
+        load.id,
+        shippers.map((shipper, index) => ({
+          shipperId: shipper.shipperId,
+          isPrimary: shipper.isPrimary ?? index === 0,
+          sequence: shipper.sequence ?? index + 1,
+          pickupDate: shipper.pickupDate
+            ? new Date(shipper.pickupDate)
+            : undefined,
+          pickupStart: shipper.pickupStart,
+          pickupEnd: shipper.pickupEnd,
+          pickupType: shipper.pickupType,
+          pickupNotes: shipper.pickupNotes,
+        }))
+      );
+    }
+
+    // Add consignees to the load
+    if (consignees && consignees.length > 0) {
+      await this.loadRepo.updateLoadConsignees(
+        load.id,
+        consignees.map((consignee, index) => ({
+          consigneeId: consignee.consigneeId,
+          isPrimary: consignee.isPrimary ?? index === 0,
+          sequence: consignee.sequence ?? index + 1,
+          deliveryDate: consignee.deliveryDate
+            ? new Date(consignee.deliveryDate)
+            : undefined,
+          deliveryStart: consignee.deliveryStart,
+          deliveryEnd: consignee.deliveryEnd,
+          deliveryType: consignee.deliveryType,
+          deliveryNotes: consignee.deliveryNotes,
+        }))
+      );
+    }
 
     // Create load event
     const eventData: LoadCreatedEventData = {
@@ -214,7 +328,14 @@ export class LoadService {
       userId
     );
 
-    return this.transformLoadForApi(load);
+    // Fetch the complete load with all relations
+    const completeLoad = await this.loadRepo.findByIdWithRelations(
+      load.id,
+      organizationId,
+      userId
+    );
+
+    return this.transformLoadForApi(completeLoad!);
   }
 
   async updateLoadStatus(
@@ -263,8 +384,50 @@ export class LoadService {
     }
 
     if (newStatus === LoadStatus.COMPLETED) {
-      // Move load to invoice page (completed loads are handled separately)
-      // This will be filtered out from regular load queries
+      // Auto-create invoice for the completed load if not already invoiced
+      try {
+        const existingLine = await prisma.invoiceLineItem.findFirst({
+          where: { loadId: id, invoice: { organizationId } },
+        });
+        if (!existingLine) {
+          // Create invoice with a single line item for this load
+          const loadForInvoice = await this.loadRepo.findById(
+            id,
+            organizationId
+          );
+          if (loadForInvoice) {
+            await prisma.invoice.create({
+              data: {
+                organizationId,
+                invoiceNumber: `INV-${loadForInvoice.loadNumber}`,
+                customerId: loadForInvoice.customerId,
+                carrierId: loadForInvoice.carrierId ?? undefined,
+                // Dates
+                invoiceDate: new Date(),
+                dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                // Amount (simple one-line invoice)
+                total: loadForInvoice.customerRate,
+                status: "DRAFT" as unknown as any,
+                createdBy: userId,
+                lineItems: {
+                  create: {
+                    loadId: id,
+                    description: `Freight charges for Load ${loadForInvoice.loadNumber}`,
+                    quantity: 1,
+                    rate: loadForInvoice.customerRate,
+                    amount: loadForInvoice.customerRate,
+                  },
+                },
+              },
+            });
+          }
+        }
+      } catch (e) {
+        // Do not block status update if invoicing fails
+        // Consider logging
+        // eslint-disable-next-line no-console
+        console.error("Failed to auto-create invoice for load", id, e);
+      }
     }
 
     return this.transformLoadForApi(updatedLoad!);
@@ -331,26 +494,77 @@ export class LoadService {
     // Validate load data
     this.validateLoadData(data);
 
-    const updateData: Record<string, unknown> = { ...data };
+    // Extract shippers and consignees from the data
+    const { shippers, consignees, ...updateData } = data;
+
+    // Strip any legacy root-level pickup/delivery fields
+    const {
+      pickupDate: _pd,
+      pickupStart: _ps,
+      pickupEnd: _pe,
+      pickupType: _pt,
+      deliveryDate: _dd,
+      deliveryStart: _ds,
+      deliveryEnd: _de,
+      deliveryType: _dt,
+      pickupNotes: _pn,
+      deliveryNotes: _dn,
+      ...cleanUpdateData
+    } = updateData as any;
 
     // Recalculate margin if rates changed
     if (data.customerRate !== undefined || data.carrierRate !== undefined) {
-      const customerRate = data.customerRate ?? existingLoad.customerRate;
-      const carrierRate = data.carrierRate ?? existingLoad.carrierRate;
-
-      if (customerRate && carrierRate) {
-        updateData.margin = Number(customerRate) - Number(carrierRate);
-      }
+      // Margin calculation removed as margin field no longer exists in Load model
+      // const customerRate = data.customerRate ?? existingLoad.customerRate;
+      // const carrierRate = data.carrierRate ?? existingLoad.carrierRate;
     }
 
     const load = await this.loadRepo.updateWithRelations(
       id,
-      updateData,
+      cleanUpdateData,
       organizationId
     );
 
     if (!load) {
       throw new NotFoundError("Load");
+    }
+
+    // Update shippers if provided
+    if (shippers !== undefined) {
+      await this.loadRepo.updateLoadShippers(
+        id,
+        shippers.map((shipper, index) => ({
+          shipperId: shipper.shipperId,
+          isPrimary: shipper.isPrimary ?? index === 0,
+          sequence: shipper.sequence ?? index + 1,
+          pickupDate: shipper.pickupDate
+            ? new Date(shipper.pickupDate)
+            : undefined,
+          pickupStart: shipper.pickupStart,
+          pickupEnd: shipper.pickupEnd,
+          pickupType: shipper.pickupType,
+          pickupNotes: shipper.pickupNotes,
+        }))
+      );
+    }
+
+    // Update consignees if provided
+    if (consignees !== undefined) {
+      await this.loadRepo.updateLoadConsignees(
+        id,
+        consignees.map((consignee, index) => ({
+          consigneeId: consignee.consigneeId,
+          isPrimary: consignee.isPrimary ?? index === 0,
+          sequence: consignee.sequence ?? index + 1,
+          deliveryDate: consignee.deliveryDate
+            ? new Date(consignee.deliveryDate)
+            : undefined,
+          deliveryStart: consignee.deliveryStart,
+          deliveryEnd: consignee.deliveryEnd,
+          deliveryType: consignee.deliveryType,
+          deliveryNotes: consignee.deliveryNotes,
+        }))
+      );
     }
 
     // Create load event
@@ -365,7 +579,14 @@ export class LoadService {
       userId
     );
 
-    return this.transformLoadForApi(load);
+    // Fetch the complete load with all relations
+    const completeLoad = await this.loadRepo.findByIdWithRelations(
+      load.id,
+      organizationId,
+      userId
+    );
+
+    return this.transformLoadForApi(completeLoad!);
   }
 
   async deleteLoad(id: string, organizationId: string) {
@@ -513,7 +734,7 @@ export class LoadService {
   }
 
   async duplicateLoad(id: string, userId: string, organizationId: string) {
-    const load = await this.loadRepo.findById(id, organizationId);
+    const load = await this.loadRepo.findByIdWithRelations(id, organizationId);
     if (!load) {
       throw new NotFoundError("Load");
     }
@@ -527,14 +748,6 @@ export class LoadService {
       createdBy: userId,
       status: LoadStatus.QUOTE,
       customerId: load.customerId,
-      shipperId: load.shipperId,
-      consigneeId: load.consigneeId,
-      pickupDate: load.pickupDate,
-      pickupStart: load.pickupStart,
-      pickupEnd: load.pickupEnd,
-      deliveryDate: load.deliveryDate,
-      deliveryStart: load.deliveryStart,
-      deliveryEnd: load.deliveryEnd,
       commodity: load.commodity,
       weight: load.weight,
       pieces: load.pieces,
@@ -543,12 +756,32 @@ export class LoadService {
       loadType: load.loadType,
       customerRate: load.customerRate,
       carrierRate: load.carrierRate,
-      margin: load.margin,
       accessorials: load.accessorials,
-      pickupNotes: load.pickupNotes,
-      deliveryNotes: load.deliveryNotes,
       internalNotes: load.internalNotes,
       referenceNumber: load.referenceNumber,
+      // Handle many-to-many relationships
+      shippers:
+        load.loadShippers?.map((relation) => ({
+          shipperId: relation.shipperId,
+          isPrimary: relation.isPrimary,
+          sequence: relation.sequence,
+          pickupDate: relation.pickupDate,
+          pickupStart: relation.pickupStart,
+          pickupEnd: relation.pickupEnd,
+          pickupType: relation.pickupType,
+          pickupNotes: relation.pickupNotes,
+        })) || [],
+      consignees:
+        load.loadConsignees?.map((relation) => ({
+          consigneeId: relation.consigneeId,
+          isPrimary: relation.isPrimary,
+          sequence: relation.sequence,
+          deliveryDate: relation.deliveryDate,
+          deliveryStart: relation.deliveryStart,
+          deliveryEnd: relation.deliveryEnd,
+          deliveryType: relation.deliveryType,
+          deliveryNotes: relation.deliveryNotes,
+        })) || [],
     };
 
     const duplicatedLoad = await this.loadRepo.createWithRelations(
@@ -679,24 +912,41 @@ export class LoadService {
       "Margin",
     ];
 
-    const rows = loads.map((load) => [
-      load.loadNumber,
-      load.status,
-      load.customer?.companyName || "",
-      load.carrier?.companyName || "",
-      load.shipperAddress?.city || "",
-      load.shipperAddress?.state || "",
-      load.consigneeAddress?.city || "",
-      load.consigneeAddress?.state || "",
-      load.pickupDate?.toISOString().split("T")[0] || "",
-      load.deliveryDate?.toISOString().split("T")[0] || "",
-      load.commodity,
-      load.weight,
-      load.equipmentType,
-      load.customerRate,
-      load.carrierRate || "",
-      load.margin || "",
-    ]);
+    const rows = (loads as unknown as LoadWithMinimalRelations[]).map(
+      (load) => {
+        const primaryShipper =
+          load.loadShippers?.find((ls) => ls.isPrimary) ||
+          load.loadShippers?.[0];
+        const primaryConsignee =
+          load.loadConsignees?.find((lc) => lc.isPrimary) ||
+          load.loadConsignees?.[0];
+
+        return [
+          load.loadNumber,
+          load.status,
+          load.customer?.companyName || "",
+          load.carrier?.companyName || "",
+          primaryShipper?.shipper?.city || "",
+          primaryShipper?.shipper?.state || "",
+          primaryConsignee?.consignee?.city || "",
+          primaryConsignee?.consignee?.state || "",
+          primaryShipper?.pickupDate
+            ? new Date(primaryShipper.pickupDate).toISOString().split("T")[0]
+            : "",
+          primaryConsignee?.deliveryDate
+            ? new Date(primaryConsignee.deliveryDate)
+                .toISOString()
+                .split("T")[0]
+            : "",
+          load.commodity,
+          load.weight,
+          load.equipmentType,
+          Number(load.customerRate),
+          load.carrierRate ? Number(load.carrierRate) : "",
+          load.margin ? Number(load.margin) : "",
+        ];
+      }
+    );
 
     const csvContent = [headers, ...rows]
       .map((row) => row.map((cell) => `"${cell}"`).join(","))
@@ -717,16 +967,7 @@ export class LoadService {
   }
 
   private validateLoadData(data: CreateLoadDto | UpdateLoadDto) {
-    // Validate dates
-    if ("pickupDate" in data && "deliveryDate" in data) {
-      if (
-        data.pickupDate &&
-        data.deliveryDate &&
-        new Date(data.pickupDate) > new Date(data.deliveryDate)
-      ) {
-        throw new Error("Pickup date must be before delivery date");
-      }
-    }
+    // Root-level pickup/delivery dates removed; validation handled per relation
 
     // Validate rates
     if ("customerRate" in data && data.customerRate !== undefined) {

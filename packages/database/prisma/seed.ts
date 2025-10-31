@@ -223,6 +223,32 @@ async function main() {
       description: "Delete reports",
     },
 
+    // Document permissions
+    {
+      name: "document:view",
+      resource: "document",
+      action: "view",
+      description: "View documents",
+    },
+    {
+      name: "document:create",
+      resource: "document",
+      action: "create",
+      description: "Create/upload documents",
+    },
+    {
+      name: "document:edit",
+      resource: "document",
+      action: "edit",
+      description: "Edit documents",
+    },
+    {
+      name: "document:delete",
+      resource: "document",
+      action: "delete",
+      description: "Delete documents",
+    },
+
     // Consignee permissions
     {
       name: "consignee:view",
@@ -349,6 +375,7 @@ async function main() {
         { resource: "carrier" },
         { resource: "consignee" },
         { resource: "shipper" },
+        { resource: "document" },
         { name: "customer:view" },
         { name: "user:view" },
         {
@@ -383,6 +410,7 @@ async function main() {
         { resource: "carrier" },
         { resource: "consignee" },
         { resource: "shipper" },
+        { resource: "document" },
         { name: "customer:view" },
         {
           name: {
@@ -408,6 +436,7 @@ async function main() {
       OR: [
         { action: { in: ["view", "view:all", "view:own"] } },
         { name: { in: ["report:view", "report:export", "settings:view"] } },
+        { resource: "document", action: "view" },
       ],
     },
   });
@@ -430,6 +459,7 @@ async function main() {
         { name: "carrier:view" },
         { name: "load:view" },
         { name: "load:view:own" },
+        { resource: "document" },
         {
           name: {
             in: ["report:view", "report:export", "settings:view"],

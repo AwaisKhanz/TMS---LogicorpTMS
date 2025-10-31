@@ -261,7 +261,7 @@ export class ConsigneeService {
       country: consignee.country,
       contactPerson: consignee.contactPerson || undefined,
       isActive: consignee.isActive,
-      totalLoads: consignee._count?.loads || 0,
+      totalLoads: consignee._count?.loadConsignees || 0,
       createdAt: consignee.createdAt.toISOString(),
     }));
 

@@ -21,6 +21,7 @@ import type {
   UpdateOrganizationRequest,
   UpdateBusinessSettingsRequest,
   UpdateDocumentNumberingRequest,
+  UpdateDocumentTermsRequest,
   TeamMember,
   InviteTeamMemberRequest,
   UpdateTeamMemberRequest,
@@ -304,6 +305,7 @@ export class SettingsService {
 
     const settings = (organization as any).settings || {};
     const documentNumbering = (organization as any).documentNumbering || {};
+    const documentTerms = settings.documentTerms || {};
 
     const teamMembers: TeamMember[] = organization.users.map((user) => ({
       id: user.id,
@@ -344,6 +346,11 @@ export class SettingsService {
         defaultLoadMargin: settings.defaultLoadMargin || 15,
         requireApprovalForLoads: settings.requireApprovalForLoads || false,
         allowCarrierSelfDispatch: settings.allowCarrierSelfDispatch || false,
+      },
+      documentTerms: {
+        bolTerms: documentTerms.bolTerms,
+        rateConfirmationTerms: documentTerms.rateConfirmationTerms,
+        invoiceTerms: documentTerms.invoiceTerms,
       },
       teamMembers,
     };
@@ -449,6 +456,36 @@ export class SettingsService {
         documentNumbering: {
           ...currentNumbering,
           ...updateData,
+        },
+      },
+    });
+
+    return this.getOrganizationSettings(organizationId);
+  }
+
+  async updateDocumentTerms(
+    organizationId: string,
+    updateData: UpdateDocumentTermsRequest
+  ): Promise<OrganizationSettings> {
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
+
+    if (!organization) {
+      throw new NotFoundError("Organization");
+    }
+
+    const currentSettings = (organization as any).settings || {};
+
+    await prisma.organization.update({
+      where: { id: organizationId },
+      data: {
+        settings: {
+          ...currentSettings,
+          documentTerms: {
+            ...(currentSettings.documentTerms || {}),
+            ...updateData,
+          },
         },
       },
     });

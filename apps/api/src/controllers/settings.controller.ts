@@ -6,6 +6,7 @@ import type {
   UpdateOrganizationRequest,
   UpdateBusinessSettingsRequest,
   UpdateDocumentNumberingRequest,
+  UpdateDocumentTermsRequest,
   InviteTeamMemberRequest,
   UpdateTeamMemberRequest,
   EnableTwoFactorRequest,
@@ -332,6 +333,31 @@ export class SettingsController {
 
       const updateData = req.body as UpdateDocumentNumberingRequest;
       const settings = await this.settingsService.updateDocumentNumbering(
+        req.auth.organizationId,
+        updateData
+      );
+
+      res.json({
+        success: true,
+        data: settings,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateDocumentTerms = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      if (!req.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const updateData = req.body as UpdateDocumentTermsRequest;
+      const settings = await this.settingsService.updateDocumentTerms(
         req.auth.organizationId,
         updateData
       );
