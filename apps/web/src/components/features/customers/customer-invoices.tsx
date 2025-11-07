@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   Table,
   TableBody,
@@ -59,6 +60,9 @@ export function CustomerInvoices({ customerId }: CustomerInvoicesProps) {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Debounce search term (500ms delay) for client-side filtering
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const {
     data: invoicesData,
@@ -123,7 +127,7 @@ export function CustomerInvoices({ customerId }: CustomerInvoicesProps) {
         statusFilter === "all" || invoice.status === statusFilter;
       const matchesSearch = invoice.invoiceNumber
         .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+        .includes(debouncedSearchTerm.toLowerCase());
       return matchesStatus && matchesSearch;
     }) || [];
 

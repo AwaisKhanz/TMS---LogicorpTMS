@@ -84,7 +84,7 @@ export function TeamMemberForm({
       lastName: member?.lastName || "",
       email: member?.email || "",
       roleIds: member?.roles || [],
-      customerIds: member?.assignedCustomers?.map((c) => c.id) || [],
+      customerIds: member?.assignedCustomers?.map((c: any) => c.id) || [],
     },
   });
 
@@ -96,7 +96,7 @@ export function TeamMemberForm({
         lastName: member.lastName,
         email: member.email,
         roleIds: member.roles,
-        customerIds: member.assignedCustomers?.map((c) => c.id) || [],
+        customerIds: member.assignedCustomers?.map((c: any) => c.id) || [],
       });
     }
   }, [member, form]);

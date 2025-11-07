@@ -62,11 +62,7 @@ export interface LoadShipper {
   companyName: string;
   phone: string;
   email?: string;
-  streetAddress: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
+  address: Address;
   contactPerson?: string;
 }
 
@@ -75,11 +71,7 @@ export interface LoadConsignee {
   companyName: string;
   phone: string;
   email?: string;
-  streetAddress: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
+  address: Address;
   contactPerson?: string;
 }
 

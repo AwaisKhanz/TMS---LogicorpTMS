@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   Table,
   TableBody,
@@ -12,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -29,21 +29,12 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   MoreVertical,
   Eye,
   Edit,
   Trash2,
   Search,
   Download,
-  Settings,
   ChevronUp,
   ChevronDown,
   Loader2,
@@ -52,30 +43,37 @@ import {
 import Link from "next/link";
 import {
   useShippers,
-  useBulkUpdateShippers,
   useExportShippers,
   useDeleteShipper,
 } from "@/hooks/use-shipper";
 import { useToast } from "@/hooks/use-toast";
-import type { ShipperFilters, BulkShipperAction } from "@tms/shared-types";
+import type { ShipperFilters } from "@tms/shared-types";
 import {
   CanEdit,
   CanDelete,
-  CanDelete as CanBulkDelete,
 } from "@/components/auth/can";
 
 export function ShippersDataTable() {
   const { toast } = useToast();
+  const [searchInput, setSearchInput] = useState("");
   const [filters, setFilters] = useState<ShipperFilters>({
     page: 1,
     limit: 50,
   });
-  const [selectedShippers, setSelectedShippers] = useState<string[]>([]);
-  const [bulkActionDialog, setBulkActionDialog] = useState(false);
-  const [bulkAction, setBulkAction] = useState<string>("");
+
+  // Debounce search input (500ms delay)
+  const debouncedSearch = useDebounce(searchInput, 500);
+
+  // Update filters when debounced search changes
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      search: debouncedSearch || undefined,
+      page: 1, // Reset to first page when search changes
+    }));
+  }, [debouncedSearch]);
 
   const { data: shippersData, isLoading, error } = useShippers(filters);
-  const bulkUpdateMutation = useBulkUpdateShippers();
   const exportMutation = useExportShippers();
   const deleteShipper = useDeleteShipper();
 
@@ -92,46 +90,6 @@ export function ShippersDataTable() {
       [key]: value,
       page: 1, // Reset to first page when filters change
     }));
-  };
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedShippers(shippers.map((shipper) => shipper.id));
-    } else {
-      setSelectedShippers([]);
-    }
-  };
-
-  const handleSelectShipper = (shipperId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedShippers((prev) => [...prev, shipperId]);
-    } else {
-      setSelectedShippers((prev) => prev.filter((id) => id !== shipperId));
-    }
-  };
-
-  const handleBulkAction = async () => {
-    if (selectedShippers.length === 0) {
-      toast({
-        title: "No shippers selected",
-        description: "Please select shippers to perform bulk actions.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const action: BulkShipperAction = {
-      shipperIds: selectedShippers,
-      action: bulkAction as "activate" | "deactivate",
-    };
-
-    try {
-      await bulkUpdateMutation.mutateAsync(action);
-      setSelectedShippers([]);
-      setBulkActionDialog(false);
-    } catch (error) {
-      console.error("Bulk action failed:", error);
-    }
   };
 
   const handleExport = async () => {
@@ -179,8 +137,8 @@ export function ShippersDataTable() {
               <label className="text-sm font-medium">Search</label>
               <Input
                 placeholder="Search by company name..."
-                value={filters.search || ""}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
               />
             </div>
             <div>
@@ -230,38 +188,6 @@ export function ShippersDataTable() {
         </CardContent>
       </Card>
 
-      {/* Bulk Actions */}
-      {selectedShippers.length > 0 && (
-        <CanBulkDelete resource="shipper">
-          <Card>
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  {selectedShippers.length} shipper(s) selected
-                </span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setBulkActionDialog(true)}
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Bulk Actions
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedShippers([])}
-                  >
-                    Clear Selection
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </CanBulkDelete>
-      )}
-
       {/* Data Table */}
       <Card>
         <CardContent className="p-0">
@@ -269,17 +195,6 @@ export function ShippersDataTable() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
-                    <CanBulkDelete resource="shipper">
-                      <Checkbox
-                        checked={
-                          selectedShippers.length === shippers.length &&
-                          shippers.length > 0
-                        }
-                        onCheckedChange={handleSelectAll}
-                      />
-                    </CanBulkDelete>
-                  </TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Location</TableHead>
@@ -291,7 +206,7 @@ export function ShippersDataTable() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       <div className="flex items-center justify-center">
                         <Loader2 className="h-6 w-6 animate-spin mr-2" />
                         Loading shippers...
@@ -300,26 +215,13 @@ export function ShippersDataTable() {
                   </TableRow>
                 ) : shippers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       No shippers found
                     </TableCell>
                   </TableRow>
                 ) : (
                   shippers.map((shipper) => (
                     <TableRow key={shipper.id}>
-                      <TableCell>
-                        <CanBulkDelete resource="shipper">
-                          <Checkbox
-                            checked={selectedShippers.includes(shipper.id)}
-                            onCheckedChange={(checked) =>
-                              handleSelectShipper(
-                                shipper.id,
-                                checked as boolean
-                              )
-                            }
-                          />
-                        </CanBulkDelete>
-                      </TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">
@@ -346,10 +248,10 @@ export function ShippersDataTable() {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          {shipper.city}, {shipper.state}
+                          {(shipper.address as any)?.city || ""}, {(shipper.address as any)?.state || ""}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {shipper.zipCode}
+                          {(shipper.address as any)?.zip || ""}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -442,47 +344,6 @@ export function ShippersDataTable() {
           </div>
         </div>
       )}
-
-      {/* Bulk Action Dialog */}
-      <Dialog open={bulkActionDialog} onOpenChange={setBulkActionDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bulk Action</DialogTitle>
-            <DialogDescription>
-              Select an action to perform on {selectedShippers.length} selected
-              shipper(s).
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Select value={bulkAction} onValueChange={setBulkAction}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select action" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="activate">Activate</SelectItem>
-                <SelectItem value="deactivate">Deactivate</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setBulkActionDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleBulkAction}
-              disabled={!bulkAction || bulkUpdateMutation.isPending}
-            >
-              {bulkUpdateMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
-              Apply Action
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

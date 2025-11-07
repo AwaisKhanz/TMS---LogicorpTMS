@@ -1,9 +1,8 @@
 "use client";
 
-import { Search, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import {
   DropdownMenu,
@@ -67,15 +66,6 @@ export function Header({ user, organizationName, onMenuClick }: HeaderProps) {
           >
             <Menu className="h-5 w-5" />
           </Button>
-
-          {/* Search */}
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search loads, carriers, customers..."
-              className="w-64 pl-9"
-            />
-          </div>
         </div>
 
         {/* Right Section */}

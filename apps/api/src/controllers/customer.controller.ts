@@ -16,6 +16,10 @@ const addressSchema = z.object({
   state: z.string(),
   zip: z.string(),
   country: z.string().optional(),
+  formattedAddress: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  placeId: z.string().optional(),
 });
 
 export const createCustomerSchema = z.object({

@@ -323,7 +323,10 @@ export class DocumentGenerationService {
           [
             "Address",
             s
-              ? `${s.shipper.streetAddress}, ${s.shipper.city}, ${s.shipper.state} ${s.shipper.zipCode}`
+              ? (() => {
+                  const addr = s.shipper.address as any;
+                  return `${addr?.street || ""}, ${addr?.city || ""}, ${addr?.state || ""} ${addr?.zip || ""}`;
+                })()
               : "-",
           ],
           ["Pickup Date", s?.pickupDate?.toISOString().split("T")[0]],
@@ -340,7 +343,10 @@ export class DocumentGenerationService {
           [
             "Address",
             c
-              ? `${c.consignee.streetAddress}, ${c.consignee.city}, ${c.consignee.state} ${c.consignee.zipCode}`
+              ? (() => {
+                  const addr = c.consignee.address as any;
+                  return `${addr?.street || ""}, ${addr?.city || ""}, ${addr?.state || ""} ${addr?.zip || ""}`;
+                })()
               : "-",
           ],
           ["Delivery Date", c?.deliveryDate?.toISOString().split("T")[0]],

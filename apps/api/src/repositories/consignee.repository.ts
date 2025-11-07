@@ -49,23 +49,13 @@ export class ConsigneeRepository extends BaseRepository<Consignee> {
       where.isActive = filters.isActive;
     }
 
-    if (filters.state) {
-      where.state = filters.state;
-    }
-
-    if (filters.search) {
-      where.OR = [
-        { companyName: { contains: filters.search, mode: "insensitive" } },
-        { phone: { contains: filters.search, mode: "insensitive" } },
-        { email: { contains: filters.search, mode: "insensitive" } },
-        { city: { contains: filters.search, mode: "insensitive" } },
-        { contactPerson: { contains: filters.search, mode: "insensitive" } },
-      ];
-    }
-
-    const [consignees, total] = await Promise.all([
+    const [allConsignees] = await Promise.all([
       this.prisma.consignee.findMany({
-        where,
+        where: {
+          organizationId,
+          deletedAt: null,
+          ...(filters.isActive !== undefined ? { isActive: filters.isActive } : {}),
+        },
         include: {
           _count: {
             select: {
@@ -73,14 +63,52 @@ export class ConsigneeRepository extends BaseRepository<Consignee> {
             },
           },
         },
-        orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
-        skip,
-        take: limit,
       }),
-      this.prisma.consignee.count({ where }),
+      this.prisma.consignee.count({
+        where: {
+          organizationId,
+          deletedAt: null,
+          ...(filters.isActive !== undefined ? { isActive: filters.isActive } : {}),
+        },
+      }),
     ]);
 
-    return { data: consignees, total };
+    // Filter by state and search in memory (since JSON fields are harder to query)
+    let filteredConsignees = allConsignees;
+    
+    if (filters.state) {
+      filteredConsignees = filteredConsignees.filter((c) => {
+        const addr = c.address as any;
+        return addr?.state === filters.state;
+      });
+    }
+
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filteredConsignees = filteredConsignees.filter((c) => {
+        const addr = c.address as any;
+        return (
+          c.companyName.toLowerCase().includes(searchLower) ||
+          c.phone.toLowerCase().includes(searchLower) ||
+          (c.email && c.email.toLowerCase().includes(searchLower)) ||
+          (addr?.city && addr.city.toLowerCase().includes(searchLower)) ||
+          (c.contactPerson && c.contactPerson.toLowerCase().includes(searchLower))
+        );
+      });
+    }
+
+    // Sort and paginate
+    filteredConsignees.sort((a, b) => {
+      if (a.isActive !== b.isActive) {
+        return a.isActive ? -1 : 1;
+      }
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    });
+
+    const total = filteredConsignees.length;
+    const paginatedConsignees = filteredConsignees.slice(skip, skip + limit);
+
+    return { data: paginatedConsignees, total };
   }
 
   async findByIdWithRelations(
@@ -105,18 +133,13 @@ export class ConsigneeRepository extends BaseRepository<Consignee> {
 
   async findByCompanyAndAddress(
     companyName: string,
-    streetAddress: string,
-    city: string,
-    state: string,
+    address: any,
     organizationId: string,
     excludeId?: string
   ): Promise<Consignee | null> {
     const where: WhereClause = {
       organizationId,
       companyName,
-      streetAddress,
-      city,
-      state,
       deletedAt: null,
     };
 
@@ -124,7 +147,20 @@ export class ConsigneeRepository extends BaseRepository<Consignee> {
       where.id = { not: excludeId };
     }
 
-    return this.prisma.consignee.findFirst({ where });
+    // Find by company name first, then filter by address in memory
+    const consignees = await this.prisma.consignee.findMany({ where });
+
+    // Filter in memory for exact address match
+    return (
+      consignees.find((c) => {
+        const addr = c.address as any;
+        return (
+          addr?.street === address.street &&
+          addr?.city === address.city &&
+          addr?.state === address.state
+        );
+      }) || null
+    );
   }
 
   async createWithRelations(

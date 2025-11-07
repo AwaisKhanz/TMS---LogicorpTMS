@@ -19,6 +19,13 @@ router.get(
   invoiceController.list.bind(invoiceController)
 );
 
+// Get invoice statistics
+router.get(
+  "/statistics",
+  authorize(PERMISSIONS.INVOICE_VIEW),
+  invoiceController.getStatistics.bind(invoiceController)
+);
+
 // Get invoice by id
 router.get(
   "/:id",

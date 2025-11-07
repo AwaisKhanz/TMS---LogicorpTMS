@@ -38,6 +38,7 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@react-google-maps/api": "^2.20.7",
     "@tanstack/react-query": "^5.14.2",
     "@tanstack/react-table": "^8.21.3",
     "@tms/shared-constants": "*",
@@ -63,6 +64,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "use-places-autocomplete": "^4.0.1",
     "vaul": "^1.1.2",
     "zod": "^3.25.76",
     "zustand": "^4.4.7"

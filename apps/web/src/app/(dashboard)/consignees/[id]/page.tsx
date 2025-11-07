@@ -201,11 +201,11 @@ export default function ConsigneeDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-1">
-                <div>{consignee.streetAddress}</div>
+                <div>{(consignee.address as any)?.street || ""}</div>
                 <div>
-                  {consignee.city}, {consignee.state} {consignee.zipCode}
+                  {(consignee.address as any)?.city || ""}, {(consignee.address as any)?.state || ""} {(consignee.address as any)?.zip || ""}
                 </div>
-                <div>{consignee.country}</div>
+                <div>{(consignee.address as any)?.country || ""}</div>
               </div>
             </CardContent>
           </Card>

@@ -29,6 +29,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Save, Loader2 } from "lucide-react";
 import { INDUSTRY_OPTIONS, PAYMENT_TERMS_OPTIONS } from "@tms/shared-constants";
 import { EQUIPMENT_TYPES } from "@tms/shared-constants";
+import { GoogleMapsLoader } from "@/components/ui/google-maps-loader";
+import { AddressFormFields } from "@/components/ui/address-form-fields";
 
 const customerFormSchema = z.object({
   // Company Info
@@ -56,12 +58,17 @@ const customerFormSchema = z.object({
     .max(100, "City name too long"),
   billingState: z
     .string()
-    .min(2, "State is required")
-    .max(2, "State must be 2 characters"),
+    .min(1, "State/Province is required")
+    .max(100, "State/Province name too long"),
   billingZip: z
     .string()
     .min(5, "ZIP code is required")
     .max(10, "ZIP code too long"),
+  billingCountry: z.string().optional(),
+  billingFormattedAddress: z.string().optional(),
+  billingLatitude: z.number().optional(),
+  billingLongitude: z.number().optional(),
+  billingPlaceId: z.string().optional(),
 
   // Billing Contact
   billingEmail: z
@@ -125,6 +132,11 @@ export function CustomerForm({
           billingCity: initialData.billingAddress?.city || "",
           billingState: initialData.billingAddress?.state || "",
           billingZip: initialData.billingAddress?.zip || "",
+          billingCountry: initialData.billingAddress?.country || "US",
+          billingFormattedAddress: initialData.billingAddress?.formattedAddress || "",
+          billingLatitude: initialData.billingAddress?.latitude || undefined,
+          billingLongitude: initialData.billingAddress?.longitude || undefined,
+          billingPlaceId: initialData.billingAddress?.placeId || "",
           billingEmail: initialData.billingEmail,
           billingPhone: initialData.billingPhone,
           creditLimit: initialData.creditLimit || 0,
@@ -142,6 +154,11 @@ export function CustomerForm({
           billingCity: "",
           billingState: "",
           billingZip: "",
+          billingCountry: "US",
+          billingFormattedAddress: "",
+          billingLatitude: undefined,
+          billingLongitude: undefined,
+          billingPlaceId: "",
           billingEmail: "",
           billingPhone: "",
           creditLimit: 0,
@@ -163,7 +180,11 @@ export function CustomerForm({
         city: data.billingCity,
         state: data.billingState,
         zip: data.billingZip,
-        country: "US",
+        country: data.billingCountry || "US",
+        formattedAddress: data.billingFormattedAddress,
+        latitude: data.billingLatitude,
+        longitude: data.billingLongitude,
+        placeId: data.billingPlaceId,
       },
       billingEmail: data.billingEmail,
       billingPhone: data.billingPhone,
@@ -181,7 +202,8 @@ export function CustomerForm({
   const isSubmitting = isSubmittingProp || form.formState.isSubmitting;
 
   return (
-    <Form {...form}>
+    <GoogleMapsLoader>
+      <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Company Information */}
         <Card>
@@ -283,63 +305,19 @@ export function CustomerForm({
             <CardTitle>Billing Address</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <FormField
+            <AddressFormFields
               control={form.control}
-              name="billingStreet"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Street Address *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="123 Main St" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              setValue={form.setValue}
+              streetFieldName="billingStreet"
+              cityFieldName="billingCity"
+              stateFieldName="billingState"
+              zipFieldName="billingZip"
+              countryFieldName="billingCountry"
+              formattedAddressFieldName="billingFormattedAddress"
+              latitudeFieldName="billingLatitude"
+              longitudeFieldName="billingLongitude"
+              placeIdFieldName="billingPlaceId"
             />
-
-            <div className="grid gap-4 md:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="billingCity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Los Angeles" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="billingState"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="CA" {...field} maxLength={2} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="billingZip"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>ZIP Code *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="90001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
           </CardContent>
         </Card>
 
@@ -548,5 +526,6 @@ export function CustomerForm({
         </div>
       </form>
     </Form>
+    </GoogleMapsLoader>
   );
 }

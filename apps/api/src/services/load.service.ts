@@ -151,22 +151,28 @@ export class LoadService {
       shipper: primaryShipper?.shipper,
       consignee: primaryConsignee?.consignee,
       shipperAddress: primaryShipper?.shipper
-        ? ({
-            street: primaryShipper.shipper.streetAddress,
-            city: primaryShipper.shipper.city,
-            state: primaryShipper.shipper.state,
-            zip: primaryShipper.shipper.zipCode,
-            country: primaryShipper.shipper.country,
-          } as Address)
+        ? (() => {
+            const addr = primaryShipper.shipper.address as any;
+            return {
+              street: addr?.street || "",
+              city: addr?.city || "",
+              state: addr?.state || "",
+              zip: addr?.zip || "",
+              country: addr?.country || "",
+            } as Address;
+          })()
         : null,
       consigneeAddress: primaryConsignee?.consignee
-        ? ({
-            street: primaryConsignee.consignee.streetAddress,
-            city: primaryConsignee.consignee.city,
-            state: primaryConsignee.consignee.state,
-            zip: primaryConsignee.consignee.zipCode,
-            country: primaryConsignee.consignee.country,
-          } as Address)
+        ? (() => {
+            const addr = primaryConsignee.consignee.address as any;
+            return {
+              street: addr?.street || "",
+              city: addr?.city || "",
+              state: addr?.state || "",
+              zip: addr?.zip || "",
+              country: addr?.country || "",
+            } as Address;
+          })()
         : null,
       customer: {
         id: load.customer.id,
@@ -926,10 +932,10 @@ export class LoadService {
           load.status,
           load.customer?.companyName || "",
           load.carrier?.companyName || "",
-          primaryShipper?.shipper?.city || "",
-          primaryShipper?.shipper?.state || "",
-          primaryConsignee?.consignee?.city || "",
-          primaryConsignee?.consignee?.state || "",
+          (primaryShipper?.shipper?.address as any)?.city || "",
+          (primaryShipper?.shipper?.address as any)?.state || "",
+          (primaryConsignee?.consignee?.address as any)?.city || "",
+          (primaryConsignee?.consignee?.address as any)?.state || "",
           primaryShipper?.pickupDate
             ? new Date(primaryShipper.pickupDate).toISOString().split("T")[0]
             : "",

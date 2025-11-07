@@ -25,6 +25,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ArrowLeft,
+  FileText,
+  MapPin,
+  Package,
+  DollarSign,
+  Receipt,
+  CreditCard,
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
@@ -59,7 +70,68 @@ export default function InvoiceDetailPage() {
     []
   );
 
-  if (isLoading || !invoice) return null;
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-col gap-4">
+            <div>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/invoices">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Invoices
+                </Link>
+              </Button>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                Invoice Details
+              </h1>
+              <p className="text-muted-foreground">
+                Loading invoice information...
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-12">
+          <div className="lg:col-span-8 space-y-4 sm:space-y-6">
+            <Skeleton className="h-64 w-full" />
+          </div>
+          <div className="lg:col-span-4 space-y-4 sm:space-y-6">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!invoice) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-col gap-4">
+            <div>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/invoices">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Invoices
+                </Link>
+              </Button>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                Invoice Not Found
+              </h1>
+              <p className="text-muted-foreground">
+                The invoice you&apos;re looking for doesn&apos;t exist
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const total = Number(invoice.total || 0);
   const paid = Number(invoice.paidAmount || 0);
@@ -83,25 +155,50 @@ export default function InvoiceDetailPage() {
   return (
     <PermissionGuard permission={PERMISSIONS.INVOICE_VIEW}>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Invoice {invoice.invoiceNumber}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Created {new Date(invoice.createdAt).toLocaleDateString()}
-            </p>
+        {/* Modern Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-col gap-4">
+            <div>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/invoices">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Invoices
+                </Link>
+              </Button>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold tracking-tight">
+                  Invoice {invoice.invoiceNumber}
+                </h1>
+                <Badge
+                  variant={
+                    invoice.status === "PAID"
+                      ? "default"
+                      : invoice.status === "OVERDUE"
+                        ? "destructive"
+                        : "secondary"
+                  }
+                >
+                  {invoice.status}
+                </Badge>
+              </div>
+              <p className="text-muted-foreground">
+                Created {new Date(invoice.createdAt).toLocaleDateString()}
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             {load?.id && (
               <Button variant="outline" asChild>
                 <Link href={`/loads/${load.id}`}>
-                  Open Load {load.loadNumber || ""}
+                  <Package className="h-4 w-4 mr-2" />
+                  View Load {load.loadNumber || ""}
                 </Link>
               </Button>
             )}
             <Button onClick={() => exportPdf.mutate(params.id)}>
+              <Receipt className="h-4 w-4 mr-2" />
               Export PDF
             </Button>
           </div>
@@ -113,46 +210,54 @@ export default function InvoiceDetailPage() {
             <TabsList className="inline-flex md:w-full md:flex min-w-full md:min-w-0">
               <TabsTrigger
                 value="overview"
-                className="flex-shrink-0 md:flex-1 whitespace-nowrap"
+                className="flex-shrink-0 md:flex-1 whitespace-nowrap flex items-center gap-2"
               >
-                Overview
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Overview</span>
               </TabsTrigger>
               <TabsTrigger
                 value="route"
                 disabled={!load}
-                className="flex-shrink-0 md:flex-1 whitespace-nowrap"
+                className="flex-shrink-0 md:flex-1 whitespace-nowrap flex items-center gap-2"
               >
-                Route
+                <MapPin className="h-4 w-4" />
+                <span className="hidden sm:inline">Route</span>
               </TabsTrigger>
               <TabsTrigger
                 value="specs"
                 disabled={!load}
-                className="flex-shrink-0 md:flex-1 whitespace-nowrap"
+                className="flex-shrink-0 md:flex-1 whitespace-nowrap flex items-center gap-2"
               >
-                Specifications
+                <Package className="h-4 w-4" />
+                <span className="hidden sm:inline">Specifications</span>
               </TabsTrigger>
               <TabsTrigger
                 value="payments"
-                className="flex-shrink-0 md:flex-1 whitespace-nowrap"
+                className="flex-shrink-0 md:flex-1 whitespace-nowrap flex items-center gap-2"
               >
-                Payments
+                <DollarSign className="h-4 w-4" />
+                <span className="hidden sm:inline">Payments</span>
               </TabsTrigger>
               <TabsTrigger
                 value="documents"
-                className="flex-shrink-0 md:flex-1 whitespace-nowrap"
+                className="flex-shrink-0 md:flex-1 whitespace-nowrap flex items-center gap-2"
               >
-                Documents
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Documents</span>
               </TabsTrigger>
             </TabsList>
           </div>
 
           {/* Overview Tab */}
-          <TabsContent value="overview">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="space-y-6 lg:col-span-2">
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-12">
+              <div className="lg:col-span-8 space-y-4 sm:space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Summary</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <Receipt className="h-5 w-5" />
+                      Summary
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -161,9 +266,17 @@ export default function InvoiceDetailPage() {
                           Status
                         </div>
                         <div className="mt-1 inline-flex items-center gap-2">
-                          <span className="text-base font-semibold">
+                          <Badge
+                            variant={
+                              invoice.status === "PAID"
+                                ? "default"
+                                : invoice.status === "OVERDUE"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                          >
                             {invoice.status}
-                          </span>
+                          </Badge>
                         </div>
                       </div>
                       <div className="rounded-lg border p-4 bg-muted/30">
@@ -198,39 +311,52 @@ export default function InvoiceDetailPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Load Details</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      Load Details
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <div className="text-muted-foreground">Load #</div>
-                        <div>{load?.loadNumber || "-"}</div>
+                        <p className="text-sm text-muted-foreground">Load #</p>
+                        <p className="font-medium">{load?.loadNumber || "-"}</p>
                       </div>
                       <div>
-                        <div className="text-muted-foreground">Customer</div>
-                        <div>{invoice.customer?.companyName || "-"}</div>
+                        <p className="text-sm text-muted-foreground">
+                          Customer
+                        </p>
+                        <p className="font-medium">
+                          {invoice.customer?.companyName || "-"}
+                        </p>
                       </div>
                       <div>
-                        <div className="text-muted-foreground">Carrier</div>
-                        <div>{invoice.carrier?.companyName || "-"}</div>
+                        <p className="text-sm text-muted-foreground">Carrier</p>
+                        <p className="font-medium">
+                          {invoice.carrier?.companyName || "-"}
+                        </p>
                       </div>
                       <div>
-                        <div className="text-muted-foreground">Origin</div>
-                        <div>{origin}</div>
+                        <p className="text-sm text-muted-foreground">Origin</p>
+                        <p className="font-medium">{origin}</p>
                       </div>
                       <div>
-                        <div className="text-muted-foreground">Destination</div>
-                        <div>{destination}</div>
+                        <p className="text-sm text-muted-foreground">
+                          Destination
+                        </p>
+                        <p className="font-medium">{destination}</p>
                       </div>
                       <div>
-                        <div className="text-muted-foreground">Pickup Date</div>
-                        <div>{pickupDate}</div>
+                        <p className="text-sm text-muted-foreground">
+                          Pickup Date
+                        </p>
+                        <p className="font-medium">{pickupDate}</p>
                       </div>
                       <div>
-                        <div className="text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                           Delivery Date
-                        </div>
-                        <div>{deliveryDate}</div>
+                        </p>
+                        <p className="font-medium">{deliveryDate}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -238,22 +364,25 @@ export default function InvoiceDetailPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Line Items</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Line Items
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {invoice.lineItems?.map((li: any) => (
                       <div
                         key={li.id}
-                        className="flex items-center justify-between text-sm rounded-md border p-2"
+                        className="flex items-center justify-between text-sm rounded-md border p-3"
                       >
                         <div className="font-medium">{li.description}</div>
-                        <div className="text-muted-foreground">
+                        <div className="font-semibold">
                           {fmt.format(Number(li.amount))}
                         </div>
                       </div>
                     ))}
                     {(!invoice.lineItems || invoice.lineItems.length === 0) && (
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-muted-foreground text-center py-4">
                         No items
                       </div>
                     )}
@@ -261,16 +390,35 @@ export default function InvoiceDetailPage() {
                 </Card>
               </div>
 
-              {/* Overview Sidebar: quick actions and metrics (kept empty for now) */}
-              <div className="space-y-6">
+              {/* Overview Sidebar */}
+              <div className="lg:col-span-4 space-y-4 sm:space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>Quick Actions</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div>
-                      Use tabs to manage details, payments, and documents.
-                    </div>
+                  <CardContent className="space-y-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => exportPdf.mutate(params.id)}
+                    >
+                      <Receipt className="h-4 w-4 mr-2" />
+                      Export PDF
+                    </Button>
+                    {load?.id && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                        asChild
+                      >
+                        <Link href={`/loads/${load.id}`}>
+                          <Package className="h-4 w-4 mr-2" />
+                          View Load
+                        </Link>
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -278,12 +426,15 @@ export default function InvoiceDetailPage() {
           </TabsContent>
 
           {/* Route Tab */}
-          <TabsContent value="route">
+          <TabsContent value="route" className="space-y-6">
             {load ? (
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Route</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5" />
+                      Route
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4 text-sm">
                     <div className="space-y-2">
@@ -303,12 +454,14 @@ export default function InvoiceDetailPage() {
                             )}
                           </div>
                           <div className="text-muted-foreground">
-                            {ls.shipper?.streetAddress || ""}
-                            {ls.shipper?.city ? ", " + ls.shipper.city : ""}
-                            {ls.shipper?.state
-                              ? ", " + ls.shipper.state
+                            {(ls.shipper?.address as any)?.street || ""}
+                            {(ls.shipper?.address as any)?.city
+                              ? ", " + (ls.shipper.address as any).city
+                              : ""}
+                            {(ls.shipper?.address as any)?.state
+                              ? ", " + (ls.shipper.address as any).state
                               : ""}{" "}
-                            {ls.shipper?.zipCode || ""}
+                            {(ls.shipper?.address as any)?.zip || ""}
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                             <div>
@@ -369,12 +522,14 @@ export default function InvoiceDetailPage() {
                             )}
                           </div>
                           <div className="text-muted-foreground">
-                            {lc.consignee?.streetAddress || ""}
-                            {lc.consignee?.city ? ", " + lc.consignee.city : ""}
-                            {lc.consignee?.state
-                              ? ", " + lc.consignee.state
+                            {(lc.consignee?.address as any)?.street || ""}
+                            {(lc.consignee?.address as any)?.city
+                              ? ", " + (lc.consignee.address as any).city
+                              : ""}
+                            {(lc.consignee?.address as any)?.state
+                              ? ", " + (lc.consignee.address as any).state
                               : ""}{" "}
-                            {lc.consignee?.zipCode || ""}
+                            {(lc.consignee?.address as any)?.zip || ""}
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                             <div>
@@ -428,57 +583,69 @@ export default function InvoiceDetailPage() {
           </TabsContent>
 
           {/* Specifications Tab */}
-          <TabsContent value="specs">
+          <TabsContent value="specs" className="space-y-6">
             {load ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>Specifications</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    Specifications
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                  <div>
-                    <div className="text-muted-foreground">Equipment</div>
-                    <div>{load.equipmentType || "-"}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Load Type</div>
-                    <div>{load.loadType || "-"}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Commodity</div>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     <div>
-                      {load.commodity ||
-                        load.multipleCommodityDescription ||
-                        "-"}
+                      <p className="text-sm text-muted-foreground">Equipment</p>
+                      <p className="font-medium">{load.equipmentType || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Load Type</p>
+                      <p className="font-medium">{load.loadType || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Commodity</p>
+                      <p className="font-medium">
+                        {load.commodity ||
+                          load.multipleCommodityDescription ||
+                          "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Weight</p>
+                      <p className="font-medium">{load.weight ?? "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Pieces</p>
+                      <p className="font-medium">{load.pieces ?? "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Units</p>
+                      <p className="font-medium">{load.units ?? "-"}</p>
                     </div>
                   </div>
-                  <div>
-                    <div className="text-muted-foreground">Weight</div>
-                    <div>{load.weight ?? "-"}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Pieces</div>
-                    <div>{load.pieces ?? "-"}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Units</div>
-                    <div>{load.units ?? "-"}</div>
-                  </div>
-                  <div className="md:col-span-3">
-                    <div className="text-muted-foreground">Internal Notes</div>
-                    <div>{load.internalNotes || "-"}</div>
-                  </div>
+                  {load.internalNotes && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Internal Notes
+                      </p>
+                      <p className="font-medium">{load.internalNotes}</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ) : null}
           </TabsContent>
 
           {/* Payments Tab */}
-          <TabsContent value="payments">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
+          <TabsContent value="payments" className="space-y-6">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-12">
+              <div className="lg:col-span-8 space-y-4 sm:space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Payments</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5" />
+                      Payments
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
                     {(invoice.payments || []).map((p: any) => (
@@ -505,11 +672,15 @@ export default function InvoiceDetailPage() {
                   </CardContent>
                 </Card>
               </div>
-              <div className="space-y-6">
+
+              <div className="lg:col-span-4 space-y-4 sm:space-y-6">
                 <PermissionGuard permission={PERMISSIONS.INVOICE_EDIT}>
                   <Card>
                     <CardHeader>
-                      <CardTitle>Add Payment</CardTitle>
+                      <CardTitle className="flex items-center gap-2">
+                        <DollarSign className="h-5 w-5" />
+                        Add Payment
+                      </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -600,12 +771,15 @@ export default function InvoiceDetailPage() {
           </TabsContent>
 
           {/* Documents Tab */}
-          <TabsContent value="documents">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
+          <TabsContent value="documents" className="space-y-6">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-12">
+              <div className="lg:col-span-8 space-y-4 sm:space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Invoice Documents</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Invoice Documents
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2 text-sm max-h-96 overflow-auto pr-1">
@@ -642,7 +816,10 @@ export default function InvoiceDetailPage() {
                 {load?.id && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Load Documents</CardTitle>
+                      <CardTitle className="flex items-center gap-2">
+                        <Package className="h-5 w-5" />
+                        Load Documents
+                      </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
                       {(loadDocs || []).map((d: any) => (
@@ -673,11 +850,14 @@ export default function InvoiceDetailPage() {
                 )}
               </div>
 
-              <div className="space-y-6">
+              <div className="lg:col-span-4 space-y-4 sm:space-y-6">
                 <PermissionGuard permission={PERMISSIONS.INVOICE_EDIT}>
                   <Card>
                     <CardHeader>
-                      <CardTitle>Upload Document</CardTitle>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Upload Document
+                      </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex items-center gap-2">

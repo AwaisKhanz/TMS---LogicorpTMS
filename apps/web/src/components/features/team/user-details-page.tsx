@@ -381,7 +381,7 @@ export function UserDetailsPage({ userId }: UserDetailsPageProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {teamMember.assignedCustomers.map((customer) => (
+                {teamMember.assignedCustomers?.map((customer: any) => (
                   <div
                     key={customer.id}
                     className="flex items-center justify-between p-3 border rounded-lg"

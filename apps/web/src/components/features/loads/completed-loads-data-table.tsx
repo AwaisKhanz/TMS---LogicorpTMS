@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCompletedLoads } from "@/hooks/use-completed-loads";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -26,12 +27,20 @@ export function CompletedLoadsDataTable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Debounce search term (500ms delay)
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  // Reset page when debounced search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm]);
+
   const {
     data: loadsData,
     isLoading,
     error,
   } = useCompletedLoads({
-    search: searchTerm || undefined,
+    search: debouncedSearchTerm || undefined,
     page: currentPage,
     limit: 50,
   });
@@ -159,8 +168,8 @@ export function CompletedLoadsDataTable() {
                                   key={shipperRelation.id}
                                   className="font-medium"
                                 >
-                                  {shipperRelation.shipper.city},{" "}
-                                  {shipperRelation.shipper.state}
+                                  {(shipperRelation.shipper.address as any)?.city || ""},{" "}
+                                  {(shipperRelation.shipper.address as any)?.state || ""}
                                   {load.loadShippers!.length > 1 && (
                                     <span className="text-xs text-muted-foreground ml-1">
                                       (+{load.loadShippers!.length - 1})
@@ -175,8 +184,8 @@ export function CompletedLoadsDataTable() {
                                     .filter((c) => c.isPrimary)
                                     .map((consigneeRelation) => (
                                       <div key={consigneeRelation.id}>
-                                        {consigneeRelation.consignee.city},{" "}
-                                        {consigneeRelation.consignee.state}
+                                        {(consigneeRelation.consignee.address as any)?.city || ""},{" "}
+                                        {(consigneeRelation.consignee.address as any)?.state || ""}
                                         {load.loadConsignees!.length > 1 && (
                                           <span className="text-xs text-muted-foreground ml-1">
                                             (+{load.loadConsignees!.length - 1})

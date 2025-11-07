@@ -62,6 +62,7 @@ export class ConsigneeService {
   private transformConsigneeForApi(consignee: any) {
     return {
       ...consignee,
+      address: consignee.address as any, // Ensure address is preserved
       createdAt: consignee.createdAt.toISOString(),
       updatedAt: consignee.updatedAt.toISOString(),
       deletedAt: consignee.deletedAt?.toISOString(),
@@ -83,9 +84,7 @@ export class ConsigneeService {
     // Check if consignee with same company and address already exists
     const existingConsignee = await this.consigneeRepo.findByCompanyAndAddress(
       data.companyName,
-      data.streetAddress,
-      data.city,
-      data.state,
+      data.address,
       organizationId
     );
 
@@ -100,11 +99,7 @@ export class ConsigneeService {
         companyName: data.companyName,
         phone: data.phone,
         email: data.email,
-        streetAddress: data.streetAddress,
-        city: data.city,
-        state: data.state,
-        zipCode: data.zipCode,
-        country: data.country || "USA",
+        address: data.address,
         contactPerson: data.contactPerson,
         notes: data.notes,
         isActive: true,
@@ -145,13 +140,13 @@ export class ConsigneeService {
     }
 
     // Check for duplicate if company/address is being changed
-    if (data.companyName || data.streetAddress || data.city || data.state) {
+    if (data.companyName || data.address) {
+      const existingAddress = (existingConsignee.address as any) || {};
+      const checkAddress = data.address || existingAddress;
       const duplicateConsignee =
         await this.consigneeRepo.findByCompanyAndAddress(
           data.companyName || existingConsignee.companyName,
-          data.streetAddress || existingConsignee.streetAddress,
-          data.city || existingConsignee.city,
-          data.state || existingConsignee.state,
+          checkAddress,
           organizationId,
           id
         );
@@ -250,20 +245,25 @@ export class ConsigneeService {
       consigneeFilters
     );
 
-    const exportData: ConsigneeExportData[] = consignees.map((consignee) => ({
-      companyName: consignee.companyName,
-      phone: consignee.phone,
-      email: consignee.email || undefined,
-      streetAddress: consignee.streetAddress,
-      city: consignee.city,
-      state: consignee.state,
-      zipCode: consignee.zipCode,
-      country: consignee.country,
-      contactPerson: consignee.contactPerson || undefined,
-      isActive: consignee.isActive,
-      totalLoads: consignee._count?.loadConsignees || 0,
-      createdAt: consignee.createdAt.toISOString(),
-    }));
+    const exportData: ConsigneeExportData[] = consignees.map((consignee) => {
+      const address = consignee.address as any;
+      return {
+        companyName: consignee.companyName,
+        phone: consignee.phone,
+        email: consignee.email || undefined,
+        address: {
+          street: address?.street || "",
+          city: address?.city || "",
+          state: address?.state || "",
+          zip: address?.zip || "",
+          country: address?.country || "",
+        },
+        contactPerson: consignee.contactPerson || undefined,
+        isActive: consignee.isActive,
+        totalLoads: consignee._count?.loadConsignees || 0,
+        createdAt: consignee.createdAt.toISOString(),
+      };
+    });
 
     if (format === "csv") {
       return this.convertToCSV(exportData);
@@ -378,14 +378,17 @@ export class ConsigneeService {
       limit
     );
 
-    return consignees.map((consignee) => ({
-      id: consignee.id,
-      companyName: consignee.companyName,
-      phone: consignee.phone,
-      email: consignee.email,
-      city: consignee.city,
-      state: consignee.state,
-      fullAddress: `${consignee.streetAddress}, ${consignee.city}, ${consignee.state} ${consignee.zipCode}`,
-    }));
+    return consignees.map((consignee) => {
+      const address = consignee.address as any;
+      return {
+        id: consignee.id,
+        companyName: consignee.companyName,
+        phone: consignee.phone,
+        email: consignee.email,
+        city: address?.city || "",
+        state: address?.state || "",
+        fullAddress: `${address?.street || ""}, ${address?.city || ""}, ${address?.state || ""} ${address?.zip || ""}`,
+      };
+    });
   }
 }

@@ -55,8 +55,12 @@ export interface Address extends Record<string, string | number | undefined> {
   state: string;
   zip: string;
   country?: string;
-  lat?: number;
-  lng?: number;
+  formattedAddress?: string; // Full formatted address from Google Places
+  latitude?: number; // Latitude coordinate
+  longitude?: number; // Longitude coordinate
+  placeId?: string; // Google Places ID
+  lat?: number; // Legacy alias for latitude
+  lng?: number; // Legacy alias for longitude
 }
 
 // Generic Where Clause Type for database queries

@@ -6,8 +6,6 @@ import type {
   CreateShipperRequest,
   UpdateShipperRequest,
   ShipperFilters,
-  BulkShipperAction,
-  BulkShipperResponse,
   GetShippersResponse,
   GetShipperResponse,
   CreateShipperResponse,
@@ -78,10 +76,10 @@ export function useShipperOptions(): {
   const shippers =
     data?.data?.map((shipper: Shipper) => ({
       value: shipper.id,
-      label: `${shipper.companyName} - ${shipper.city}, ${shipper.state}`,
+      label: `${shipper.companyName} - ${(shipper.address as any)?.city || ""}, ${(shipper.address as any)?.state || ""}`,
       companyName: shipper.companyName,
-      city: shipper.city,
-      state: shipper.state,
+      city: (shipper.address as any)?.city || "",
+      state: (shipper.address as any)?.state || "",
       isActive: shipper.isActive,
     })) || [];
 
@@ -187,60 +185,6 @@ export function useDeleteShipper() {
         error?.response?.data?.error?.message ||
         error?.message ||
         "Failed to delete shipper";
-      toast.error(message);
-    },
-  });
-}
-
-// Bulk update shippers
-export function useBulkUpdateShippers() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (action: BulkShipperAction) => {
-      const response = await apiClient.post<BulkShipperResponse>(
-        "/shippers/bulk/update",
-        action
-      );
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["shippers"] });
-      queryClient.invalidateQueries({ queryKey: ["shippers", "statistics"] });
-      toast.success("Shippers updated successfully");
-    },
-    onError: (error: ApiError) => {
-      const message =
-        error?.response?.data?.error?.message ||
-        error?.message ||
-        "Failed to update shippers";
-      toast.error(message);
-    },
-  });
-}
-
-// Bulk delete shippers
-export function useBulkDeleteShippers() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (shipperIds: string[]) => {
-      const response = await apiClient.post<BulkShipperResponse>(
-        "/shippers/bulk/delete",
-        { shipperIds }
-      );
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["shippers"] });
-      queryClient.invalidateQueries({ queryKey: ["shippers", "statistics"] });
-      toast.success("Shippers deleted successfully");
-    },
-    onError: (error: ApiError) => {
-      const message =
-        error?.response?.data?.error?.message ||
-        error?.message ||
-        "Failed to delete shippers";
       toast.error(message);
     },
   });

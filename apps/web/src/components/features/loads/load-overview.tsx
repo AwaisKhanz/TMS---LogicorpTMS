@@ -194,7 +194,7 @@ export function LoadOverview({ loadId }: LoadOverviewProps) {
                         {shipperRelation.shipper.companyName}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {shipperRelation.shipper.city}, {shipperRelation.shipper.state} {shipperRelation.shipper.zipCode}
+                        {(shipperRelation.shipper.address as any)?.city || ""}, {(shipperRelation.shipper.address as any)?.state || ""} {(shipperRelation.shipper.address as any)?.zip || ""}
                       </p>
                       <div className="flex items-center gap-2 text-sm">
                         <Calendar className="h-3 w-3" />
@@ -270,7 +270,7 @@ export function LoadOverview({ loadId }: LoadOverviewProps) {
                         {consigneeRelation.consignee.companyName}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {consigneeRelation.consignee.city}, {consigneeRelation.consignee.state} {consigneeRelation.consignee.zipCode}
+                        {(consigneeRelation.consignee.address as any)?.city || ""}, {(consigneeRelation.consignee.address as any)?.state || ""} {(consigneeRelation.consignee.address as any)?.zip || ""}
                       </p>
                       <div className="flex items-center gap-2 text-sm">
                         <Calendar className="h-3 w-3" />

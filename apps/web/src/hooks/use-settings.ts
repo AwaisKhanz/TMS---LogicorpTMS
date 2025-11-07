@@ -436,29 +436,6 @@ export function useRemoveTeamMember() {
   });
 }
 
-export function useBulkDeleteTeamMembers() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (memberIds: string[]) => {
-      await apiClient.post("/settings/team/bulk-delete", {
-        memberIds,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: settingsKeys.team() });
-      // Toast removed - WebSocket will handle the notification
-    },
-    onError: (error) => {
-      const apiError = error as ApiErrorException;
-      toast.error(
-        apiError.response?.data?.error?.message ||
-          "Failed to delete team members"
-      );
-    },
-  });
-}
-
 // ==================== BILLING SETTINGS ====================
 
 export function useBillingSettings() {

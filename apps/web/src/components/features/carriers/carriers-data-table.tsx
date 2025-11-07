@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   useCarriers,
   useDeleteCarrier,
   useExportCarriers,
-  useBulkApproveCarriers,
-  useBulkDeleteCarriers,
 } from "@/hooks/use-carriers";
 import type { Carrier } from "@tms/shared-types";
 import {
@@ -57,15 +56,11 @@ import {
   Loader2,
   Trash2,
   Download,
-  CheckSquare,
-  Square,
-  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   CanEdit,
   CanDelete,
-  CanDelete as CanBulkDelete,
 } from "@/components/auth/can";
 
 import { CARRIER_EQUIPMENT_TYPES } from "@tms/shared-constants";
@@ -100,12 +95,17 @@ export function CarriersDataTable() {
   const [approvalFilter, setApprovalFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteCarrierId, setDeleteCarrierId] = useState<string | null>(null);
-  const [selectedCarriers, setSelectedCarriers] = useState<string[]>([]);
 
   const deleteCarrier = useDeleteCarrier();
   const exportCarriers = useExportCarriers();
-  const bulkApproveCarriers = useBulkApproveCarriers();
-  const bulkDeleteCarriers = useBulkDeleteCarriers();
+
+  // Debounce search term (500ms delay)
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  // Reset page when debounced search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm]);
 
   const { data: carriersData, isLoading } = useCarriers({
     isActive:
@@ -120,7 +120,7 @@ export function CarriersDataTable() {
         : approvalFilter === "approved"
           ? true
           : false,
-    search: searchTerm || undefined,
+    search: debouncedSearchTerm || undefined,
     page: currentPage,
     limit: 50,
   });
@@ -132,36 +132,6 @@ export function CarriersDataTable() {
     if (deleteCarrierId) {
       await deleteCarrier.mutateAsync(deleteCarrierId);
       setDeleteCarrierId(null);
-    }
-  };
-
-  const handleSelectCarrier = (carrierId: string) => {
-    setSelectedCarriers((prev) =>
-      prev.includes(carrierId)
-        ? prev.filter((id) => id !== carrierId)
-        : [...prev, carrierId]
-    );
-  };
-
-  const handleSelectAll = () => {
-    if (selectedCarriers.length === carriers.length) {
-      setSelectedCarriers([]);
-    } else {
-      setSelectedCarriers(carriers.map((carrier: Carrier) => carrier.id));
-    }
-  };
-
-  const handleBulkApprove = async () => {
-    if (selectedCarriers.length > 0) {
-      await bulkApproveCarriers.mutateAsync(selectedCarriers);
-      setSelectedCarriers([]);
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedCarriers.length > 0) {
-      await bulkDeleteCarriers.mutateAsync(selectedCarriers);
-      setSelectedCarriers([]);
     }
   };
 
@@ -225,75 +195,12 @@ export function CarriersDataTable() {
         </div>
       </Card>
 
-      {/* Bulk Actions Toolbar */}
-      {selectedCarriers.length > 0 && (
-        <CanBulkDelete resource="carrier">
-          <Card className="p-4 bg-primary/5 border-primary/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-medium">
-                  {selectedCarriers.length} carrier
-                  {selectedCarriers.length > 1 ? "s" : ""} selected
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedCarriers([])}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Clear
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <CanEdit resource="carrier">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleBulkApprove}
-                    disabled={bulkApproveCarriers.isPending}
-                  >
-                    <UserCheck className="h-4 w-4 mr-2" />
-                    Approve Selected
-                  </Button>
-                </CanEdit>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleBulkDelete}
-                  disabled={bulkDeleteCarriers.isPending}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Selected
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </CanBulkDelete>
-      )}
-
       {/* Table */}
       <Card>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">
-                  <CanBulkDelete resource="carrier">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSelectAll}
-                      className="h-8 w-8 p-0"
-                    >
-                      {selectedCarriers.length === carriers.length &&
-                      carriers.length > 0 ? (
-                        <CheckSquare className="h-4 w-4" />
-                      ) : (
-                        <Square className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </CanBulkDelete>
-                </TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead>MC/DOT</TableHead>
                 <TableHead>Contact</TableHead>
@@ -308,14 +215,14 @@ export function CarriersDataTable() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="h-24 text-center">
+                  <TableCell colSpan={10} className="h-24 text-center">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : carriers.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={11}
+                    colSpan={10}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No carriers found
@@ -328,22 +235,6 @@ export function CarriersDataTable() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => router.push(`/carriers/${carrier.id}`)}
                   >
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <CanBulkDelete resource="carrier">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSelectCarrier(carrier.id)}
-                          className="h-8 w-8 p-0"
-                        >
-                          {selectedCarriers.includes(carrier.id) ? (
-                            <CheckSquare className="h-4 w-4" />
-                          ) : (
-                            <Square className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </CanBulkDelete>
-                    </TableCell>
                     <TableCell className="whitespace-nowrap">
                       <div>
                         <div className="font-medium">{carrier.companyName}</div>

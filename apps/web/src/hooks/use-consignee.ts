@@ -6,8 +6,6 @@ import type {
   CreateConsigneeRequest,
   UpdateConsigneeRequest,
   ConsigneeFilters,
-  BulkConsigneeAction,
-  BulkConsigneeResponse,
   GetConsigneesResponse,
   GetConsigneeResponse,
   CreateConsigneeResponse,
@@ -77,10 +75,10 @@ export function useConsigneeOptions(): {
   const consignees =
     data?.data?.map((consignee) => ({
       value: consignee.id,
-      label: `${consignee.companyName} - ${consignee.city}, ${consignee.state}`,
+      label: `${consignee.companyName} - ${(consignee.address as any)?.city || ""}, ${(consignee.address as any)?.state || ""}`,
       companyName: consignee.companyName,
-      city: consignee.city,
-      state: consignee.state,
+      city: (consignee.address as any)?.city || "",
+      state: (consignee.address as any)?.state || "",
       isActive: consignee.isActive,
     })) || [];
 
@@ -188,60 +186,6 @@ export function useDeleteConsignee() {
         error?.response?.data?.error?.message ||
         error?.message ||
         "Failed to delete consignee";
-      toast.error(message);
-    },
-  });
-}
-
-// Bulk update consignees
-export function useBulkUpdateConsignees() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (action: BulkConsigneeAction) => {
-      const response = await apiClient.post<BulkConsigneeResponse>(
-        "/consignees/bulk/update",
-        action
-      );
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["consignees"] });
-      queryClient.invalidateQueries({ queryKey: ["consignees", "statistics"] });
-      toast.success("Consignees updated successfully");
-    },
-    onError: (error: ApiError) => {
-      const message =
-        error?.response?.data?.error?.message ||
-        error?.message ||
-        "Failed to update consignees";
-      toast.error(message);
-    },
-  });
-}
-
-// Bulk delete consignees
-export function useBulkDeleteConsignees() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (consigneeIds: string[]) => {
-      const response = await apiClient.post<BulkConsigneeResponse>(
-        "/consignees/bulk/delete",
-        { consigneeIds }
-      );
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["consignees"] });
-      queryClient.invalidateQueries({ queryKey: ["consignees", "statistics"] });
-      toast.success("Consignees deleted successfully");
-    },
-    onError: (error: ApiError) => {
-      const message =
-        error?.response?.data?.error?.message ||
-        error?.message ||
-        "Failed to delete consignees";
       toast.error(message);
     },
   });

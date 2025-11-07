@@ -41,8 +41,15 @@ PORT=4000
 # Frontend URLs
 NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_key
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
 ```
+
+**Important:** You must obtain a Google Maps API key from Google Cloud Console and enable the following APIs:
+- Maps JavaScript API
+- Places API
+- Geocoding API (optional, for reverse geocoding)
+
+See the Google Maps API Setup section below for detailed instructions.
 
 ### 2. Database Configuration
 
@@ -358,13 +365,57 @@ sudo systemctl start redis-server
 4. Create email templates
 5. Update template IDs in environment
 
-### 6. Google Maps Setup
+### 6. Google Maps API Setup
 
-1. Create Google Cloud project
-2. Enable Maps JavaScript API
-3. Enable Places API
-4. Enable Distance Matrix API
-5. Create API key with restrictions
+The TMS platform uses Google Places Autocomplete for address input fields. Follow these steps to set up:
+
+#### Step 1: Create Google Cloud Project
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable billing (Google provides $200 free credit monthly)
+
+#### Step 2: Enable Required APIs
+
+Enable the following APIs in your Google Cloud project:
+
+1. **Maps JavaScript API** - Required for loading Google Maps
+2. **Places API** - Required for address autocomplete functionality
+3. **Geocoding API** (Optional) - For reverse geocoding and coordinate conversion
+
+To enable:
+- Go to "APIs & Services" > "Library"
+- Search for each API and click "Enable"
+
+#### Step 3: Create API Key
+
+1. Go to "APIs & Services" > "Credentials"
+2. Click "Create Credentials" > "API Key"
+3. Copy the generated API key
+
+#### Step 4: Restrict API Key (Recommended for Production)
+
+**Application Restrictions:**
+- For development: Add HTTP referrer `http://localhost:3000/*`
+- For production: Add your domain `https://yourdomain.com/*`
+
+**API Restrictions:**
+- Restrict to: Maps JavaScript API, Places API
+- This prevents unauthorized use of your API key
+
+#### Step 5: Add API Key to Environment
+
+Add the API key to your `.env.local` file:
+
+```bash
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_api_key_here
+```
+
+**Important Notes:**
+- The API key is exposed in the browser (NEXT_PUBLIC_ prefix)
+- Always use API restrictions to limit usage
+- Monitor usage in Google Cloud Console
+- Set up billing alerts to avoid unexpected charges
 
 **API Key Restrictions:**
 

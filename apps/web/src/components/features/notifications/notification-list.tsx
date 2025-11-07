@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Bell, Check, Search, Eye, FileText, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import {
   useNotifications,
@@ -97,16 +97,12 @@ interface NotificationItemProps {
   notification: Notification;
   onMarkAsRead: (id: string) => void;
   onDelete: (id: string) => void;
-  isSelected: boolean;
-  onSelect: (id: string, selected: boolean) => void;
 }
 
 function NotificationItem({
   notification,
   onMarkAsRead,
   onDelete,
-  isSelected,
-  onSelect,
 }: NotificationItemProps) {
   const router = useRouter();
   const icon = getNotificationIcon(notification.type);
@@ -135,13 +131,6 @@ function NotificationItem({
       )}
       onClick={handleClick}
     >
-      <Checkbox
-        checked={isSelected}
-        onCheckedChange={(checked) => onSelect(notification.id, !!checked)}
-        onClick={(e) => e.stopPropagation()}
-        className="mt-1"
-      />
-
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-2">
@@ -215,9 +204,6 @@ export function NotificationList({
 }: NotificationListProps) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [selectedNotifications, setSelectedNotifications] = useState<string[]>(
-    []
-  );
 
   const { data: notificationsData, isLoading } = useNotifications(page, 20);
   const { markAsReadOptimistic } = useOptimisticNotificationRead();
@@ -229,12 +215,17 @@ export function NotificationList({
   const total = notificationsData?.data?.total || 0;
   const totalPages = Math.ceil(total / 20);
 
+  // Debounce search term (500ms delay) for client-side filtering
+  const debouncedSearch = useDebounce(search, 500);
+
   // Filter notifications by search
-  const filteredNotifications = notifications.filter(
-    (notification) =>
-      notification.title.toLowerCase().includes(search.toLowerCase()) ||
-      notification.message.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredNotifications = useMemo(() => {
+    return notifications.filter(
+      (notification) =>
+        notification.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        notification.message.toLowerCase().includes(debouncedSearch.toLowerCase())
+    );
+  }, [notifications, debouncedSearch]);
 
   const handleMarkAsRead = (notificationId: string) => {
     markAsReadOptimistic(notificationId);
@@ -243,26 +234,6 @@ export function NotificationList({
 
   const handleDelete = (notificationId: string) => {
     deleteNotification.mutate(notificationId);
-  };
-
-  const handleSelectNotification = (id: string, selected: boolean) => {
-    setSelectedNotifications((prev) =>
-      selected ? [...prev, id] : prev.filter((nId) => nId !== id)
-    );
-  };
-
-  const handleSelectAll = (selected: boolean) => {
-    setSelectedNotifications(
-      selected ? filteredNotifications.map((n) => n.id) : []
-    );
-  };
-
-  const handleBulkMarkAsRead = () => {
-    selectedNotifications.forEach((id) => {
-      markAsReadOptimistic(id);
-      markAsRead.mutate(id);
-    });
-    setSelectedNotifications([]);
   };
 
   const handleMarkAllAsRead = () => {
@@ -293,12 +264,6 @@ export function NotificationList({
           </p>
         </div>
         <div className="flex space-x-2">
-          {selectedNotifications.length > 0 && (
-            <Button variant="outline" size="sm" onClick={handleBulkMarkAsRead}>
-              <Check className="h-4 w-4 mr-1" />
-              Mark Selected as Read
-            </Button>
-          )}
           <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
             <Check className="h-4 w-4 mr-1" />
             Mark All as Read
@@ -321,20 +286,6 @@ export function NotificationList({
 
       {/* Notifications List */}
       <div className="space-y-4">
-        {filteredNotifications.length > 0 && (
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              checked={
-                selectedNotifications.length === filteredNotifications.length
-              }
-              onCheckedChange={handleSelectAll}
-            />
-            <span className="text-sm text-muted-foreground">
-              Select all ({filteredNotifications.length})
-            </span>
-          </div>
-        )}
-
         {filteredNotifications.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
@@ -355,8 +306,6 @@ export function NotificationList({
                 notification={notification}
                 onMarkAsRead={handleMarkAsRead}
                 onDelete={handleDelete}
-                isSelected={selectedNotifications.includes(notification.id)}
-                onSelect={handleSelectNotification}
               />
             ))}
           </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { Search, Filter, Download, Trash2, Calendar } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Filter, Download, Calendar } from "lucide-react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,7 +22,6 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { ReportFilters } from "@tms/shared-types";
-import { CanDelete } from "@/components/auth/can";
 
 const reportTypeOptions = [
   { value: "LOAD_ANALYTICS", label: "Load Analytics" },
@@ -66,26 +66,42 @@ interface ReportFiltersProps {
   filters: ReportFilters;
   onFiltersChange: (filters: ReportFilters) => void;
   onExport: () => void;
-  selectedCount: number;
-  onBulkDelete: () => void;
-  isBulkDeleting: boolean;
 }
 
 export function ReportFilters({
   filters,
   onFiltersChange,
   onExport,
-  selectedCount,
-  onBulkDelete,
-  isBulkDeleting,
 }: ReportFiltersProps) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState(filters.search || "");
   const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>(
     filters.customDateFrom ? new Date(filters.customDateFrom) : undefined
   );
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>(
     filters.customDateTo ? new Date(filters.customDateTo) : undefined
   );
+
+  // Sync searchInput with filters.search when filters change externally
+  useEffect(() => {
+    if (filters.search !== searchInput) {
+      setSearchInput(filters.search || "");
+    }
+  }, [filters.search]);
+
+  // Debounce search input (500ms delay)
+  const debouncedSearch = useDebounce(searchInput, 500);
+
+  // Update filters when debounced search changes
+  useEffect(() => {
+    if (debouncedSearch !== filters.search) {
+      onFiltersChange({
+        ...filters,
+        search: debouncedSearch || undefined,
+        page: 1, // Reset to first page when search changes
+      });
+    }
+  }, [debouncedSearch]);
 
   const updateFilter = (key: keyof ReportFilters, value: unknown) => {
     onFiltersChange({
@@ -95,6 +111,7 @@ export function ReportFilters({
   };
 
   const clearFilters = () => {
+    setSearchInput("");
     onFiltersChange({
       page: 1,
       limit: 50,
@@ -146,8 +163,8 @@ export function ReportFilters({
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search reports..."
-              value={filters.search || ""}
-              onChange={(e) => updateFilter("search", e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="pl-8"
             />
           </div>
@@ -332,20 +349,6 @@ export function ReportFilters({
         </div>
 
         <div className="flex items-center space-x-2">
-          {selectedCount > 0 && (
-            <CanDelete resource="report">
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={onBulkDelete}
-                disabled={isBulkDeleting}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete ({selectedCount})
-              </Button>
-            </CanDelete>
-          )}
-
           <Button variant="outline" size="sm" onClick={onExport}>
             <Download className="mr-2 h-4 w-4" />
             Export
@@ -360,7 +363,10 @@ export function ReportFilters({
             <Badge variant="secondary" className="gap-1">
               Search: {filters.search}
               <button
-                onClick={() => updateFilter("search", undefined)}
+                onClick={() => {
+                  setSearchInput("");
+                  updateFilter("search", undefined);
+                }}
                 className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5"
               >
                 ×

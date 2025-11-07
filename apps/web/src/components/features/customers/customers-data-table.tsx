@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   Table,
   TableBody,
@@ -12,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -29,14 +29,6 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Building2,
   MoreVertical,
   Eye,
@@ -44,7 +36,6 @@ import {
   Trash2,
   Search,
   Download,
-  Settings,
   ChevronUp,
   ChevronDown,
   Loader2,
@@ -53,20 +44,16 @@ import {
 import Link from "next/link";
 import {
   useCustomers,
-  useBulkUpdateCustomers,
   useExportCustomers,
 } from "@/hooks/use-customer";
 import {
   CanEdit,
   CanDelete,
-  CanDelete as CanBulkDelete,
 } from "@/components/auth/can";
 import { useToast } from "@/hooks/use-toast";
-import { CUSTOMER_BULK_ACTIONS } from "@tms/shared-constants";
 import type {
   CustomerFilters,
   Customer,
-  BulkCustomerAction,
 } from "@tms/shared-types";
 
 interface CustomersDataTableProps {
@@ -83,14 +70,18 @@ export function CustomersDataTable({ onDelete }: CustomersDataTableProps) {
   const [creditStatusFilter, setCreditStatusFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("companyName");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
-  const [showBulkDialog, setShowBulkDialog] = useState(false);
-  const [bulkAction, setBulkAction] = useState<string>("");
-  const [bulkNote, setBulkNote] = useState("");
+
+  // Debounce search term (500ms delay)
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  // Reset page when debounced search changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchTerm]);
 
   // Build filters object
   const filters: CustomerFilters = {
-    search: searchTerm,
+    search: debouncedSearchTerm,
     isActive: statusFilter === "all" ? undefined : statusFilter === "active",
     creditStatus:
       creditStatusFilter === "all"
@@ -109,29 +100,11 @@ export function CustomersDataTable({ onDelete }: CustomersDataTableProps) {
   };
 
   const { data: customersData, isLoading, error } = useCustomers(filters);
-  const { mutate: bulkUpdateCustomers, isPending: isBulkUpdating } =
-    useBulkUpdateCustomers();
   const { mutate: exportCustomers, isPending: isExporting } =
     useExportCustomers();
 
   const customers = customersData?.data || [];
   const pagination = customersData?.pagination;
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedCustomers(customers.map((customer: Customer) => customer.id));
-    } else {
-      setSelectedCustomers([]);
-    }
-  };
-
-  const handleSelectCustomer = (customerId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedCustomers((prev) => [...prev, customerId]);
-    } else {
-      setSelectedCustomers((prev) => prev.filter((id) => id !== customerId));
-    }
-  };
 
   const handleSort = (
     column:
@@ -148,35 +121,6 @@ export function CustomersDataTable({ onDelete }: CustomersDataTableProps) {
       setSortBy(column);
       setSortOrder("asc");
     }
-  };
-
-  const handleBulkAction = () => {
-    if (!bulkAction || selectedCustomers.length === 0) return;
-
-    const bulkActionData: BulkCustomerAction = {
-      customerIds: selectedCustomers,
-      action: bulkAction as "activate" | "deactivate" | "export" | "delete",
-    };
-
-    bulkUpdateCustomers(bulkActionData, {
-      onSuccess: () => {
-        toast({
-          title: "Bulk Action Completed",
-          description: `Action "${bulkAction}" applied to ${selectedCustomers.length} customers`,
-        });
-        setShowBulkDialog(false);
-        setBulkAction("");
-        setBulkNote("");
-        setSelectedCustomers([]);
-      },
-      onError: () => {
-        toast({
-          title: "Action Failed",
-          description: "Failed to apply bulk action",
-          variant: "destructive",
-        });
-      },
-    });
   };
 
   const handleExport = () => {
@@ -263,18 +207,6 @@ export function CustomersDataTable({ onDelete }: CustomersDataTableProps) {
               )}
               Export
             </Button>
-            {selectedCustomers.length > 0 && (
-              <CanBulkDelete resource="customer">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowBulkDialog(true)}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Bulk Actions ({selectedCustomers.length})
-                </Button>
-              </CanBulkDelete>
-            )}
           </div>
         </div>
       </CardHeader>
@@ -318,14 +250,6 @@ export function CustomersDataTable({ onDelete }: CustomersDataTableProps) {
                   <SelectItem value="critical">Critical</SelectItem>
                 </SelectContent>
               </Select>
-              <Button
-                variant="outline"
-                onClick={() => setShowBulkDialog(true)}
-                disabled={selectedCustomers.length === 0}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Bulk Actions ({selectedCustomers.length})
-              </Button>
             </div>
           </div>
 
@@ -334,17 +258,6 @@ export function CustomersDataTable({ onDelete }: CustomersDataTableProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
-                    <CanBulkDelete resource="customer">
-                      <Checkbox
-                        checked={
-                          selectedCustomers.length === customers.length &&
-                          customers.length > 0
-                        }
-                        onCheckedChange={handleSelectAll}
-                      />
-                    </CanBulkDelete>
-                  </TableHead>
                   <TableHead
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleSort("companyName")}
@@ -406,7 +319,7 @@ export function CustomersDataTable({ onDelete }: CustomersDataTableProps) {
               <TableBody>
                 {customers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       <div className="flex flex-col items-center gap-2">
                         <Building2 className="h-8 w-8 text-muted-foreground" />
                         <p className="text-muted-foreground">
@@ -425,26 +338,9 @@ export function CustomersDataTable({ onDelete }: CustomersDataTableProps) {
                       customer.creditUsed,
                       customer.creditLimit
                     );
-                    const isSelected = selectedCustomers.includes(customer.id);
 
                     return (
-                      <TableRow
-                        key={customer.id}
-                        className={isSelected ? "bg-muted/50" : ""}
-                      >
-                        <TableCell>
-                          <CanBulkDelete resource="customer">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={(checked) =>
-                                handleSelectCustomer(
-                                  customer.id,
-                                  checked as boolean
-                                )
-                              }
-                            />
-                          </CanBulkDelete>
-                        </TableCell>
+                      <TableRow key={customer.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -576,60 +472,6 @@ export function CustomersDataTable({ onDelete }: CustomersDataTableProps) {
               </div>
             </div>
           )}
-
-          {/* Bulk Actions Dialog */}
-          <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Bulk Actions</DialogTitle>
-                <DialogDescription>
-                  Apply actions to {selectedCustomers.length} selected customers
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Action</label>
-                  <Select value={bulkAction} onValueChange={setBulkAction}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an action" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CUSTOMER_BULK_ACTIONS.map((action) => (
-                        <SelectItem key={action.value} value={action.value}>
-                          {action.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Note (Optional)</label>
-                  <Input
-                    placeholder="Add a note for this action..."
-                    value={bulkNote}
-                    onChange={(e) => setBulkNote(e.target.value)}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowBulkDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleBulkAction}
-                  disabled={!bulkAction || isBulkUpdating}
-                >
-                  {isBulkUpdating && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Apply Action
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </div>
       </CardContent>
     </Card>

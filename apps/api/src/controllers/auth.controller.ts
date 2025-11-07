@@ -31,6 +31,10 @@ export const registerSchema = z.object({
     state: z.string().min(2, "State is required"),
     zip: z.string().min(5, "ZIP code is required"),
     country: z.string().min(2, "Country is required"),
+    formattedAddress: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
+    placeId: z.string().optional(),
   }),
   phone: z.string().optional(),
 }) satisfies z.ZodType<RegisterDto>;

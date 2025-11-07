@@ -1,5 +1,6 @@
 // Settings Types for TMS Application
 import { Customer } from "./customer.types";
+import type { Address } from "./api.types";
 
 // ==================== PROFILE SETTINGS ====================
 export interface ProfileSettings {
@@ -75,7 +76,7 @@ export interface OrganizationSettings {
   website?: string | null;
   mcNumber: string;
   dotNumber: string;
-  address: OrganizationAddress;
+  address: Address;
   billingEmail?: string | null;
   plan: string;
   planExpiresAt?: string | null;
@@ -85,52 +86,13 @@ export interface OrganizationSettings {
   teamMembers: TeamMember[];
 }
 
-export interface OrganizationAddress {
-  street: string;
-  city: string;
-  state: string;
-  zip: string;
-  country: string;
-}
-
-export interface DocumentNumberingSettings {
-  loadNumberPrefix: string;
-  loadNumberStart: number;
-  invoiceNumberPrefix: string;
-  invoiceNumberStart: number;
-  autoIncrement: boolean;
-}
-
-export interface BusinessSettings {
-  timezone: string;
-  currency: string;
-  dateFormat: string;
-  fuelSurchargeRate: number;
-  defaultLoadMargin: number;
-  requireApprovalForLoads: boolean;
-  allowCarrierSelfDispatch: boolean;
-}
-
-export interface TeamMember {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  roles: string[];
-  assignedCustomers?: Customer[];
-  isActive: boolean;
-  lastLogin?: string | null;
-  invitedAt?: string | null;
-  joinedAt?: string | null;
-}
-
 export interface UpdateOrganizationRequest {
   name?: string;
   logo?: string | null;
   website?: string | null;
   mcNumber?: string;
   dotNumber?: string;
-  address?: Partial<OrganizationAddress>;
+  address?: Partial<Address>;
   billingEmail?: string | null;
 }
 
@@ -162,6 +124,38 @@ export interface UpdateDocumentTermsRequest {
   bolTerms?: string;
   rateConfirmationTerms?: string;
   invoiceTerms?: string;
+}
+
+export interface DocumentNumberingSettings {
+  loadNumberPrefix: string;
+  loadNumberStart: number;
+  invoiceNumberPrefix: string;
+  invoiceNumberStart: number;
+  autoIncrement: boolean;
+}
+
+export interface BusinessSettings {
+  timezone: string;
+  currency: string;
+  dateFormat: string;
+  fuelSurchargeRate: number;
+  defaultLoadMargin: number;
+  requireApprovalForLoads: boolean;
+  allowCarrierSelfDispatch: boolean;
+}
+
+export interface TeamMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  roles: string[];
+  isActive: boolean;
+  lastLogin?: string | null;
+  invitedAt?: string | null;
+  joinedAt: string | null;
+  userId?: string;
+  assignedCustomers?: unknown[];
 }
 
 export interface InviteTeamMemberRequest {

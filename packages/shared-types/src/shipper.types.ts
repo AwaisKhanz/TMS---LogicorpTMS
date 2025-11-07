@@ -10,12 +10,8 @@ export interface Shipper {
   phone: string;
   email?: string;
 
-  // Address Information
-  streetAddress: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
+  // Address Information (JSON format)
+  address: Address;
 
   // Additional Information
   contactPerson?: string;
@@ -40,11 +36,7 @@ export interface CreateShipperRequest {
   companyName: string;
   phone: string;
   email?: string;
-  streetAddress: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country?: string;
+  address: Address;
   contactPerson?: string;
   notes?: string;
 }
@@ -111,11 +103,7 @@ export interface ShipperExportData {
   companyName: string;
   phone: string;
   email?: string;
-  streetAddress: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
+  address: Address;
   contactPerson?: string;
   isActive: boolean;
   totalLoads: number;
@@ -128,11 +116,7 @@ export interface CreateShipperDto {
   companyName: string;
   phone: string;
   email?: string;
-  streetAddress: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country?: string;
+  address: Address;
   contactPerson?: string;
   notes?: string;
 }

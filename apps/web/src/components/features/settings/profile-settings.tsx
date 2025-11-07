@@ -97,6 +97,11 @@ export function ProfileSettings() {
   }, [profile, profileForm]);
 
   const onProfileSubmit = async (data: z.infer<typeof profileSchema>) => {
+    // Only submit if we're actually in editing mode
+    if (!isEditing) {
+      return;
+    }
+    
     console.log("Form submitted with data:", data);
     console.log("isEditing state:", isEditing);
     try {
@@ -267,7 +272,15 @@ export function ProfileSettings() {
           {/* Profile Form */}
           <Form {...profileForm}>
             <form
-              onSubmit={profileForm.handleSubmit(onProfileSubmit)}
+              onSubmit={(e) => {
+                // Only allow submission if in editing mode
+                if (!isEditing) {
+                  e.preventDefault();
+                  return;
+                }
+                // Let handleSubmit handle the rest (validation and submission)
+                profileForm.handleSubmit(onProfileSubmit)(e);
+              }}
               className="space-y-4"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -384,7 +397,9 @@ export function ProfileSettings() {
                 {!isEditing ? (
                   <Button
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       setIsEditing(true);
                     }}
                   >
@@ -392,15 +407,35 @@ export function ProfileSettings() {
                   </Button>
                 ) : (
                   <>
-                    <Button type="submit" disabled={updateProfile.isPending}>
+                    <Button 
+                      type="submit" 
+                      disabled={updateProfile.isPending}
+                      onClick={(e) => {
+                        // Ensure we're in editing mode before submitting
+                        if (!isEditing) {
+                          e.preventDefault();
+                          return;
+                        }
+                      }}
+                    >
                       {updateProfile.isPending ? "Saving..." : "Save Changes"}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
                         setIsEditing(false);
-                        profileForm.reset();
+                        // Reset form to original profile values
+                        if (profile) {
+                          profileForm.reset({
+                            firstName: profile.firstName,
+                            lastName: profile.lastName,
+                            phone: profile.phone || "",
+                            timezone: profile.timezone,
+                            language: profile.language,
+                          });
+                        }
                       }}
                     >
                       Cancel

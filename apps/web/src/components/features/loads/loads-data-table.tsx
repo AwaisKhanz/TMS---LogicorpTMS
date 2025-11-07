@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useLoads, useDeleteLoad } from "@/hooks/use-loads";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   Table,
   TableBody,
@@ -48,20 +49,10 @@ import {
   Trash2,
   Loader2,
   Truck,
-  MapPin,
-  Calendar,
-  DollarSign,
-  Package,
-  Grid3X3,
-  List,
-  CheckSquare,
-  Square,
-  X,
 } from "lucide-react";
 import {
   CanEdit,
   CanDelete,
-  CanDelete as CanBulkDelete,
   CanCreate,
 } from "@/components/auth/can";
 import { cn } from "@/lib/utils";
@@ -85,10 +76,16 @@ export function LoadsDataTable() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteLoadId, setDeleteLoadId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "table">("table");
-  const [selectedLoads, setSelectedLoads] = useState<string[]>([]);
 
   const deleteLoad = useDeleteLoad();
+
+  // Debounce search term (500ms delay)
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  // Reset page when debounced search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm]);
 
   const {
     data: loadsData,
@@ -96,7 +93,7 @@ export function LoadsDataTable() {
     error,
   } = useLoads({
     status: statusFilter !== "all" ? statusFilter : undefined,
-    search: searchTerm || undefined,
+    search: debouncedSearchTerm || undefined,
     page: currentPage,
     limit: 50,
   });
@@ -109,28 +106,6 @@ export function LoadsDataTable() {
       await deleteLoad.mutateAsync(deleteLoadId);
       setDeleteLoadId(null);
     }
-  };
-
-  const handleSelectLoad = (loadId: string) => {
-    setSelectedLoads((prev) =>
-      prev.includes(loadId)
-        ? prev.filter((id) => id !== loadId)
-        : [...prev, loadId]
-    );
-  };
-
-  const handleSelectAll = () => {
-    if (selectedLoads.length === loads.length) {
-      setSelectedLoads([]);
-    } else {
-      setSelectedLoads(loads.map((load) => load.id));
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    // Implement bulk delete logic here
-    console.log("Bulk delete loads:", selectedLoads);
-    setSelectedLoads([]);
   };
 
   const formatCurrency = (amount: number | null) => {
@@ -161,25 +136,7 @@ export function LoadsDataTable() {
         {/* Enhanced Filters */}
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <CardTitle className="text-lg">Loads Overview</CardTitle>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={viewMode === "grid" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "table" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("table")}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <CardTitle className="text-lg">Loads Overview</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col lg:flex-row gap-4">
@@ -238,269 +195,12 @@ export function LoadsDataTable() {
               </CanCreate>
             </CardContent>
           </Card>
-        ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {loads.map((load) => (
-              <Card
-                key={load.id}
-                className="group cursor-pointer hover:shadow-lg transition-all duration-200 border-l-4 border-l-primary/20 hover:border-l-primary"
-                onClick={() => router.push(`/loads/${load.id}`)}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg font-semibold">
-                        {load.loadNumber}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {load.customer.companyName}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={
-                        statusConfig[load.status as keyof typeof statusConfig]
-                          ?.variant
-                      }
-                      className="ml-2"
-                    >
-                      {
-                        statusConfig[load.status as keyof typeof statusConfig]
-                          ?.label
-                      }
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Route */}
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex-1">
-                      {load.loadShippers && load.loadShippers.length > 0 ? (
-                        <div className="space-y-1">
-                          {load.loadShippers
-                            .filter(s => s.isPrimary)
-                            .map(shipperRelation => (
-                              <div key={shipperRelation.id} className="font-medium">
-                                {shipperRelation.shipper.city}, {shipperRelation.shipper.state}
-                                {load.loadShippers!.length > 1 && (
-                                  <span className="text-xs text-muted-foreground ml-1">
-                                    (+{load.loadShippers!.length - 1} more)
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          <div className="text-muted-foreground">→</div>
-                          {load.loadConsignees && load.loadConsignees.length > 0 ? (
-                            load.loadConsignees
-                              .filter(c => c.isPrimary)
-                              .map(consigneeRelation => (
-                                <div key={consigneeRelation.id} className="font-medium">
-                                  {consigneeRelation.consignee.city}, {consigneeRelation.consignee.state}
-                                  {load.loadConsignees!.length > 1 && (
-                                    <span className="text-xs text-muted-foreground ml-1">
-                                      (+{load.loadConsignees!.length - 1} more)
-                                    </span>
-                                  )}
-                                </div>
-                              ))
-                          ) : (
-                            <div className="font-medium text-muted-foreground">
-                              No delivery location
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        // Fallback for backward compatibility
-                        <div>
-                          <div className="font-medium text-muted-foreground">
-                            No pickup location
-                          </div>
-                          <div className="text-muted-foreground">→</div>
-                          <div className="font-medium text-muted-foreground">
-                            No delivery location
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Pickup Date */}
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      {(() => {
-                        const ps = load.loadShippers?.find(s => s.isPrimary) || load.loadShippers?.[0];
-                        return ps?.pickupDate
-                          ? format(new Date(ps.pickupDate), "MMM dd, yyyy")
-                          : "-";
-                      })()}
-                    </span>
-                  </div>
-
-                  {/* Commodity & Weight */}
-                  <div className="flex items-center gap-2 text-sm">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <div className="font-medium">{load.commodity}</div>
-                      <div className="text-muted-foreground">
-                        {formatWeight(load.weight)} •{" "}
-                        {load.equipmentType.replace("_", " ")}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Carrier */}
-                  <div className="flex items-center gap-2 text-sm">
-                    <Truck className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      {load.carrier ? (
-                        <>
-                          <div className="font-medium">
-                            {load.carrier.companyName}
-                          </div>
-                          <div className="text-muted-foreground">
-                            {load.carrier.mcNumber}
-                          </div>
-                        </>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          Not assigned
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Rate & Margin */}
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div className="flex items-center gap-2 text-sm">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <div className="font-semibold">
-                          {formatCurrency(load.customerRate)}
-                        </div>
-                        {load.carrierRate && (
-                          <div className="text-muted-foreground text-xs">
-                            Cost: {formatCurrency(load.carrierRate)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {load.margin !== null && load.margin !== undefined && (
-                      <Badge
-                        variant={load.margin > 0 ? "success" : "secondary"}
-                        className="text-xs"
-                      >
-                        {formatCurrency(load.margin ?? null)}
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-end pt-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        asChild
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => router.push(`/loads/${load.id}`)}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        <CanEdit resource="load">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              router.push(`/loads/${load.id}/edit`)
-                            }
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit Load
-                          </DropdownMenuItem>
-                        </CanEdit>
-                        <CanDelete resource="load">
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => setDeleteLoadId(load.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Load
-                          </DropdownMenuItem>
-                        </CanDelete>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
         ) : (
-          <>
-            {/* Bulk Actions Toolbar */}
-            {selectedLoads.length > 0 && (
-              <CanBulkDelete resource="load">
-                <Card className="p-4 bg-primary/5 border-primary/20">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-medium">
-                        {selectedLoads.length} load
-                        {selectedLoads.length > 1 ? "s" : ""} selected
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedLoads([])}
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Clear
-                      </Button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleBulkDelete}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete Selected
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              </CanBulkDelete>
-            )}
-
-            <Card>
-              <div className="overflow-x-auto">
-                <Table>
+          <Card>
+            <div className="overflow-x-auto">
+              <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">
-                        <CanBulkDelete resource="load">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleSelectAll}
-                            className="h-8 w-8 p-0"
-                          >
-                            {selectedLoads.length === loads.length &&
-                            loads.length > 0 ? (
-                              <CheckSquare className="h-4 w-4" />
-                            ) : (
-                              <Square className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </CanBulkDelete>
-                      </TableHead>
                       <TableHead>Load #</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Customer</TableHead>
@@ -521,22 +221,6 @@ export function LoadsDataTable() {
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => router.push(`/loads/${load.id}`)}
                       >
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <CanBulkDelete resource="load">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleSelectLoad(load.id)}
-                              className="h-8 w-8 p-0"
-                            >
-                              {selectedLoads.includes(load.id) ? (
-                                <CheckSquare className="h-4 w-4" />
-                              ) : (
-                                <Square className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </CanBulkDelete>
-                        </TableCell>
                         <TableCell className="font-medium">
                           {load.loadNumber}
                         </TableCell>
@@ -583,7 +267,7 @@ export function LoadsDataTable() {
                                   .filter(s => s.isPrimary)
                                   .map(shipperRelation => (
                                     <div key={shipperRelation.id}>
-                                      {shipperRelation.shipper.city}, {shipperRelation.shipper.state}
+                                      {(shipperRelation.shipper.address as any)?.city || ""}, {(shipperRelation.shipper.address as any)?.state || ""}
                                       {load.loadShippers!.length > 1 && (
                                         <span className="text-xs text-muted-foreground ml-1">
                                           (+{load.loadShippers!.length - 1})
@@ -597,7 +281,7 @@ export function LoadsDataTable() {
                                     .filter(c => c.isPrimary)
                                     .map(consigneeRelation => (
                                       <div key={consigneeRelation.id}>
-                                        {consigneeRelation.consignee.city}, {consigneeRelation.consignee.state}
+                                        {(consigneeRelation.consignee.address as any)?.city || ""}, {(consigneeRelation.consignee.address as any)?.state || ""}
                                         {load.loadConsignees!.length > 1 && (
                                           <span className="text-xs text-muted-foreground ml-1">
                                             (+{load.loadConsignees!.length - 1})
@@ -722,7 +406,6 @@ export function LoadsDataTable() {
                 </Table>
               </div>
             </Card>
-          </>
         )}
 
         {/* Pagination */}

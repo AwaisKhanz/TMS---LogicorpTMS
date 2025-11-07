@@ -22,38 +22,30 @@ export type LoadWithRelations = Prisma.LoadGetPayload<{
     };
     loadShippers: {
       include: {
-        shipper: {
-          select: {
-            id: true;
-            companyName: true;
-            phone: true;
-            email: true;
-            streetAddress: true;
-            city: true;
-            state: true;
-            zipCode: true;
-            country: true;
-            contactPerson: true;
-          };
-        };
+            shipper: {
+              select: {
+                id: true,
+                companyName: true,
+                phone: true,
+                email: true,
+                address: true,
+                contactPerson: true,
+              };
+            };
       };
     };
     loadConsignees: {
       include: {
-        consignee: {
-          select: {
-            id: true;
-            companyName: true;
-            phone: true;
-            email: true;
-            streetAddress: true;
-            city: true;
-            state: true;
-            zipCode: true;
-            country: true;
-            contactPerson: true;
-          };
-        };
+            consignee: {
+              select: {
+                id: true;
+                companyName: true;
+                phone: true;
+                email: true;
+                address: true;
+                contactPerson: true;
+              };
+            };
       };
     };
     creator: {
@@ -91,38 +83,30 @@ export type LoadWithMinimalRelations = Prisma.LoadGetPayload<{
     };
     loadShippers: {
       include: {
-        shipper: {
-          select: {
-            id: true;
-            companyName: true;
-            phone: true;
-            email: true;
-            streetAddress: true;
-            city: true;
-            state: true;
-            zipCode: true;
-            country: true;
-            contactPerson: true;
-          };
-        };
+            shipper: {
+              select: {
+                id: true,
+                companyName: true,
+                phone: true,
+                email: true,
+                address: true,
+                contactPerson: true,
+              };
+            };
       };
     };
     loadConsignees: {
       include: {
-        consignee: {
-          select: {
-            id: true;
-            companyName: true;
-            phone: true;
-            email: true;
-            streetAddress: true;
-            city: true;
-            state: true;
-            zipCode: true;
-            country: true;
-            contactPerson: true;
-          };
-        };
+            consignee: {
+              select: {
+                id: true;
+                companyName: true;
+                phone: true;
+                email: true;
+                address: true;
+                contactPerson: true;
+              };
+            };
       };
     };
     creator: {
@@ -262,11 +246,7 @@ export class LoadRepository extends BaseRepository<Load> {
                   companyName: true,
                   phone: true,
                   email: true,
-                  streetAddress: true,
-                  city: true,
-                  state: true,
-                  zipCode: true,
-                  country: true,
+                  address: true,
                   contactPerson: true,
                 },
               },
@@ -280,11 +260,7 @@ export class LoadRepository extends BaseRepository<Load> {
                   companyName: true,
                   phone: true,
                   email: true,
-                  streetAddress: true,
-                  city: true,
-                  state: true,
-                  zipCode: true,
-                  country: true,
+                  address: true,
                   contactPerson: true,
                 },
               },
@@ -380,11 +356,7 @@ export class LoadRepository extends BaseRepository<Load> {
                   companyName: true,
                   phone: true,
                   email: true,
-                  streetAddress: true,
-                  city: true,
-                  state: true,
-                  zipCode: true,
-                  country: true,
+                  address: true,
                   contactPerson: true,
                 },
               },
@@ -398,11 +370,7 @@ export class LoadRepository extends BaseRepository<Load> {
                   companyName: true,
                   phone: true,
                   email: true,
-                  streetAddress: true,
-                  city: true,
-                  state: true,
-                  zipCode: true,
-                  country: true,
+                  address: true,
                   contactPerson: true,
                 },
               },

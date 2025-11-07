@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   useTeamMembers,
   useInviteTeamMember,
   useRemoveTeamMember,
-  // useBulkDeleteTeamMembers, // Commented out - selection disabled
 } from "@/hooks/use-settings";
 import type { TeamMember } from "@tms/shared-types";
 import {
@@ -21,7 +21,6 @@ import {
 import {
   CanEdit,
   CanDelete,
-  // CanDelete as CanBulkDelete, // Commented out - selection disabled
 } from "@/components/auth/can";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,7 +58,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-// import { Checkbox } from "@/components/ui/checkbox"; // Commented out - selection disabled
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   MoreHorizontal,
@@ -70,7 +68,6 @@ import {
   Loader2,
   Trash2,
   Download,
-  // X, // Commented out - selection disabled
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -85,7 +82,6 @@ export function TeamDataTable() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [deleteMemberId, setDeleteMemberId] = useState<string | null>(null);
-  // const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [editMember, setEditMember] = useState<TeamMember | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -93,29 +89,34 @@ export function TeamDataTable() {
   const { data: teamMembers, isLoading } = useTeamMembers();
   const inviteTeamMember = useInviteTeamMember();
   const removeTeamMember = useRemoveTeamMember();
-  // const bulkDeleteMembers = useBulkDeleteTeamMembers(); // Commented out - selection disabled
+
+  // Debounce search term (500ms delay) for client-side filtering
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   // Filter team members based on search and filters
-  const filteredMembers =
-    teamMembers?.filter((member) => {
-      const matchesSearch =
-        member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.email.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredMembers = useMemo(() => {
+    return (
+      teamMembers?.filter((member) => {
+        const matchesSearch =
+          member.firstName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+          member.lastName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+          member.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
 
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && member.isActive) ||
-        (statusFilter === "inactive" && !member.isActive);
+        const matchesStatus =
+          statusFilter === "all" ||
+          (statusFilter === "active" && member.isActive) ||
+          (statusFilter === "inactive" && !member.isActive);
 
-      const matchesRole =
-        roleFilter === "all" ||
-        member.roles.some((role) =>
-          role.toLowerCase().includes(roleFilter.toLowerCase())
-        );
+        const matchesRole =
+          roleFilter === "all" ||
+          member.roles.some((role) =>
+            role.toLowerCase().includes(roleFilter.toLowerCase())
+          );
 
-      return matchesSearch && matchesStatus && matchesRole;
-    }) || [];
+        return matchesSearch && matchesStatus && matchesRole;
+      }) || []
+    );
+  }, [teamMembers, debouncedSearchTerm, statusFilter, roleFilter]);
 
   const handleDeleteMember = async () => {
     if (deleteMemberId) {
@@ -124,45 +125,6 @@ export function TeamDataTable() {
       toast.success("Team member removed successfully!");
     }
   };
-
-  // Selection functions commented out for now
-  // const handleSelectMember = (memberId: string) => {
-  //   setSelectedMembers((prev) =>
-  //     prev.includes(memberId)
-  //       ? prev.filter((id) => id !== memberId)
-  //       : [...prev, memberId]
-  //   );
-  // };
-
-  // const handleSelectAll = () => {
-  //   if (selectedMembers.length === filteredMembers.length) {
-  //     setSelectedMembers([]);
-  //   } else {
-  //     setSelectedMembers(
-  //       filteredMembers.map((member: TeamMember) => member.id)
-  //     );
-  //   }
-  // };
-
-  // const handleBulkDelete = async () => {
-  //   if (selectedMembers.length === 0) return;
-
-  //   if (
-  //     confirm(
-  //       `Are you sure you want to delete ${selectedMembers.length} team members?`
-  //     )
-  //   ) {
-  //     try {
-  //       await bulkDeleteMembers.mutateAsync(selectedMembers);
-  //       setSelectedMembers([]);
-  //       toast.success(
-  //         `${selectedMembers.length} team members deleted successfully!`
-  //       );
-  //     } catch (error) {
-  //       toast.error("Failed to delete team members");
-  //     }
-  //   }
-  // };
 
   const onInviteSubmit = async (data: {
     email?: string;
@@ -309,62 +271,12 @@ export function TeamDataTable() {
         </div>
       </Card>
 
-      {/* Bulk Actions - Commented out for now */}
-      {/* {selectedMembers.length > 0 && (
-        <CanBulkDelete resource="user">
-          <Card className="border-destructive">
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">
-                  {selectedMembers.length} member
-                  {selectedMembers.length > 1 ? "s" : ""} selected
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleBulkDelete}
-                  disabled={bulkDeleteMembers.isPending}
-                >
-                  {bulkDeleteMembers.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4 mr-2" />
-                  )}
-                  Delete Selected
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedMembers([])}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Clear Selection
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </CanBulkDelete>
-      )} */}
-
       {/* Data Table */}
       <Card>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                {/* <TableHead className="w-[50px]">
-                  <CanBulkDelete resource="user">
-                    <Checkbox
-                      checked={
-                        selectedMembers.length === filteredMembers.length &&
-                        filteredMembers.length > 0
-                      }
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </CanBulkDelete>
-                </TableHead> */}
                 <TableHead>Member</TableHead>
                 <TableHead>Roles</TableHead>
                 <TableHead>Status</TableHead>
@@ -376,14 +288,6 @@ export function TeamDataTable() {
               {filteredMembers.length > 0 ? (
                 filteredMembers.map((member) => (
                   <TableRow key={member.id}>
-                    {/* <TableCell>
-                      <CanBulkDelete resource="user">
-                        <Checkbox
-                          checked={selectedMembers.includes(member.id)}
-                          onCheckedChange={() => handleSelectMember(member.id)}
-                        />
-                      </CanBulkDelete>
-                    </TableCell> */}
                     <TableCell className="whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
@@ -472,7 +376,7 @@ export function TeamDataTable() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8">
                     <div className="text-muted-foreground">
                       <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p>No team members found</p>

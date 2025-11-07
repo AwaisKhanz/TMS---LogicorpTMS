@@ -14,11 +14,17 @@ export const createShipperSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
   phone: z.string().min(1, "Phone number is required"),
   email: z.string().email().optional(),
-  streetAddress: z.string().min(1, "Street address is required"),
-  city: z.string().min(1, "City is required"),
-  state: z.string().min(2, "State is required"),
-  zipCode: z.string().min(5, "ZIP code is required"),
-  country: z.string().optional(),
+  address: z.object({
+    street: z.string().min(1, "Street address is required"),
+    city: z.string().min(1, "City is required"),
+    state: z.string().min(2, "State is required"),
+    zip: z.string().min(5, "ZIP code is required"),
+    country: z.string().optional(),
+    formattedAddress: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
+    placeId: z.string().optional(),
+  }),
   contactPerson: z.string().optional(),
   notes: z.string().optional(),
 }) satisfies z.ZodType<CreateShipperDto>;
@@ -27,15 +33,24 @@ export const updateShipperSchema = z.object({
   companyName: z.string().min(1).optional(),
   phone: z.string().min(1).optional(),
   email: z.string().email().optional(),
-  streetAddress: z.string().min(1).optional(),
-  city: z.string().min(1).optional(),
-  state: z.string().min(2).optional(),
-  zipCode: z.string().min(5).optional(),
-  country: z.string().optional(),
+  address: z
+    .object({
+      street: z.string().min(1),
+      city: z.string().min(1),
+      state: z.string().min(2),
+      zip: z.string().min(5),
+      country: z.string().optional(),
+      formattedAddress: z.string().optional(),
+      latitude: z.number().optional(),
+      longitude: z.number().optional(),
+      placeId: z.string().optional(),
+    })
+    .partial()
+    .optional(),
   contactPerson: z.string().optional(),
   notes: z.string().optional(),
   isActive: z.boolean().optional(),
-}) satisfies z.ZodType<UpdateShipperDto>;
+}) as z.ZodType<UpdateShipperDto>;
 
 export class ShipperController {
   async getShippers(req: Request, res: Response, next: NextFunction) {

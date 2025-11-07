@@ -200,11 +200,11 @@ export default function ShipperDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-1">
-                <div>{shipper.streetAddress}</div>
+                <div>{(shipper.address as any)?.street || ""}</div>
                 <div>
-                  {shipper.city}, {shipper.state} {shipper.zipCode}
+                  {(shipper.address as any)?.city || ""}, {(shipper.address as any)?.state || ""} {(shipper.address as any)?.zip || ""}
                 </div>
-                <div>{shipper.country}</div>
+                <div>{(shipper.address as any)?.country || ""}</div>
               </div>
             </CardContent>
           </Card>

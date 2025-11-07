@@ -64,6 +64,7 @@ export class ShipperService {
   private transformShipperForApi(shipper: any): Shipper {
     return {
       ...shipper,
+      address: shipper.address as any, // Ensure address is preserved
       createdAt: shipper.createdAt.toISOString(),
       updatedAt: shipper.updatedAt.toISOString(),
       deletedAt: shipper.deletedAt?.toISOString(),
@@ -85,9 +86,7 @@ export class ShipperService {
     // Check if shipper with same company and address already exists
     const existingShipper = await this.shipperRepo.findByCompanyAndAddress(
       data.companyName,
-      data.streetAddress,
-      data.city,
-      data.state,
+      data.address,
       organizationId
     );
 
@@ -102,11 +101,7 @@ export class ShipperService {
         companyName: data.companyName,
         phone: data.phone,
         email: data.email,
-        streetAddress: data.streetAddress,
-        city: data.city,
-        state: data.state,
-        zipCode: data.zipCode,
-        country: data.country || "USA",
+        address: data.address,
         contactPerson: data.contactPerson,
         notes: data.notes,
         isActive: true,
@@ -148,12 +143,12 @@ export class ShipperService {
     }
 
     // Check for duplicate if company/address is being changed
-    if (data.companyName || data.streetAddress || data.city || data.state) {
+    if (data.companyName || data.address) {
+      const existingAddress = (existingShipper.address as any) || {};
+      const checkAddress = data.address || existingAddress;
       const duplicateShipper = await this.shipperRepo.findByCompanyAndAddress(
         data.companyName || existingShipper.companyName,
-        data.streetAddress || existingShipper.streetAddress,
-        data.city || existingShipper.city,
-        data.state || existingShipper.state,
+        checkAddress,
         organizationId,
         id
       );
@@ -260,20 +255,25 @@ export class ShipperService {
       shipperFilters
     );
 
-    const exportData: ShipperExportData[] = shippers.map((shipper) => ({
-      companyName: shipper.companyName,
-      phone: shipper.phone,
-      email: shipper.email || undefined,
-      streetAddress: shipper.streetAddress,
-      city: shipper.city,
-      state: shipper.state,
-      zipCode: shipper.zipCode,
-      country: shipper.country,
-      contactPerson: shipper.contactPerson || undefined,
-      isActive: shipper.isActive,
-      totalLoads: shipper._count?.loadShippers || 0,
-      createdAt: shipper.createdAt.toISOString(),
-    }));
+    const exportData: ShipperExportData[] = shippers.map((shipper) => {
+      const address = shipper.address as any;
+      return {
+        companyName: shipper.companyName,
+        phone: shipper.phone,
+        email: shipper.email || undefined,
+        address: {
+          street: address?.street || "",
+          city: address?.city || "",
+          state: address?.state || "",
+          zip: address?.zip || "",
+          country: address?.country || "",
+        },
+        contactPerson: shipper.contactPerson || undefined,
+        isActive: shipper.isActive,
+        totalLoads: (shipper as any)._count?.loadShippers || 0,
+        createdAt: shipper.createdAt.toISOString(),
+      };
+    });
 
     if (format === "csv") {
       return this.convertToCSV(exportData);
@@ -413,15 +413,18 @@ export class ShipperService {
       limit
     );
 
-    return shippers.map((shipper) => ({
-      id: shipper.id,
-      companyName: shipper.companyName,
-      phone: shipper.phone,
-      email: shipper.email || undefined,
-      city: shipper.city,
-      state: shipper.state,
-      fullAddress: `${shipper.streetAddress}, ${shipper.city}, ${shipper.state} ${shipper.zipCode}`,
-    }));
+    return shippers.map((shipper) => {
+      const address = shipper.address as any;
+      return {
+        id: shipper.id,
+        companyName: shipper.companyName,
+        phone: shipper.phone,
+        email: shipper.email || undefined,
+        city: address?.city || "",
+        state: address?.state || "",
+        fullAddress: `${address?.street || ""}, ${address?.city || ""}, ${address?.state || ""} ${address?.zip || ""}`,
+      };
+    });
   }
 
   private async getRecentShippersCount(
@@ -464,7 +467,11 @@ export class ShipperService {
 
       const stateCounts = shippers.reduce(
         (acc, shipper) => {
-          acc[shipper.state] = (acc[shipper.state] || 0) + 1;
+          const address = shipper.address as any;
+          const state = address?.state || "";
+          if (state) {
+            acc[state] = (acc[state] || 0) + 1;
+          }
           return acc;
         },
         {} as Record<string, number>

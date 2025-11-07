@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   Table,
   TableBody,
@@ -60,6 +61,9 @@ export function CustomerLoads({ customerId }: CustomerLoadsProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<string>("all");
 
+  // Debounce search term (500ms delay) for client-side filtering
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
   const {
     data: loadsData,
     isLoading,
@@ -108,10 +112,10 @@ export function CustomerLoads({ customerId }: CustomerLoadsProps) {
       const matchesStatus =
         statusFilter === "all" || load.status === statusFilter;
       const matchesSearch =
-        load.loadNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        load.loadNumber.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         load.carrier?.companyName
           .toLowerCase()
-          .includes(searchTerm.toLowerCase());
+          .includes(debouncedSearchTerm.toLowerCase());
       return matchesStatus && matchesSearch;
     }) || [];
 

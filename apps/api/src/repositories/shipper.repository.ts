@@ -49,23 +49,13 @@ export class ShipperRepository extends BaseRepository<Shipper> {
       where.isActive = filters.isActive;
     }
 
-    if (filters.state) {
-      where.state = filters.state;
-    }
-
-    if (filters.search) {
-      where.OR = [
-        { companyName: { contains: filters.search, mode: "insensitive" } },
-        { phone: { contains: filters.search, mode: "insensitive" } },
-        { email: { contains: filters.search, mode: "insensitive" } },
-        { city: { contains: filters.search, mode: "insensitive" } },
-        { contactPerson: { contains: filters.search, mode: "insensitive" } },
-      ];
-    }
-
-    const [shippers, total] = await Promise.all([
+    const [allShippers] = await Promise.all([
       this.prisma.shipper.findMany({
-        where,
+        where: {
+          organizationId,
+          deletedAt: null,
+          ...(filters.isActive !== undefined ? { isActive: filters.isActive } : {}),
+        },
         include: {
           _count: {
             select: {
@@ -73,14 +63,52 @@ export class ShipperRepository extends BaseRepository<Shipper> {
             },
           },
         },
-        orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
-        skip,
-        take: limit,
       }),
-      this.prisma.shipper.count({ where }),
+      this.prisma.shipper.count({
+        where: {
+          organizationId,
+          deletedAt: null,
+          ...(filters.isActive !== undefined ? { isActive: filters.isActive } : {}),
+        },
+      }),
     ]);
 
-    return { data: shippers, total };
+    // Filter by state and search in memory (since JSON fields are harder to query)
+    let filteredShippers = allShippers;
+    
+    if (filters.state) {
+      filteredShippers = filteredShippers.filter((s) => {
+        const addr = s.address as any;
+        return addr?.state === filters.state;
+      });
+    }
+
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filteredShippers = filteredShippers.filter((s) => {
+        const addr = s.address as any;
+        return (
+          s.companyName.toLowerCase().includes(searchLower) ||
+          s.phone.toLowerCase().includes(searchLower) ||
+          (s.email && s.email.toLowerCase().includes(searchLower)) ||
+          (addr?.city && addr.city.toLowerCase().includes(searchLower)) ||
+          (s.contactPerson && s.contactPerson.toLowerCase().includes(searchLower))
+        );
+      });
+    }
+
+    // Sort and paginate
+    filteredShippers.sort((a, b) => {
+      if (a.isActive !== b.isActive) {
+        return a.isActive ? -1 : 1;
+      }
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    });
+
+    const total = filteredShippers.length;
+    const paginatedShippers = filteredShippers.slice(skip, skip + limit);
+
+    return { data: paginatedShippers, total };
   }
 
   async findByIdWithRelations(
@@ -105,18 +133,17 @@ export class ShipperRepository extends BaseRepository<Shipper> {
 
   async findByCompanyAndAddress(
     companyName: string,
-    streetAddress: string,
-    city: string,
-    state: string,
+    address: any,
     organizationId: string,
     excludeId?: string
   ): Promise<Shipper | null> {
     const where: WhereClause = {
       organizationId,
       companyName,
-      streetAddress,
-      city,
-      state,
+      address: {
+        path: ["street"],
+        equals: address.street,
+      },
       deletedAt: null,
     };
 
@@ -124,7 +151,27 @@ export class ShipperRepository extends BaseRepository<Shipper> {
       where.id = { not: excludeId };
     }
 
-    return this.prisma.shipper.findFirst({ where });
+    // Also check city and state for exact match
+    const shippers = await this.prisma.shipper.findMany({
+      where: {
+        organizationId,
+        companyName,
+        deletedAt: null,
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+    });
+
+    // Filter in memory for exact address match
+    return (
+      shippers.find((s) => {
+        const addr = s.address as any;
+        return (
+          addr?.street === address.street &&
+          addr?.city === address.city &&
+          addr?.state === address.state
+        );
+      }) || null
+    );
   }
 
   async createWithRelations(
@@ -257,40 +304,39 @@ export class ShipperRepository extends BaseRepository<Shipper> {
   }
 
   async exportShippers(organizationId: string, filters: ShipperFilters) {
-    const where: WhereClause = {
-      organizationId,
-      deletedAt: null,
-    };
+    const allShippers = await this.prisma.shipper.findMany({
+      where: {
+        organizationId,
+        deletedAt: null,
+        ...(filters.isActive !== undefined ? { isActive: filters.isActive } : {}),
+      },
+    });
 
-    if (filters.isActive !== undefined) {
-      where.isActive = filters.isActive;
-    }
-
+    // Filter by state and search in memory
+    let filteredShippers = allShippers;
+    
     if (filters.state) {
-      where.state = filters.state;
+      filteredShippers = filteredShippers.filter((s) => {
+        const addr = s.address as any;
+        return addr?.state === filters.state;
+      });
     }
 
     if (filters.search) {
-      where.OR = [
-        { companyName: { contains: filters.search, mode: "insensitive" } },
-        { phone: { contains: filters.search, mode: "insensitive" } },
-        { email: { contains: filters.search, mode: "insensitive" } },
-        { city: { contains: filters.search, mode: "insensitive" } },
-        { contactPerson: { contains: filters.search, mode: "insensitive" } },
-      ];
+      const searchLower = filters.search.toLowerCase();
+      filteredShippers = filteredShippers.filter((s) => {
+        const addr = s.address as any;
+        return (
+          s.companyName.toLowerCase().includes(searchLower) ||
+          s.phone.toLowerCase().includes(searchLower) ||
+          (s.email && s.email.toLowerCase().includes(searchLower)) ||
+          (addr?.city && addr.city.toLowerCase().includes(searchLower)) ||
+          (s.contactPerson && s.contactPerson.toLowerCase().includes(searchLower))
+        );
+      });
     }
 
-    return this.prisma.shipper.findMany({
-      where,
-      include: {
-        _count: {
-          select: {
-            loadShippers: true,
-          },
-        },
-      },
-      orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
-    });
+    return filteredShippers;
   }
 
   async bulkUpdate(

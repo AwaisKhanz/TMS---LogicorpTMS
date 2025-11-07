@@ -46,7 +46,7 @@ export function DashboardLayout({
   };
 
   return (
-    <div className="h-screen bg-background flex overflow-hidden">
+    <div className="h-screen min-h-screen bg-background flex overflow-hidden">
       {/* Mobile Overlay */}
       {mobileMenuOpen && (
         <div
@@ -58,7 +58,7 @@ export function DashboardLayout({
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 h-screen transform transition-transform duration-300",
+          "fixed left-0 top-0 z-50 h-screen min-h-screen transform transition-transform duration-300",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
           "lg:translate-x-0 lg:relative lg:z-auto lg:h-full"
         )}

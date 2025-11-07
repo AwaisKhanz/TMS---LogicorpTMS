@@ -43,6 +43,8 @@ import {
 import { CalendarIcon, Plus, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { GoogleMapsLoader } from "@/components/ui/google-maps-loader";
+import { AddressFormFields } from "@/components/ui/address-form-fields";
 
 const carrierFormSchema = z.object({
   // Identification
@@ -65,6 +67,11 @@ const carrierFormSchema = z.object({
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
   zip: z.string().min(1, "ZIP code is required"),
+  country: z.string().optional(),
+  formattedAddress: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  placeId: z.string().optional(),
 
   // Primary Contact
   contactName: z.string().min(1, "Contact name is required"),
@@ -134,6 +141,11 @@ export function CarrierForm({
           city: (initialData.address as Address)?.city || undefined,
           state: (initialData.address as Address)?.state || undefined,
           zip: (initialData.address as Address)?.zip || undefined,
+          country: (initialData.address as Address)?.country || "US",
+          formattedAddress: (initialData.address as Address)?.formattedAddress || "",
+          latitude: (initialData.address as Address)?.latitude || undefined,
+          longitude: (initialData.address as Address)?.longitude || undefined,
+          placeId: (initialData.address as Address)?.placeId || "",
           contactName: initialData.contactName,
           contactPhone: initialData.contactPhone,
           contactEmail: initialData.contactEmail,
@@ -166,6 +178,7 @@ export function CarrierForm({
           w9OnFile: false,
           factoring: false,
           equipment: [],
+          country: "US",
         },
   });
 
@@ -187,6 +200,11 @@ export function CarrierForm({
           city: data.city,
           state: data.state,
           zip: data.zip,
+          country: data.country,
+          formattedAddress: data.formattedAddress,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          placeId: data.placeId,
         },
         contactName: data.contactName,
         contactPhone: data.contactPhone,
@@ -226,8 +244,9 @@ export function CarrierForm({
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <GoogleMapsLoader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Company Information */}
         <Card>
           <CardHeader>
@@ -380,63 +399,19 @@ export function CarrierForm({
 
             <Separator />
 
-            <FormField
+            <AddressFormFields
               control={form.control}
-              name="street"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Street Address *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="123 Industrial Blvd" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              setValue={form.setValue}
+              streetFieldName="street"
+              cityFieldName="city"
+              stateFieldName="state"
+              zipFieldName="zip"
+              countryFieldName="country"
+              formattedAddressFieldName="formattedAddress"
+              latitudeFieldName="latitude"
+              longitudeFieldName="longitude"
+              placeIdFieldName="placeId"
             />
-
-            <div className="grid gap-4 md:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Chicago" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="IL" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="zip"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>ZIP Code *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="60601" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
           </CardContent>
         </Card>
 
@@ -882,7 +857,8 @@ export function CarrierForm({
                 : "Create Carrier"}
           </Button>
         </div>
-      </form>
-    </Form>
+        </form>
+      </Form>
+    </GoogleMapsLoader>
   );
 }

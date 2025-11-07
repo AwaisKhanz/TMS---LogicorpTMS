@@ -93,7 +93,9 @@ export function useExportInvoice() {
         if (typeof url === "string" && url.startsWith("http")) {
           if (typeof window !== "undefined") window.open(url, "_blank");
         }
-      } catch {}
+      } catch {
+        // Silently fail if window is not available or URL is invalid
+      }
       toast.success("Invoice PDF generated");
     },
     onError: () => toast.error("Failed to export invoice"),
@@ -137,5 +139,24 @@ export function useUploadInvoiceDocument(invoiceId: string) {
       toast.success("Document uploaded");
     },
     onError: () => toast.error("Failed to upload document"),
+  });
+}
+
+export function useInvoiceStatistics() {
+  return useQuery({
+    queryKey: ["invoice-statistics"],
+    queryFn: async () => {
+      const res = await apiClient.get<{
+        success: boolean;
+        data: {
+          total: number;
+          paid: number;
+          totalRevenue: number;
+          avgInvoice: number;
+        };
+      }>("/invoices/statistics");
+      return res;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }

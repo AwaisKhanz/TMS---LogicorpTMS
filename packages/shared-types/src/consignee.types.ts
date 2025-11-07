@@ -10,12 +10,8 @@ export interface Consignee {
   phone: string;
   email?: string;
 
-  // Address Information
-  streetAddress: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
+  // Address Information (JSON format)
+  address: Address;
 
   // Additional Information
   contactPerson?: string;
@@ -40,11 +36,7 @@ export interface CreateConsigneeRequest {
   companyName: string;
   phone: string;
   email?: string;
-  streetAddress: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country?: string;
+  address: Address;
   contactPerson?: string;
   notes?: string;
 }
@@ -112,11 +104,7 @@ export interface ConsigneeExportData {
   companyName: string;
   phone: string;
   email?: string;
-  streetAddress: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
+  address: Address;
   contactPerson?: string;
   isActive: boolean;
   totalLoads: number;

@@ -43,6 +43,8 @@ import { CanEdit } from "@/components/auth/can";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
 import Image from "next/image";
+import { GoogleMapsLoader } from "@/components/ui/google-maps-loader";
+import { AddressFormFields } from "@/components/ui/address-form-fields";
 
 const organizationSchema = z.object({
   name: z.string().min(1, "Organization name is required"),
@@ -56,6 +58,10 @@ const organizationSchema = z.object({
     state: z.string().min(1, "State is required"),
     zip: z.string().min(1, "ZIP code is required"),
     country: z.string().min(1, "Country is required"),
+    formattedAddress: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
+    placeId: z.string().optional(),
   }),
 });
 
@@ -73,7 +79,8 @@ function DocumentTermsForm({ organization }: { organization: any }) {
     resolver: zodResolver(documentTermsSchema),
     defaultValues: {
       bolTerms: organization?.documentTerms?.bolTerms || "",
-      rateConfirmationTerms: organization?.documentTerms?.rateConfirmationTerms || "",
+      rateConfirmationTerms:
+        organization?.documentTerms?.rateConfirmationTerms || "",
       invoiceTerms: organization?.documentTerms?.invoiceTerms || "",
     },
   });
@@ -82,7 +89,8 @@ function DocumentTermsForm({ organization }: { organization: any }) {
     if (organization) {
       form.reset({
         bolTerms: organization.documentTerms?.bolTerms || "",
-        rateConfirmationTerms: organization.documentTerms?.rateConfirmationTerms || "",
+        rateConfirmationTerms:
+          organization.documentTerms?.rateConfirmationTerms || "",
         invoiceTerms: organization.documentTerms?.invoiceTerms || "",
       });
     }
@@ -181,10 +189,7 @@ function DocumentTermsForm({ organization }: { organization: any }) {
             </CanEdit>
           ) : (
             <>
-              <Button
-                type="submit"
-                disabled={updateDocumentTerms.isPending}
-              >
+              <Button type="submit" disabled={updateDocumentTerms.isPending}>
                 {updateDocumentTerms.isPending ? "Saving..." : "Save Changes"}
               </Button>
               <Button
@@ -368,173 +373,84 @@ export function OrganizationSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Organization Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5" />
-            Organization Information
-          </CardTitle>
-          <CardDescription>
-            Manage your organization details and contact information
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Logo Section */}
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage
-                src={organization?.logo || ""}
-                alt="Organization Logo"
-                crossOrigin="anonymous"
-                referrerPolicy="no-referrer"
-              />
-              <AvatarFallback className="text-lg">
-                <Building className="h-8 w-8" />
-              </AvatarFallback>
-            </Avatar>
-            <div className="space-y-2">
-              <CanEdit resource="settings">
-                <div>
-                  <label htmlFor="logo-upload" className="cursor-pointer">
-                    <Button variant="outline" size="sm" asChild>
-                      <span>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Change Logo
-                      </span>
-                    </Button>
-                  </label>
-                  <input
-                    id="logo-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    className="hidden"
-                  />
-                </div>
-              </CanEdit>
-              <p className="text-sm text-muted-foreground">
-                JPG, PNG or GIF. Max size 5MB.
-              </p>
+    <GoogleMapsLoader>
+      <div className="space-y-6">
+        {/* Organization Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Organization Information
+            </CardTitle>
+            <CardDescription>
+              Manage your organization details and contact information
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Logo Section */}
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20">
+                <AvatarImage
+                  src={organization?.logo || ""}
+                  alt="Organization Logo"
+                  crossOrigin="anonymous"
+                  referrerPolicy="no-referrer"
+                />
+                <AvatarFallback className="text-lg">
+                  <Building className="h-8 w-8" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-2">
+                <CanEdit resource="settings">
+                  <div>
+                    <label htmlFor="logo-upload" className="cursor-pointer">
+                      <Button variant="outline" size="sm" asChild>
+                        <span>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Change Logo
+                        </span>
+                      </Button>
+                    </label>
+                    <input
+                      id="logo-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                  </div>
+                </CanEdit>
+                <p className="text-sm text-muted-foreground">
+                  JPG, PNG or GIF. Max size 5MB.
+                </p>
+              </div>
             </div>
-          </div>
 
-          <Form {...organizationForm}>
-            <form
-              onSubmit={(e) => {
-                console.log(
-                  "Organization form onSubmit triggered, isEditingOrg:",
-                  isEditingOrg
-                );
-                if (!isEditingOrg) {
+            <Form {...organizationForm}>
+              <form
+                onSubmit={(e) => {
                   console.log(
-                    "Preventing organization form submission - not in editing mode"
+                    "Organization form onSubmit triggered, isEditingOrg:",
+                    isEditingOrg
                   );
-                  e.preventDefault();
-                  return;
-                }
-                organizationForm.handleSubmit(onOrganizationSubmit)(e);
-              }}
-              className="space-y-4"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={organizationForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Organization Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} disabled={!isEditingOrg} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={organizationForm.control}
-                  name="website"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Website</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          disabled={!isEditingOrg}
-                          placeholder="https://example.com"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={organizationForm.control}
-                  name="mcNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>MC Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          disabled={!isEditingOrg}
-                          placeholder="MC-123456"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={organizationForm.control}
-                  name="dotNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>DOT Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          disabled={!isEditingOrg}
-                          placeholder="DOT-123456"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={organizationForm.control}
-                name="billingEmail"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Billing Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        disabled={!isEditingOrg}
-                        placeholder="billing@company.com"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium">Address</h4>
+                  if (!isEditingOrg) {
+                    console.log(
+                      "Preventing organization form submission - not in editing mode"
+                    );
+                    e.preventDefault();
+                    return;
+                  }
+                  organizationForm.handleSubmit(onOrganizationSubmit)(e);
+                }}
+                className="space-y-4"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={organizationForm.control}
-                    name="address.street"
+                    name="name"
                     render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Street Address</FormLabel>
+                      <FormItem>
+                        <FormLabel>Organization Name</FormLabel>
                         <FormControl>
                           <Input {...field} disabled={!isEditingOrg} />
                         </FormControl>
@@ -544,122 +460,162 @@ export function OrganizationSettings() {
                   />
                   <FormField
                     control={organizationForm.control}
-                    name="address.city"
+                    name="website"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City</FormLabel>
+                        <FormLabel>Website</FormLabel>
                         <FormControl>
-                          <Input {...field} disabled={!isEditingOrg} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={organizationForm.control}
-                    name="address.state"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>State</FormLabel>
-                        <FormControl>
-                          <Input {...field} disabled={!isEditingOrg} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={organizationForm.control}
-                    name="address.zip"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ZIP Code</FormLabel>
-                        <FormControl>
-                          <Input {...field} disabled={!isEditingOrg} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={organizationForm.control}
-                    name="address.country"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Country</FormLabel>
-                        <FormControl>
-                          <Input {...field} disabled={!isEditingOrg} />
+                          <Input
+                            {...field}
+                            disabled={!isEditingOrg}
+                            placeholder="https://example.com"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-              </div>
 
-              <div className="flex gap-2">
-                {!isEditingOrg ? (
-                  <CanEdit resource="settings">
-                    <Button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log(
-                          "Edit Organization button clicked, setting isEditingOrg to true"
-                        );
-                        setIsEditingOrg(true);
-                      }}
-                    >
-                      Edit Organization
-                    </Button>
-                  </CanEdit>
-                ) : (
-                  <>
-                    <Button
-                      type="submit"
-                      disabled={updateOrganization.isPending}
-                    >
-                      {updateOrganization.isPending
-                        ? "Saving..."
-                        : "Save Changes"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsEditingOrg(false);
-                        organizationForm.reset();
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                )}
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={organizationForm.control}
+                    name="mcNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>MC Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            disabled={!isEditingOrg}
+                            placeholder="MC-123456"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={organizationForm.control}
+                    name="dotNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>DOT Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            disabled={!isEditingOrg}
+                            placeholder="DOT-123456"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-      {/* Document Terms & Conditions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5" />
-            Document Terms & Conditions
-          </CardTitle>
-          <CardDescription>
-            Configure terms and conditions that will appear at the end of generated documents (BOL, Rate Confirmation, Invoice)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DocumentTermsForm organization={organization} />
-        </CardContent>
-      </Card>
+                <FormField
+                  control={organizationForm.control}
+                  name="billingEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Billing Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          disabled={!isEditingOrg}
+                          placeholder="billing@company.com"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-      {/* Business Settings - Hidden for now */}
-      {/* <Card>
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium">Address</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <AddressFormFields
+                      control={organizationForm.control}
+                      setValue={organizationForm.setValue}
+                      streetFieldName="address.street"
+                      cityFieldName="address.city"
+                      stateFieldName="address.state"
+                      zipFieldName="address.zip"
+                      countryFieldName="address.country"
+                      formattedAddressFieldName="address.formattedAddress"
+                      latitudeFieldName="address.latitude"
+                      longitudeFieldName="address.longitude"
+                      placeIdFieldName="address.placeId"
+                      disabled={!isEditingOrg}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  {!isEditingOrg ? (
+                    <CanEdit resource="settings">
+                      <Button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log(
+                            "Edit Organization button clicked, setting isEditingOrg to true"
+                          );
+                          setIsEditingOrg(true);
+                        }}
+                      >
+                        Edit Organization
+                      </Button>
+                    </CanEdit>
+                  ) : (
+                    <>
+                      <Button
+                        type="submit"
+                        disabled={updateOrganization.isPending}
+                      >
+                        {updateOrganization.isPending
+                          ? "Saving..."
+                          : "Save Changes"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditingOrg(false);
+                          organizationForm.reset();
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+
+        {/* Document Terms & Conditions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Document Terms & Conditions
+            </CardTitle>
+            <CardDescription>
+              Configure terms and conditions that will appear at the end of
+              generated documents (BOL, Rate Confirmation, Invoice)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DocumentTermsForm organization={organization} />
+          </CardContent>
+        </Card>
+
+        {/* Business Settings - Hidden for now */}
+        {/* <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -915,8 +871,8 @@ export function OrganizationSettings() {
         </CardContent>
       </Card> */}
 
-      {/* Document Numbering - Hidden for now */}
-      {/* <Card>
+        {/* Document Numbering - Hidden for now */}
+        {/* <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -1074,54 +1030,55 @@ export function OrganizationSettings() {
         </CardContent>
       </Card> */}
 
-      {/* Team Management - Moved to dedicated /team page */}
+        {/* Team Management - Moved to dedicated /team page */}
 
-      {/* Logo Upload Confirmation Dialog */}
-      <Dialog open={showLogoDialog} onOpenChange={setShowLogoDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Logo Upload</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to upload this image as your organization
-              logo?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {previewUrl && (
-              <div className="flex justify-center">
-                <Image
-                  src={previewUrl}
-                  alt="Logo preview"
-                  width={192}
-                  height={192}
-                  className="max-w-48 max-h-48 object-contain rounded-lg border"
-                />
+        {/* Logo Upload Confirmation Dialog */}
+        <Dialog open={showLogoDialog} onOpenChange={setShowLogoDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Logo Upload</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to upload this image as your organization
+                logo?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {previewUrl && (
+                <div className="flex justify-center">
+                  <Image
+                    src={previewUrl}
+                    alt="Logo preview"
+                    width={192}
+                    height={192}
+                    className="max-w-48 max-h-48 object-contain rounded-lg border"
+                  />
+                </div>
+              )}
+              <div className="text-sm text-muted-foreground">
+                <p>File: {selectedFile?.name}</p>
+                <p>
+                  Size:{" "}
+                  {selectedFile
+                    ? (selectedFile.size / 1024 / 1024).toFixed(2) + " MB"
+                    : "N/A"}
+                </p>
               </div>
-            )}
-            <div className="text-sm text-muted-foreground">
-              <p>File: {selectedFile?.name}</p>
-              <p>
-                Size:{" "}
-                {selectedFile
-                  ? (selectedFile.size / 1024 / 1024).toFixed(2) + " MB"
-                  : "N/A"}
-              </p>
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={handleCancelLogoUpload}
-              disabled={isUploading}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmLogoUpload} disabled={isUploading}>
-              {isUploading ? "Uploading..." : "Upload Logo"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={handleCancelLogoUpload}
+                disabled={isUploading}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmLogoUpload} disabled={isUploading}>
+                {isUploading ? "Uploading..." : "Upload Logo"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </GoogleMapsLoader>
   );
 }

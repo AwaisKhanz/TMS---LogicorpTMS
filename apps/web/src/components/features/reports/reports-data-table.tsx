@@ -26,7 +26,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
 import { reportService } from "@/services/report.service";
 import {
   Report,
@@ -38,7 +37,6 @@ import {
 import {
   CanEdit,
   CanDelete,
-  CanDelete as CanBulkDelete,
 } from "@/components/auth/can";
 import { DeleteReportDialog } from "./delete-report-dialog";
 import { GenerateReportDialog } from "./generate-report-dialog";
@@ -82,7 +80,6 @@ interface ReportsDataTableProps {
 
 export function ReportsDataTable({ initialFilters }: ReportsDataTableProps) {
   const [filters, setFilters] = useState<ReportFilters>(initialFilters || {});
-  const [selectedReports, setSelectedReports] = useState<string[]>([]);
   const [deleteReportId, setDeleteReportId] = useState<string | null>(null);
   const [generateReportId, setGenerateReportId] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -124,31 +121,6 @@ export function ReportsDataTable({ initialFilters }: ReportsDataTableProps) {
     },
   });
 
-  // Bulk delete mutation
-  const bulkDelete = useMutation({
-    mutationFn: (reportIds: string[]) => reportService.bulkDelete(reportIds),
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["reports"] });
-      if (result.data.successful.length > 0) {
-        toast.success(
-          `${result.data.successful.length} reports deleted successfully`
-        );
-      }
-      if (result.data.failed.length > 0) {
-        toast.error(`${result.data.failed.length} reports failed to delete`);
-      }
-      setSelectedReports([]);
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to delete reports");
-    },
-  });
-
-  const handleBulkDelete = () => {
-    if (selectedReports.length === 0) return;
-    bulkDelete.mutate(selectedReports);
-  };
-
   const handleExport = async () => {
     try {
       const blob = await reportService.exportReports(filters, "csv");
@@ -167,31 +139,6 @@ export function ReportsDataTable({ initialFilters }: ReportsDataTableProps) {
   };
 
   const columns: ColumnDef<Report>[] = [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <CanBulkDelete resource="report">
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected()}
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
-          />
-        </CanBulkDelete>
-      ),
-      cell: ({ row }) => (
-        <CanBulkDelete resource="report">
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        </CanBulkDelete>
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
     {
       accessorKey: "name",
       header: "Name",
@@ -399,9 +346,6 @@ export function ReportsDataTable({ initialFilters }: ReportsDataTableProps) {
         filters={filters}
         onFiltersChange={setFilters}
         onExport={handleExport}
-        selectedCount={selectedReports.length}
-        onBulkDelete={handleBulkDelete}
-        isBulkDeleting={bulkDelete.isPending}
       />
 
       <DataTable columns={columns} data={reportsData?.data.data || []} />

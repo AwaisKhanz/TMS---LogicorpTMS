@@ -99,6 +99,43 @@ export class InvoiceService {
     await prisma.invoice.update({ where: { id }, data: { paidAmount: paid, status: newStatus } });
     return payment;
   }
+
+  async getStatistics(organizationId: string) {
+    const totalInvoices = await prisma.invoice.count({
+      where: {
+        organizationId,
+      },
+    });
+
+    const paidInvoices = await prisma.invoice.count({
+      where: {
+        organizationId,
+        status: "PAID" as any,
+      },
+    });
+
+    const totalRevenue = await prisma.invoice.aggregate({
+      where: {
+        organizationId,
+      },
+      _sum: {
+        total: true,
+      },
+    });
+
+    const totalRevenueValue = totalRevenue._sum.total
+      ? Number(totalRevenue._sum.total)
+      : 0;
+
+    const avgInvoice = totalInvoices > 0 ? totalRevenueValue / totalInvoices : 0;
+
+    return {
+      total: totalInvoices,
+      paid: paidInvoices,
+      totalRevenue: totalRevenueValue,
+      avgInvoice,
+    };
+  }
 }
 
 

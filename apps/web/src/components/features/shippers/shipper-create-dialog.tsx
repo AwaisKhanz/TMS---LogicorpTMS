@@ -23,29 +23,27 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useCreateShipper } from "@/hooks/use-shipper";
-import { US_STATES, COUNTRIES } from "@tms/shared-constants";
 import type { CreateShipperRequest } from "@tms/shared-types";
 import { Loader2 } from "lucide-react";
 import { CanCreate } from "@/components/auth/can";
+import { GoogleMapsLoader } from "@/components/ui/google-maps-loader";
+import { AddressFormFields } from "@/components/ui/address-form-fields";
 
 const shipperFormSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
   phone: z.string().min(1, "Phone number is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  streetAddress: z.string().min(1, "Street address is required"),
+  street: z.string().min(1, "Street address is required"),
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
-  zipCode: z.string().min(5, "ZIP code must be at least 5 characters"),
+  zip: z.string().min(5, "ZIP code must be at least 5 characters"),
   country: z.string().min(1, "Country is required"),
+  formattedAddress: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  placeId: z.string().optional(),
   contactPerson: z.string().optional(),
   notes: z.string().optional(),
   isActive: z.boolean().default(true),
@@ -73,11 +71,15 @@ export function ShipperCreateDialog({
       companyName: "",
       phone: "",
       email: "",
-      streetAddress: "",
+      street: "",
       city: "",
       state: "",
-      zipCode: "",
+      zip: "",
       country: "US",
+      formattedAddress: "",
+      latitude: undefined,
+      longitude: undefined,
+      placeId: "",
       contactPerson: "",
       notes: "",
       isActive: true,
@@ -88,8 +90,20 @@ export function ShipperCreateDialog({
     setIsSubmitting(true);
     try {
       const createData: CreateShipperRequest = {
-        ...data,
+        companyName: data.companyName,
+        phone: data.phone,
         email: data.email || undefined,
+        address: {
+          street: data.street,
+          city: data.city,
+          state: data.state,
+          zip: data.zip,
+          country: data.country,
+          formattedAddress: data.formattedAddress,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          placeId: data.placeId,
+        },
         contactPerson: data.contactPerson || undefined,
         notes: data.notes || undefined,
       };
@@ -211,104 +225,21 @@ export function ShipperCreateDialog({
             {/* Address Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Address Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
+              <GoogleMapsLoader>
+                <AddressFormFields
                   control={form.control}
-                  name="streetAddress"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Street Address *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter street address" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  setValue={form.setValue}
+                  streetFieldName="street"
+                  cityFieldName="city"
+                  stateFieldName="state"
+                  zipFieldName="zip"
+                  countryFieldName="country"
+                  formattedAddressFieldName="formattedAddress"
+                  latitudeFieldName="latitude"
+                  longitudeFieldName="longitude"
+                  placeIdFieldName="placeId"
                 />
-                <FormField
-                  control={form.control}
-                  name="city"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>City *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter city" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="state"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>State *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select state" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {US_STATES.map((state) => (
-                            <SelectItem key={state.value} value={state.value}>
-                              {state.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="zipCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>ZIP Code *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter ZIP code" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="country"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Country *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select country" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {COUNTRIES.map((country) => (
-                            <SelectItem
-                              key={country.value}
-                              value={country.value}
-                            >
-                              {country.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              </GoogleMapsLoader>
             </div>
 
             {/* Additional Information */}

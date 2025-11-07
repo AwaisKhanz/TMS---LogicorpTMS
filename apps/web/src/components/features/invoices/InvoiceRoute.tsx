@@ -24,9 +24,9 @@ export function InvoiceRoute({ load }: Props) {
                 )}
               </div>
               <div className="text-muted-foreground">
-                {ls.shipper?.streetAddress || ""}
-                {ls.shipper?.city ? ", " + ls.shipper.city : ""}
-                {ls.shipper?.state ? ", " + ls.shipper.state : ""} {ls.shipper?.zipCode || ""}
+                {(ls.shipper?.address as any)?.street || ""}
+                {(ls.shipper?.address as any)?.city ? ", " + (ls.shipper.address as any).city : ""}
+                {(ls.shipper?.address as any)?.state ? ", " + (ls.shipper.address as any).state : ""} {(ls.shipper?.address as any)?.zip || ""}
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                 <div>
@@ -67,9 +67,9 @@ export function InvoiceRoute({ load }: Props) {
                 )}
               </div>
               <div className="text-muted-foreground">
-                {lc.consignee?.streetAddress || ""}
-                {lc.consignee?.city ? ", " + lc.consignee.city : ""}
-                {lc.consignee?.state ? ", " + lc.consignee.state : ""} {lc.consignee?.zipCode || ""}
+                {(lc.consignee?.address as any)?.street || ""}
+                {(lc.consignee?.address as any)?.city ? ", " + (lc.consignee.address as any).city : ""}
+                {(lc.consignee?.address as any)?.state ? ", " + (lc.consignee.address as any).state : ""} {(lc.consignee?.address as any)?.zip || ""}
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                 <div>

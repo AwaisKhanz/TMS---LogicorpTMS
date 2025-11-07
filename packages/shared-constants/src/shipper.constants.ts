@@ -59,11 +59,8 @@ export const US_STATES = [
   { value: "DC", label: "District of Columbia" },
 ] as const;
 
-export const COUNTRIES = [
-  { value: "USA", label: "United States" },
-  { value: "CAN", label: "Canada" },
-  { value: "MEX", label: "Mexico" },
-] as const;
+// Note: COUNTRIES has been moved to country.constants.ts for better organization
+// Import COUNTRIES from country.constants.ts instead
 
 // Form Section Configuration
 export const SHIPPER_FORM_SECTIONS = [

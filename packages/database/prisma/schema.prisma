@@ -774,12 +774,8 @@ model Shipper {
   phone          String
   email          String?
 
-  // Address Information
-  streetAddress  String
-  city           String
-  state          String
-  zipCode        String
-  country        String @default("USA")
+  // Address Information (JSON format: { street, city, state, zip, country, formattedAddress?, latitude?, longitude?, placeId? })
+  address Json @default("{\"street\": \"\", \"city\": \"\", \"state\": \"\", \"zip\": \"\", \"country\": \"USA\"}")
 
   // Additional Information
   contactPerson  String?
@@ -797,10 +793,9 @@ model Shipper {
   organization   Organization @relation(fields: [organizationId], references: [id])
   loadShippers   LoadShipper[]
 
-  @@unique([organizationId, companyName, streetAddress, city, state])
+  @@unique([organizationId, companyName])
   @@index([organizationId, isActive])
   @@index([organizationId, companyName])
-  @@index([organizationId, state])
   @@map("shippers")
 }
 
@@ -813,12 +808,8 @@ model Consignee {
   phone          String
   email          String?
 
-  // Address Information
-  streetAddress  String
-  city           String
-  state          String
-  zipCode        String
-  country        String @default("USA")
+  // Address Information (JSON format: { street, city, state, zip, country, formattedAddress?, latitude?, longitude?, placeId? })
+  address Json @default("{\"street\": \"\", \"city\": \"\", \"state\": \"\", \"zip\": \"\", \"country\": \"USA\"}")
 
   // Additional Information
   contactPerson  String?
@@ -836,10 +827,9 @@ model Consignee {
   organization   Organization @relation(fields: [organizationId], references: [id])
   loadConsignees LoadConsignee[]
 
-  @@unique([organizationId, companyName, streetAddress, city, state])
+  @@unique([organizationId, companyName])
   @@index([organizationId, isActive])
   @@index([organizationId, companyName])
-  @@index([organizationId, state])
   @@map("consignees")
 }
 
