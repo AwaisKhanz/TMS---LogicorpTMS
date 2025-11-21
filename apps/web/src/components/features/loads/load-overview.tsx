@@ -155,6 +155,45 @@ export function LoadOverview({ loadId }: LoadOverviewProps) {
                 <p className="text-xs text-muted-foreground">
                   {load.carrier.mcNumber}
                 </p>
+                {(load.driverName ||
+                  load.driverPhone ||
+                  load.truckNumber ||
+                  load.trailerNumber) && (
+                  <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                    {load.driverName && (
+                      <p>
+                        <span className="font-medium text-foreground">
+                          Driver:
+                        </span>{" "}
+                        {load.driverName}
+                      </p>
+                    )}
+                    {load.driverPhone && (
+                      <p>
+                        <span className="font-medium text-foreground">
+                          Phone:
+                        </span>{" "}
+                        {load.driverPhone}
+                      </p>
+                    )}
+                    {load.truckNumber && (
+                      <p>
+                        <span className="font-medium text-foreground">
+                          Truck #:
+                        </span>{" "}
+                        {load.truckNumber}
+                      </p>
+                    )}
+                    {load.trailerNumber && (
+                      <p>
+                        <span className="font-medium text-foreground">
+                          Trailer #:
+                        </span>{" "}
+                        {load.trailerNumber}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">Not assigned</p>

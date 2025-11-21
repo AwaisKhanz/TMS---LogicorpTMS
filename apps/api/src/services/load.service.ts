@@ -132,6 +132,10 @@ export class LoadService {
 
     const baseTransform = {
       ...load,
+      driverName: load.driverName ?? undefined,
+      driverPhone: load.driverPhone ?? undefined,
+      truckNumber: load.truckNumber ?? undefined,
+      trailerNumber: load.trailerNumber ?? undefined,
       createdAt: load.createdAt.toISOString(),
       updatedAt: load.updatedAt.toISOString(),
       // Derive top-level pickup/delivery dates from primary relations for backward compatibility
@@ -765,8 +769,12 @@ export class LoadService {
       accessorials: load.accessorials,
       internalNotes: load.internalNotes,
       referenceNumber: load.referenceNumber,
+      driverName: load.driverName,
+      driverPhone: load.driverPhone,
+      truckNumber: load.truckNumber,
+      trailerNumber: load.trailerNumber,
       // Handle many-to-many relationships
-      shippers:
+      loadShippers:
         load.loadShippers?.map((relation) => ({
           shipperId: relation.shipperId,
           isPrimary: relation.isPrimary,
@@ -777,7 +785,7 @@ export class LoadService {
           pickupType: relation.pickupType,
           pickupNotes: relation.pickupNotes,
         })) || [],
-      consignees:
+      loadConsignees:
         load.loadConsignees?.map((relation) => ({
           consigneeId: relation.consigneeId,
           isPrimary: relation.isPrimary,

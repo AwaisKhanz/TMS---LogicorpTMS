@@ -1,6 +1,6 @@
 "use client";
 
-import { Control } from "react-hook-form";
+import { Control, useWatch } from "react-hook-form";
 import Link from "next/link";
 import {
   FormControl,
@@ -42,8 +42,13 @@ export function LoadInformationSection({
     isLoading: carriersLoading,
     error: carriersError,
   } = useCarrierOptions();
+  const carrierId = useWatch({
+    control,
+    name: "carrierId",
+  });
 
   return (
+    <div className="space-y-6">
     <div className="bg-card rounded-xl border border-border shadow-sm p-6 sm:p-8">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-foreground">
@@ -166,6 +171,77 @@ export function LoadInformationSection({
           )}
         />
       </div>
+      </div>
+
+      {carrierId && (
+        <div className="bg-card rounded-xl border border-border shadow-sm p-6 sm:p-8">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-foreground">
+              Driver & Equipment
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Provide driver details once a carrier is assigned
+            </p>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <FormField
+              control={control}
+              name="driverName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Driver Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Driver full name" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="driverPhone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Driver Phone</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Driver phone number" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="truckNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Truck Number</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Truck number" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="trailerNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Trailer Number</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Trailer number" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

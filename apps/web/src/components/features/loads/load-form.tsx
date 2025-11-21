@@ -107,6 +107,10 @@ export function LoadForm({
           carrierRate: initialData.carrierRate ?? 0,
           internalNotes: initialData.internalNotes ?? "",
           referenceNumber: initialData.referenceNumber ?? "",
+          driverName: initialData.driverName ?? "",
+          driverPhone: initialData.driverPhone ?? "",
+          truckNumber: initialData.truckNumber ?? "",
+          trailerNumber: initialData.trailerNumber ?? "",
         } as LoadFormData)
       : {
           // Explicitly set root-level dates to undefined to prevent validation errors
@@ -124,6 +128,10 @@ export function LoadForm({
           commodity: "",
           equipmentType: "DRY_VAN",
           loadType: "FULL_TRUCK",
+          driverName: "",
+          driverPhone: "",
+          truckNumber: "",
+          trailerNumber: "",
           shippers: [{
             shipperId: "",
             isPrimary: true,
@@ -191,7 +199,17 @@ export function LoadForm({
           customerRate: data.customerRate,
           carrierRate: data.carrierRate,
           internalNotes: data.internalNotes,
-          referenceNumber: data.referenceNumber,
+          referenceNumber: data.referenceNumber || undefined,
+          driverName: data.driverName?.trim() ? data.driverName.trim() : null,
+          driverPhone: data.driverPhone?.trim()
+            ? data.driverPhone.trim()
+            : null,
+          truckNumber: data.truckNumber?.trim()
+            ? data.truckNumber.trim()
+            : null,
+          trailerNumber: data.trailerNumber?.trim()
+            ? data.trailerNumber.trim()
+            : null,
         };
 
         console.log("Transformed load data:", loadData);

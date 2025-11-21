@@ -46,7 +46,6 @@ import {
   useExportShippers,
   useDeleteShipper,
 } from "@/hooks/use-shipper";
-import { useToast } from "@/hooks/use-toast";
 import type { ShipperFilters } from "@tms/shared-types";
 import {
   CanEdit,
@@ -54,7 +53,6 @@ import {
 } from "@/components/auth/can";
 
 export function ShippersDataTable() {
-  const { toast } = useToast();
   const [searchInput, setSearchInput] = useState("");
   const [filters, setFilters] = useState<ShipperFilters>({
     page: 1,

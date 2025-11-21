@@ -185,6 +185,10 @@ export interface Load {
   customer: LoadCustomer;
   carrierId?: string;
   carrier?: LoadCarrier;
+  driverName?: string;
+  driverPhone?: string;
+  truckNumber?: string;
+  trailerNumber?: string;
 
   // Pickup/Delivery Times (moved to load level for backward compatibility)
   pickupDate: string;
@@ -262,6 +266,10 @@ export interface Load {
 export interface CreateLoadRequest {
   customerId: string;
   carrierId?: string;
+  driverName?: string | null;
+  driverPhone?: string | null;
+  truckNumber?: string | null;
+  trailerNumber?: string | null;
 
   // Pickup/Delivery Times (load level)
   pickupDate: string; // Always string in requests
@@ -426,6 +434,10 @@ export interface LoadExportData {
   carrier?: {
     companyName: string;
   };
+  driverName?: string;
+  driverPhone?: string;
+  truckNumber?: string;
+  trailerNumber?: string;
   shipperAddress: {
     city?: string;
     state?: string;

@@ -36,6 +36,10 @@ const consigneeRelationSchema = z.object({
 export const createLoadSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
   carrierId: z.string().optional(),
+  driverName: z.string().optional().nullable(),
+  driverPhone: z.string().optional().nullable(),
+  truckNumber: z.string().optional().nullable(),
+  trailerNumber: z.string().optional().nullable(),
   // Root-level pickup/delivery fields removed in favor of per-shipper/consignee
 
   // Multiple shippers and consignees
@@ -81,6 +85,10 @@ export const createLoadSchema = z.object({
 export const updateLoadSchema = z.object({
   customerId: z.string().optional(),
   carrierId: z.string().optional(),
+  driverName: z.string().optional().nullable(),
+  driverPhone: z.string().optional().nullable(),
+  truckNumber: z.string().optional().nullable(),
+  trailerNumber: z.string().optional().nullable(),
   // Root-level pickup/delivery fields removed; managed per-shipper/consignee
 
   // Multiple shippers and consignees

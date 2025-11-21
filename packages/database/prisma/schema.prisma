@@ -173,6 +173,10 @@ model Load {
   // Customer & Carrier
   customerId String
   carrierId  String?
+  driverName String?
+  driverPhone String?
+  truckNumber String?
+  trailerNumber String?
 
   // Removed root-level pickup/delivery fields for many-to-many
   // Now handled in related LoadShipper and LoadConsignee

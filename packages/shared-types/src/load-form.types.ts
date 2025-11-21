@@ -30,6 +30,10 @@ export const loadFormSchema = z.object({
   // Customer
   customerId: z.string().min(1, "Customer is required"),
   carrierId: z.string().optional(),
+  driverName: z.string().optional(),
+  driverPhone: z.string().optional(),
+  truckNumber: z.string().optional(),
+  trailerNumber: z.string().optional(),
 
   // Load-level pickup/delivery times (legacy - now using shipper/consignee specific times)
   pickupDate: z.union([z.date(), z.undefined()]).optional(),

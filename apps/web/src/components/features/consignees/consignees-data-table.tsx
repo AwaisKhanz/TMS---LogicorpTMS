@@ -46,7 +46,6 @@ import {
   useExportConsignees,
   useDeleteConsignee,
 } from "@/hooks/use-consignee";
-import { useToast } from "@/hooks/use-toast";
 import type { ConsigneeFilters } from "@tms/shared-types";
 import {
   CanEdit,
@@ -54,7 +53,6 @@ import {
 } from "@/components/auth/can";
 
 export function ConsigneesDataTable() {
-  const { toast } = useToast();
   const [searchInput, setSearchInput] = useState("");
   const [filters, setFilters] = useState<ConsigneeFilters>({
     page: 1,

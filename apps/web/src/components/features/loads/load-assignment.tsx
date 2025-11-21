@@ -235,6 +235,39 @@ export function LoadAssignment({ loadId }: LoadAssignmentProps) {
                 Assigned by {load.assignee.firstName} {load.assignee.lastName}
               </div>
             )}
+
+            {(load.driverName ||
+              load.driverPhone ||
+              load.truckNumber ||
+              load.trailerNumber) && (
+              <div className="rounded-lg border bg-muted/40 p-3 text-sm space-y-1">
+                <p className="font-medium text-foreground">Driver Details</p>
+                {load.driverName && (
+                  <p className="text-muted-foreground">
+                    <span className="font-medium text-foreground">Name:</span>{" "}
+                    {load.driverName}
+                  </p>
+                )}
+                {load.driverPhone && (
+                  <p className="text-muted-foreground">
+                    <span className="font-medium text-foreground">Phone:</span>{" "}
+                    {load.driverPhone}
+                  </p>
+                )}
+                {load.truckNumber && (
+                  <p className="text-muted-foreground">
+                    <span className="font-medium text-foreground">Truck #:</span>{" "}
+                    {load.truckNumber}
+                  </p>
+                )}
+                {load.trailerNumber && (
+                  <p className="text-muted-foreground">
+                    <span className="font-medium text-foreground">Trailer #:</span>{" "}
+                    {load.trailerNumber}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
