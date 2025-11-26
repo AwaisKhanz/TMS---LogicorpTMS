@@ -234,6 +234,13 @@ model Load {
   assignedTo String?
   deletedAt  DateTime?
 
+  // DocuSign Integration
+  docusignEnvelopeId        String?
+  docusignStatus            String?   // sent, delivered, completed, declined, voided
+  docusignSentAt            DateTime?
+  docusignCompletedAt       DateTime?
+  signedRateConfirmationUrl String?
+
   // Relations
   organization Organization     @relation(fields: [organizationId], references: [id])
   customer     Customer         @relation(fields: [customerId], references: [id])

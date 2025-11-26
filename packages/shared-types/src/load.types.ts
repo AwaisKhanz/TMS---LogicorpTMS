@@ -257,6 +257,13 @@ export interface Load {
   assignedTo?: string;
   assignee?: LoadCreator;
 
+  // DocuSign Integration
+  docusignEnvelopeId?: string;
+  docusignStatus?: string;
+  docusignSentAt?: string;
+  docusignCompletedAt?: string;
+  signedRateConfirmationUrl?: string;
+
   // Relations
   events?: LoadEvent[];
   documents?: LoadDocument[];

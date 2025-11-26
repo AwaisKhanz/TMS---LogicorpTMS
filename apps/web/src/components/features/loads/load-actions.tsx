@@ -9,6 +9,7 @@ import {
   useSendDocument,
   useExportLoad,
 } from "@/hooks/use-load-actions";
+import { useSendForSignature } from "@/hooks/use-docusign";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -49,6 +50,7 @@ import {
   FileText,
   X,
   Plus,
+  PenTool,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { SelectTrigger } from "@/components/ui/select";
@@ -79,6 +81,7 @@ export function LoadActions({ loadId }: LoadActionsProps) {
   const generateDocument = useGenerateDocument();
   const sendDocument = useSendDocument();
   const exportLoad = useExportLoad();
+  const sendForSignature = useSendForSignature();
 
   // Fetch existing documents to filter available send types
   const { data: loadDocs } = useLoadDocuments(loadId);
@@ -181,6 +184,30 @@ export function LoadActions({ loadId }: LoadActionsProps) {
     setRecipients(updated);
   };
 
+  const handleSendForSignature = () => {
+    sendForSignature.mutate(loadId);
+  };
+
+  // Check if load can be sent for signature
+  const canSendForSignature = () => {
+    if (!load) return false;
+    
+    // Must have carrier assigned
+    if (!load.carrier && !load.carrierId) return false;
+    
+    // Must be BOOKED or later status
+    const validStatuses = ['BOOKED', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED'];
+    if (!validStatuses.includes(load.status)) return false;
+    
+    // Check if already sent and pending/completed
+    if (load.docusignEnvelopeId && load.docusignStatus) {
+      const pendingStatuses = ['sent', 'delivered', 'completed'];
+      if (pendingStatuses.includes(load.docusignStatus)) return false;
+    }
+    
+    return true;
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -216,6 +243,15 @@ export function LoadActions({ loadId }: LoadActionsProps) {
             <DropdownMenuItem onClick={() => setShowSendDialog(true)}>
               <Mail className="h-4 w-4 mr-2" />
               Send Documents
+            </DropdownMenuItem>
+          </CanCreate>
+          <CanCreate resource="document">
+            <DropdownMenuItem 
+              onClick={handleSendForSignature}
+              disabled={!canSendForSignature() || sendForSignature.isPending}
+            >
+              <PenTool className="h-4 w-4 mr-2" />
+              {sendForSignature.isPending ? "Sending..." : "Send for Signature"}
             </DropdownMenuItem>
           </CanCreate>
           <CanView resource="load">

@@ -10,6 +10,7 @@ import { LoadActions } from "@/components/features/loads/load-actions";
 import { LoadAssignment } from "@/components/features/loads/load-assignment";
 import { LoadSummary } from "@/components/features/loads/load-summary";
 import { LoadActivity } from "@/components/features/loads/load-activity";
+import { SignatureStatus } from "@/components/features/loads/signature-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -226,6 +227,11 @@ export default function LoadDetailsPage({ params }: LoadDetailsPageProps) {
               {/* Status Workflow - Compact */}
               <Suspense fallback={<Skeleton className="h-32 w-full" />}>
                 <LoadStatusWorkflow loadId={params.id} compact />
+              </Suspense>
+
+              {/* Signature Status */}
+              <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+                <SignatureStatus loadId={params.id} />
               </Suspense>
 
               {/* Quick Actions Card - Compact on the right */}

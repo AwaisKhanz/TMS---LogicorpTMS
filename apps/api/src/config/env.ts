@@ -87,6 +87,17 @@ export const config = {
     fromEmail: process.env.FROM_EMAIL || "noreply@logicorptms.com",
     frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
   },
+
+  // DocuSign configuration
+  docusign: {
+    integrationKey: process.env.DOCUSIGN_INTEGRATION_KEY || "",
+    userId: process.env.DOCUSIGN_USER_ID || "",
+    accountId: process.env.DOCUSIGN_ACCOUNT_ID || "",
+    privateKey: process.env.DOCUSIGN_PRIVATE_KEY || "",
+    basePath: process.env.DOCUSIGN_BASE_PATH || "https://demo.docusign.net/restapi",
+    oauthBasePath: process.env.DOCUSIGN_OAUTH_BASE_PATH || "account-d.docusign.com",
+    webhookSecret: process.env.DOCUSIGN_WEBHOOK_SECRET || "",
+  },
 };
 
 // Validate required environment variables
